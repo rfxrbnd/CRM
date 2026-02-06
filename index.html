@@ -1947,5 +1947,89 @@ function togTourThenShow(id){
 
 
 </script>
+
+<script>
+/* ============================================================
+   ACTION DISPATCHER (Fix)
+   - sorgt dafür, dass Buttons mit data-action in jedem Browser
+     zuverlässig funktionieren.
+   - Übergibt automatisch das geklickte Element an Handler, die
+     ein Element erwarten (z.B. setCalView, setMonth, ...).
+   - Stoppt alte/defekte Handler (capture + stopPropagation).
+   ============================================================ */
+(function(){
+  // parseArgs fallback, falls die Hauptfunktion aus irgendeinem Grund nicht im Scope ist
+  function parseArgsFallback(s){
+    if(!s) return [];
+    try { return JSON.parse(s); } catch {}
+    // Komma-separiert: 1,2,"x"
+    return String(s).split(',').map(x=>x.trim()).filter(Boolean).map(x=>{
+      if(x === 'this') return null;
+      if(x === 'true') return true;
+      if(x === 'false') return false;
+      const n = Number(x);
+      if(!Number.isNaN(n) && x !== '') return n;
+      return x.replace(/^["']|["']$/g,'');
+    });
+  }
+
+  function getArgs(el){
+    const raw = el.getAttribute('data-args') || '';
+    try {
+      if (typeof window.parseArgs === 'function') return window.parseArgs(raw);
+    } catch {}
+    return parseArgsFallback(raw);
+  }
+
+  document.addEventListener('click', function(ev){
+    const el = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
+    if(!el) return;
+
+    // Wir übernehmen die Aktion komplett, damit kein anderer (fehlerhafter)
+    // Listener sie nochmal ausführt.
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const action = el.getAttribute('data-action');
+    const fn = window[action];
+
+    if (typeof fn !== 'function') {
+      // Soft fail: nicht hart crashen
+      try { alert(`Fehler bei Action: ${action}\nFunktion nicht gefunden.`); } catch {}
+      return;
+    }
+
+    let args = getArgs(el);
+
+    // "this" Platzhalter (als null) durch das Element ersetzen
+    args = (args || []).map(a => (a === null ? el : a));
+
+    // Wenn keine Args angegeben sind, aber die Funktion ein Element erwartet:
+    // Konvention in deinem Code: ( _unused, el )
+    if (args.length === 0) {
+      // setCalView/setMonth/... brauchen el als 2. Parameter
+      fn(undefined, el);
+      return;
+    }
+
+    // Wenn Args vorhanden sind, aber kein Element mitgegeben wurde und fn erwartet 2+:
+    if (fn.length >= 2 && args.length === 1) {
+      fn(args[0], el);
+      return;
+    }
+
+    fn.apply(null, args);
+  }, true); // capture => läuft vor anderen Listenern
+
+  // Export/Bind: manche Funktionen können (je nach Block-Scope) nicht global sein.
+  // Wir binden sie hier explizit auf window, falls vorhanden.
+  try {
+    if (typeof showAgenda === 'function') window.showAgenda = showAgenda;
+    if (typeof showSearch === 'function') window.showSearch = showSearch;
+    if (typeof showTools === 'function') window.showTools = showTools;
+  } catch {}
+})();
+</script>
+
 </body>
 </html>
