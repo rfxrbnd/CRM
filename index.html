@@ -402,9 +402,9 @@ async function geocodeAddress(address){
         else if(page === 'map') showMap();
         else if(page === 'calendar') showCalendar();
         else if(page === 'customers') showCustomers();
-        else if(page === 'agenda') showAgenda();
-        else if(page === 'search') showSearch();
-        else if(page === 'tools') showTools();
+        else if(page === 'agenda') { if (typeof window.showAgenda==='function') window.showAgenda(); else if (typeof showAgenda==='function') showAgenda(); else alert('Agenda-Funktion fehlt in dieser Version. Bitte index.html aktualisieren.'); }
+        else if(page === 'search') { if (typeof window.showSearch==='function') window.showSearch(); else if (typeof showSearch==='function') showSearch(); else alert('Suche-Funktion fehlt in dieser Version. Bitte index.html aktualisieren.'); }
+        else if(page === 'tools') { if (typeof window.showTools==='function') window.showTools(); else if (typeof showTools==='function') showTools(); else alert('Tools-Funktion fehlt in dieser Version. Bitte index.html aktualisieren.'); }
         else if(page === 'tour') showTour();
         else if(page === 'routes') showRoutes();
         else if(page === 'expenses') showExpenses();
