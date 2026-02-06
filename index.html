@@ -274,6 +274,43 @@ async function geocodeAddress(address){
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
     let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
+    // ===== NEU: Schema-Upgrade (damit neue Features mit alten Daten laufen) =====
+    // Safari/Chrome-safe: Früh definieren, damit Startlogik es garantiert findet.
+    function ensureNewSchema() {
+        if (!db || typeof db !== 'object') db = {};
+        if (!Array.isArray(db.customers)) db.customers = [];
+        if (!Array.isArray(db.expenses)) db.expenses = [];
+        if (!Array.isArray(db.events)) db.events = [];
+        if (!Array.isArray(db.tour)) db.tour = [];
+        if (typeof db.home !== 'string') db.home = '';
+        if (db.logo === undefined) db.logo = null;
+
+        // Security / Settings
+        if (!db.security || typeof db.security !== 'object') db.security = { pinEnabled: false, pinHash: '' };
+        if (!db.settings || typeof db.settings !== 'object') db.settings = { kmRate: 0.30 };
+
+        // Snapshots: eigener Key (separat von DB_KEY) – optional
+        if (!Array.isArray(db._migrations)) db._migrations = [];
+
+        // Customer defaults for new modules
+        db.customers.forEach(c => {
+            if (!c || typeof c !== 'object') return;
+            if (!Array.isArray(c.reports)) c.reports = [];
+            if (!Array.isArray(c.tasks)) c.tasks = [];
+            if (!Array.isArray(c.tags)) c.tags = [];
+            if (!Array.isArray(c.docs)) c.docs = []; // {name,type,data,ts}
+            if (!Array.isArray(c.checklist)) c.checklist = []; // {text,done}
+            if (typeof c.nextAppointment !== 'string') c.nextAppointment = '';
+            if (typeof c.visitInterval !== 'number') c.visitInterval = 4;
+        });
+
+        // Mark migration
+        const v = 'schema_vB_1';
+        if (!db._migrations.includes(v)) db._migrations.push(v);
+    }
+    // explizit global machen (defensiv, für ältere Safari-Scopes)
+    window.ensureNewSchema = ensureNewSchema;
+
     let currentCalDate = new Date();
     let calView = 'month'; 
     let dragId = null, dragTargetDate = null;
