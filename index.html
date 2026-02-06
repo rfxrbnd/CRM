@@ -325,7 +325,7 @@
         } else { 
             img.src = DEFAULT_LOGO; 
             img.style.display = 'inline-block'; 
-            txt.style.display = 'none'; 
+            txt.style.display = 'inline-block'; 
         }
     }
 
@@ -890,10 +890,10 @@
         const c = id ? db.customers.find(x => x.id === id) : {name:'',nr:'',category:'C',status:'aktiv',address:'',contact:'',phone:'',email:'',route:'',products:''};
         
         document.getElementById('content').innerHTML = `
-        <div style="max-width:600px; margin:0 auto;">
+            <div style="max-width:600px; margin:0 auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                 <h1>${id?'Kunde bearbeiten':'Neuer Kunde'}</h1>
-                <button class="btn btn-secondary" onclick="id ? showDetail(${id}) : showCustomers()">Abbrechen</button>
+                <button class="btn btn-secondary" onclick="${id ? `showDetail(${id})` : 'showCustomers()'}">Abbrechen</button>
             </div>
             
             <div class="card">
@@ -1333,7 +1333,11 @@
     }
 
     function openMaps(){
-        const d = db.tour.map(id => encodeURIComponent(db.customers.find(x => x.id === id).address)).join('/');
+        const stops = db.tour
+            .map(id => db.customers.find(x => x.id === id))
+            .filter(Boolean)
+            .map(c => encodeURIComponent(c.address));
+        const d = stops.join('/');
         window.open(`https://www.google.com/maps/dir/${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`, '_blank');
     }
 
