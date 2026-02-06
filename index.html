@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AD Board v123 - Umsatz Layout</title>
+    <title>AD Board v123 - Layout Fix</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -231,29 +231,33 @@
                 const legacy = JSON.parse(localStorage.getItem('raphael_crm_v121_visualcat')) || JSON.parse(localStorage.getItem('raphael_crm_v120_fixedcal'));
                 if(legacy) { db = legacy; save(); }
             }
-        } catch(e) { console.error(e); }
 
-        if(!db.expenses) db.expenses = [];
-        if(!db.events) db.events = [];
-        if(!db.customers) db.customers = [];
-        
-        if(!db.meta_revenue_migrated) {
+            if(!db.expenses) db.expenses = [];
+            if(!db.events) db.events = [];
+            if(!db.customers) db.customers = [];
+            
+            if(!db.meta_revenue_migrated) {
+                db.customers.forEach(c => {
+                    c.products = ""; 
+                });
+                db.meta_revenue_migrated = true;
+                save();
+            }
+
             db.customers.forEach(c => {
-                c.products = ""; 
+                if(!c.reports) c.reports = [];
+                if(!c.tasks) c.tasks = [];
+                if(!c.nextAppointment) c.nextAppointment = "";
+                if(!c.visitInterval) c.visitInterval = 4;
             });
-            db.meta_revenue_migrated = true;
-            save();
+            updateLogoUI();
+            showHome();
+        } catch(e) {
+            console.error(e);
+            alert("Fehler beim Starten: " + e.message + "\nBitte Backup prüfen.");
+        } finally {
+            document.getElementById('loader').style.display='none';
         }
-
-        db.customers.forEach(c => {
-            if(!c.reports) c.reports = [];
-            if(!c.tasks) c.tasks = [];
-            if(!c.nextAppointment) c.nextAppointment = "";
-            if(!c.visitInterval) c.visitInterval = 4;
-        });
-        updateLogoUI();
-        showHome();
-        document.getElementById('loader').style.display='none';
     };
 
     function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
@@ -767,7 +771,6 @@
     
         const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
-        // Umbau Layout: Grid mit "stretch" damit die Boxen gleich hoch sind
         document.getElementById('content').innerHTML = `
         <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
         
@@ -788,7 +791,7 @@
                 <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
                     <a href="tel:${c.phone}" class="btn btn-secondary btn-full">📞 Anrufen</a>
                     <a href="mailto:${c.email}" class="btn btn-secondary btn-full">✉️ E-Mail</a>
-                    <a href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
+                    <a href="https://maps.google.com/?q=$${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
                 </div>
             </div>
 
@@ -876,7 +879,7 @@
 
     function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
-    function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
+    function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
     function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen</h1><div class="grid-3">${r.map(x=>`<div class="card" onclick="filterRoute('${x}')" style="cursor:pointer;text-align:center;"><h2>${x}</h2><div style="color:#666">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
     
