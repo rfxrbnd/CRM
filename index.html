@@ -6,46 +6,7 @@
     <title>AD Board v123 - Layout Fix</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-
-<script>
-/* ============================================================
-   GEO-CACHE (Nominatim) – persistent, TTL 180 Tage
-   - reduziert Requests
-   - schnelleres Kartenladen
-   - verhindert Rate-Limit/Block
-   ============================================================ */
-const GEO_CACHE_KEY = 'crm_geo_cache_v1';
-const GEO_TTL_MS = 180 * 24 * 60 * 60 * 1000;
-
-function geoCacheLoad(){
-  try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}'); } catch { return {}; }
-}
-function geoCacheSave(cache){
-  try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); } catch {}
-}
-async function geocodeAddress(address){
-  const a = (address||'').trim();
-  if (!a) return null;
-  const cache = geoCacheLoad();
-  const key = a.toLowerCase();
-  const now = Date.now();
-  const hit = cache[key];
-  if (hit && hit.lat && hit.lon && hit.ts && (now - hit.ts) < GEO_TTL_MS) {
-    return {lat: hit.lat, lon: hit.lon, cached:true};
-  }
-  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  const d = await r.json();
-  if (d && d[0]) {
-    cache[key] = {lat: d[0].lat, lon: d[0].lon, ts: now};
-    geoCacheSave(cache);
-    return {lat: d[0].lat, lon: d[0].lon, cached:false};
-  }
-  return null;
-}
-</script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
@@ -189,36 +150,17 @@ async function geocodeAddress(address){
 <div id="loader">
     <div class="spinner"></div>
     <div id="loader-text" style="margin-top:10px; font-weight:bold;">Lädt...</div>
-    <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" data-action="setFlag" data-flag="stopGeocoding" data-value="true">STOPP</button>
+    <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" onclick="stopGeocoding=true">STOPP</button>
 </div>
-
-<!-- ============================
-     NEU: PIN-Sperre (offline)
-     - erscheint nur, wenn eine PIN gesetzt ist
-     - entsperrt pro Browser-Session
-============================ -->
-<div id="pinOverlay" class="modal-overlay" style="display:none; z-index:9999;">
-  <div class="modal-box" style="max-width:420px;">
-    <h2 style="text-align:center; margin-top:0;">🔒 CRM gesperrt</h2>
-    <p style="color:var(--text-light); text-align:center; margin-top:-6px;">Bitte PIN eingeben.</p>
-    <input id="pinInput" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN" style="width:100%; margin-top:10px;">
-    <div style="display:flex; gap:10px; margin-top:12px;">
-      <button class="btn btn-primary btn-full" data-action="unlockWithPin" data-args="">Entsperren</button>
-      <button class="btn btn-secondary btn-full" data-action="pinOverlayHelp" data-args="">Hilfe</button>
-    </div>
-    <div id="pinMsg" style="margin-top:10px; color:var(--danger); font-weight:600; display:none;"></div>
-  </div>
-</div>
-
-<button id="menu-toggle" data-action="toggleSidebar" data-args="">☰</button>
+<button id="menu-toggle" onclick="toggleSidebar()">☰</button>
 
 <div id="timeModal" class="modal-overlay">
     <div class="modal-box">
         <h2 style="text-align:center">Zeit wählen</h2>
         <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
         <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-primary btn-full" data-action="confirmDrop" data-args="">Speichern</button>
-            <button class="btn btn-secondary btn-full" data-action="closeModal" data-args="">Abbrechen</button>
+            <button class="btn btn-primary btn-full" onclick="confirmDrop()">Speichern</button>
+            <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
         </div>
     </div>
 </div>
@@ -240,9 +182,9 @@ async function geocodeAddress(address){
         </div>
         <div style="margin-top:10px;"><label>Bis</label><input type="time" id="evtEnd" value="10:00" style="margin:0;"></div>
         <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-success btn-full" data-action="saveManualEvent" data-args="">Speichern</button>
-            <button class="btn btn-danger btn-full" data-action="delManualEvent" data-args="" id="btnDelEvt" style="display:none;">Löschen</button>
-            <button class="btn btn-secondary btn-full" data-action="closeEventModal">Abbrechen</button>
+            <button class="btn btn-success btn-full" onclick="saveManualEvent()">Speichern</button>
+            <button class="btn btn-danger btn-full" onclick="delManualEvent()" id="btnDelEvt" style="display:none;">Löschen</button>
+            <button class="btn btn-secondary btn-full" onclick="document.getElementById('eventModal').style.display='none'">Abbrechen</button>
         </div>
     </div>
 </div>
@@ -253,82 +195,23 @@ async function geocodeAddress(address){
         <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
     </div>
     <div class="nav-menu">
-        <button class="nav-item active" data-action="nav" data-args="'home', this">🏠 Dashboard</button>
-        <button class="nav-item" data-action="nav" data-args="'customers', this">👥 Kunden</button>
-        <button class="nav-item" data-action="nav" data-args="'expenses', this">💶 Spesen</button>
-        <button class="nav-item" data-action="nav" data-args="'map', this">🗺️ Karte</button>
-        <button class="nav-item" data-action="nav" data-args="'calendar', this">📅 Kalender</button>
-        <button class="nav-item" data-action="nav" data-args="'agenda', this">🗓️ Agenda</button>
-        <button class="nav-item" data-action="nav" data-args="'search', this">🔎 Suche</button>
-        <button class="nav-item" data-action="nav" data-args="'tools', this">🧰 Tools</button>
-        <button class="nav-item" data-action="nav" data-args="'tour', this">🚗 Tour</button>
-        <button class="nav-item" data-action="nav" data-args="'routes', this">📂 Routen</button>
+        <button class="nav-item active" onclick="nav('home', this)">🏠 Dashboard</button>
+        <button class="nav-item" onclick="nav('customers', this)">👥 Kunden</button>
+        <button class="nav-item" onclick="nav('expenses', this)">💶 Spesen</button>
+        <button class="nav-item" onclick="nav('map', this)">🗺️ Karte</button>
+        <button class="nav-item" onclick="nav('calendar', this)">📅 Kalender</button>
+        <button class="nav-item" onclick="nav('tour', this)">🚗 Tour</button>
+        <button class="nav-item" onclick="nav('routes', this)">📂 Routen</button>
     </div>
 </div>
 
 <div id="main"><div id="content" class="content-wrap"></div></div>
 
 <script>
-
     const DB_KEY = 'raphael_crm_v122_revenue';
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
     let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
-
-    /* ============================================================
-       i18n / Text-Helfer
-       - Im ursprünglichen UI gab es Aufrufe wie tr('...').
-       - Falls kein Übersetzungs-Layer vorhanden ist, ist tr() eine Identity-Funktion.
-       ============================================================ */
-    function tr(s){ return String(s ?? ''); }
-
-    /* ============================================================
-       PIN-Sperre – Guard
-       - Stellt sicher, dass isPinLocked() existiert, bevor onload läuft.
-       ============================================================ */
-    function isPinLocked(){
-        try{
-            if(!db.security || !db.security.pinEnabled || !db.security.pinHash) return false;
-            return sessionStorage.getItem('crm_pin_unlocked_v1') !== '1';
-        }catch(e){ return false; }
-    }
-    // ===== NEU: Schema-Upgrade (damit neue Features mit alten Daten laufen) =====
-    // Safari/Chrome-safe: Früh definieren, damit Startlogik es garantiert findet.
-    function ensureNewSchema() {
-        if (!db || typeof db !== 'object') db = {};
-        if (!Array.isArray(db.customers)) db.customers = [];
-        if (!Array.isArray(db.expenses)) db.expenses = [];
-        if (!Array.isArray(db.events)) db.events = [];
-        if (!Array.isArray(db.tour)) db.tour = [];
-        if (typeof db.home !== 'string') db.home = '';
-        if (db.logo === undefined) db.logo = null;
-
-        // Security / Settings
-        if (!db.security || typeof db.security !== 'object') db.security = { pinEnabled: false, pinHash: '' };
-        if (!db.settings || typeof db.settings !== 'object') db.settings = { kmRate: 0.30 };
-
-        // Snapshots: eigener Key (separat von DB_KEY) – optional
-        if (!Array.isArray(db._migrations)) db._migrations = [];
-
-        // Customer defaults for new modules
-        db.customers.forEach(c => {
-            if (!c || typeof c !== 'object') return;
-            if (!Array.isArray(c.reports)) c.reports = [];
-            if (!Array.isArray(c.tasks)) c.tasks = [];
-            if (!Array.isArray(c.tags)) c.tags = [];
-            if (!Array.isArray(c.docs)) c.docs = []; // {name,type,data,ts}
-            if (!Array.isArray(c.checklist)) c.checklist = []; // {text,done}
-            if (typeof c.nextAppointment !== 'string') c.nextAppointment = '';
-            if (typeof c.visitInterval !== 'number') c.visitInterval = 4;
-        });
-
-        // Mark migration
-        const v = 'schema_vB_1';
-        if (!db._migrations.includes(v)) db._migrations.push(v);
-    }
-    // explizit global machen (defensiv, für ältere Safari-Scopes)
-    window.ensureNewSchema = ensureNewSchema;
-
     let currentCalDate = new Date();
     let calView = 'month'; 
     let dragId = null, dragTargetDate = null;
@@ -367,14 +250,8 @@ async function geocodeAddress(address){
                 if(!c.nextAppointment) c.nextAppointment = "";
                 if(!c.visitInterval) c.visitInterval = 4;
             });
-            ensureNewSchema();
             updateLogoUI();
-            // ===== NEU: PIN-Sperre (optional) =====
-            if (isPinLocked()) {
-                showPinOverlay();
-            } else {
-                showHome();
-            }
+            showHome();
         } catch(e) {
             console.error(e);
             alert("Fehler beim Starten: " + e.message + "\nBitte Backup prüfen.");
@@ -402,9 +279,6 @@ async function geocodeAddress(address){
         else if(page === 'map') showMap();
         else if(page === 'calendar') showCalendar();
         else if(page === 'customers') showCustomers();
-        else if(page === 'agenda') { if (typeof window.showAgenda==='function') window.showAgenda(); else if (typeof showAgenda==='function') showAgenda(); else alert('Agenda-Funktion fehlt in dieser Version. Bitte index.html aktualisieren.'); }
-        else if(page === 'search') { if (typeof window.showSearch==='function') window.showSearch(); else if (typeof showSearch==='function') showSearch(); else alert('Suche-Funktion fehlt in dieser Version. Bitte index.html aktualisieren.'); }
-        else if(page === 'tools') { if (typeof window.showTools==='function') window.showTools(); else if (typeof showTools==='function') showTools(); else alert('Tools-Funktion fehlt in dieser Version. Bitte index.html aktualisieren.'); }
         else if(page === 'tour') showTour();
         else if(page === 'routes') showRoutes();
         else if(page === 'expenses') showExpenses();
@@ -481,32 +355,32 @@ async function geocodeAddress(address){
         <div class="grid-3">
             <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800;">${count}</div><div style="font-size:12px; color:var(--text-light);">Kunden</div></div>
             <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; color:var(--brand-dark);">${visited}</div><div style="font-size:12px; color:var(--text-light);">Heute</div></div>
-            <div class="card" style="text-align:center; cursor:pointer;" data-action="showAllTasks" data-args=""><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben (Anzeigen)</div></div>
+            <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben (Anzeigen)</div></div>
         </div>
         <div class="card"><h2>📈 Besuchstrend</h2><div class="stat-container">${bars}</div></div>
         <div class="grid-2">
             <div class="card"><h2>Schnellzugriff</h2>
-                <button class="btn btn-primary btn-full" data-action="showForm" data-args="">+ Neuer Kunde</button>
+                <button class="btn btn-primary btn-full" onclick="showForm()">+ Neuer Kunde</button>
                 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn btn-secondary btn-full" data-action="downloadBackup" data-args="">💾 Backup Speichern</button>
-                    <button class="btn btn-secondary btn-full" data-action="triggerFile" data-target="bakIn">📂 Backup Laden</button>
+                    <button class="btn btn-secondary btn-full" onclick="downloadBackup()">💾 Backup Speichern</button>
+                    <button class="btn btn-secondary btn-full" onclick="document.getElementById('bakIn').click()">📂 Backup Laden</button>
                 </div>
-                <button class="btn btn-secondary btn-full" style="margin-top:10px;" data-action="triggerFile" data-target="csvIn">CSV Import</button>
+                <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('csvIn').click()">CSV Import</button>
                 <input type="file" id="csvIn" style="display:none" onchange="importCSV(this)">
                 <input type="file" id="bakIn" style="display:none" onchange="importBackup(this)">
             </div>
-            <div class="card"><h2>Berichte</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" data-action="generateReportPDF" data-args="'day'">📄 Tagesbericht drucken</button><button class="btn btn-secondary btn-full" data-action="generateReportPDF" data-args="'week'">📄 Wochenbericht drucken</button></div></div>
+            <div class="card"><h2>Berichte</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">📄 Tagesbericht drucken</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">📄 Wochenbericht drucken</button></div></div>
         </div>
         <div class="card"><h2>Einstellungen</h2>
-            <button class="btn btn-secondary btn-full" data-action="showDuplicates" data-args="">⚠️ Duplikate finden</button>
-            <button class="btn btn-secondary btn-full" style="margin-top:10px;" data-action="triggerFile" data-target="logoIn">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" data-action="deleteLogoConfirm">Logo entfernen</button>
+            <button class="btn btn-secondary btn-full" onclick="showDuplicates()">⚠️ Duplikate finden</button>
+            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
         </div>`;
     }
 
     // --- GLOBAL TASKS ---
     function showAllTasks() {
         const todayStr = new Date().toISOString().split('T')[0];
-        let html = '<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" data-action="showHome" data-args="">← Zurück</button></div><h1>Offene Aufgaben</h1><div class="card">';
+        let html = '<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div><h1>Offene Aufgaben</h1><div class="card">';
         let count = 0;
         db.customers.forEach(c => {
             if(c.tasks && c.tasks.length > 0) {
@@ -515,10 +389,10 @@ async function geocodeAddress(address){
                         const isOverdue = t.dueDate && t.dueDate < todayStr;
                         html += `
                         <div class="global-task-row">
-                            <input type="checkbox" style="margin-right:10px; width:20px; height:20px;" data-action="toggleTaskGlobal" data-args="${c.id}, ${index}">
+                            <input type="checkbox" style="margin-right:10px; width:20px; height:20px;" onclick="toggleTaskGlobal(${c.id}, ${index})">
                             <div style="flex:1;">
                                 <div style="font-weight:bold; ${isOverdue ? 'color:#ef4444;' : ''}">${t.text}</div>
-                                <div style="font-size:12px; color:#666; cursor:pointer;" data-action="showDetail" data-args="${c.id}">
+                                <div style="font-size:12px; color:#666; cursor:pointer;" onclick="showDetail(${c.id})">
                                     👤 ${c.name} ${t.dueDate ? '📅 ' + t.dueDate.split('-').reverse().join('.') : ''}
                                 </div>
                             </div>
@@ -557,13 +431,13 @@ async function geocodeAddress(address){
                 <div>
                     <div style="font-size:12px; color:#666;">${e.date} <span class="exp-cat">${e.category}</span></div>
                     <div style="font-weight:bold; margin-top:2px;">${e.note||'Keine Notiz'}</div>
-                    ${e.img?`<img src="${e.img}" class="exp-img" data-action="openImageSelf">`:''}
+                    ${e.img?`<img src="${e.img}" class="exp-img" onclick="window.open(this.src)">`:''}
                 </div>
                 <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
                     <div class="exp-amount">${parseFloat(e.amount).toFixed(2)} €</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" data-action="editExpense" data-args="${e.id}">✏️</button>
-                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" data-action="delExpense" data-args="${e.id}">🗑️</button>
+                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">✏️</button>
+                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">🗑️</button>
                     </div>
                 </div>
             </div>`).join('');
@@ -576,7 +450,7 @@ async function geocodeAddress(address){
         <div class="card" id="expFormCard">
             <h3 id="expFormTitle">Neuer Eintrag</h3>
             <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:15px;">
-                <button class="btn btn-secondary btn-full" data-action="triggerFile" data-target="ocrInput">📄 Beleg Scannen (AI)</button>
+                <button class="btn btn-secondary btn-full" onclick="document.getElementById('ocrInput').click()">📄 Beleg Scannen (AI)</button>
                 <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="processOCR(this)">
                 <img id="ocr-preview" style="display:none; max-height:100px; margin:10px auto; border:1px solid #ccc;">
                 <div id="ocrStatus" style="font-size:12px; color:#666; margin-top:5px; text-align:center;"></div>
@@ -590,13 +464,13 @@ async function geocodeAddress(address){
                 <input type="text" id="exp-note" placeholder="Notiz (z.B. Ort)">
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" data-action="triggerFile" data-target="exp-img">📸 Beleg</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📸 Beleg</button>
                 <input type="file" id="exp-img" style="display:none" accept="image/*">
-                <button class="btn btn-primary" style="flex:1;" data-action="addExpense" data-args="" id="btnSaveExp">Speichern</button>
-                <button class="btn btn-secondary" data-action="resetExpForm" data-args="" id="btnCancelExp" style="display:none;">Abbrechen</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Speichern</button>
+                <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Abbrechen</button>
             </div>
         </div>
-        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" data-action="printExpenses" data-args="">🖨️ Abrechnung drucken</button></div>
+        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
         <div>${list||'<div style="text-align:center; padding:20px; color:#999;">Keine Ausgaben</div>'}</div>`;
         editingExpenseId = null;
         window.currentOcrImage = null;
@@ -732,9 +606,9 @@ async function geocodeAddress(address){
     }
     
     function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();showExpenses();}}
-    function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" data-action="printPage">Drucken</button> <button class="btn btn-secondary" data-action="showExpenses" data-args="">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
+    function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showExpenses()">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
 
-    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" data-action="batchGeocode" data-args="">📍 Positionen laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button data-action="showDetail" data-args="${c.id}" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
+    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">📍 Positionen laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
     async function batchGeocode(){
         const missing=db.customers.filter(c=>!c.lat&&c.address.length>5);
         if(missing.length===0)return alert("Alle Adressen haben bereits Koordinaten.");
@@ -764,7 +638,7 @@ async function geocodeAddress(address){
     function toggleSelectMode(){selectMode=!selectMode;selectedIds.clear();showCustomers();}
     function toggleSelection(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);showCustomers();}
     function addBatchToTour(){if(selectedIds.size===0)return alert("Bitte Kunden auswählen.");selectedIds.forEach(id=>{if(!db.tour.includes(id))db.tour.push(id);});save();selectMode=false;selectedIds.clear();showTour();}
-    function deleteCustomerDirect(id, ev) { if(ev && ev.stopPropagation) ev.stopPropagation(); if(confirm("Kunden löschen?")) { db.customers = db.customers.filter(x => x.id !== id); db.tour = db.tour.filter(x => x !== id); save(); renderTable(); } }
+    function deleteCustomerDirect(e, id) { e.stopPropagation(); if(confirm("Kunden löschen?")) { db.customers = db.customers.filter(x => x.id !== id); db.tour = db.tour.filter(x => x !== id); save(); renderTable(); } }
     function deleteBatch() { if(selectedIds.size === 0) return alert("Keine Kunden ausgewählt."); if(!confirm(`${selectedIds.size} Kunden löschen?`)) return; db.customers = db.customers.filter(c => !selectedIds.has(c.id)); db.tour = db.tour.filter(id => !selectedIds.has(id)); save(); selectMode = false; selectedIds.clear(); showCustomers(); }
     
     // --- REPORTS (SORTED) ---
@@ -793,7 +667,7 @@ async function geocodeAddress(address){
 
         reportData.sort((a,b) => a.rawDate - b.rawDate);
 
-        let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" data-action="printPage">Drucken</button> <button class="btn btn-secondary" data-action="showHome" data-args="">Zurück</button></div><h1>${range==='day'?'Tagesbericht':'Wochenbericht'}</h1>`;
+        let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showHome()">Zurück</button></div><h1>${range==='day'?'Tagesbericht':'Wochenbericht'}</h1>`;
         
         reportData.forEach(r=>{
             html+=`<div class="card" style="page-break-inside:avoid;"><div style="font-weight:bold;font-size:16px;">${r.customerName}</div><div style="font-size:12px;color:#666;">Datum: ${r.date}</div><div style="white-space:pre-wrap;margin-top:10px;">${r.text}</div>${r.img?`<img src="${r.img}" style="max-width:300px;display:block;margin-top:10px;border:1px solid #eee;">`:''}</div>`;
@@ -811,7 +685,7 @@ async function geocodeAddress(address){
             headerHTML = `
                 <div style="background:var(--event-blue); color:var(--event-blue-text); padding:10px; border-radius:var(--radius); margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold;">Filter: Route "${viewState.filterRoute}"</div>
-                    <button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; height:auto;" data-action="filterRoute" data-args="null">Alle anzeigen</button>
+                    <button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; height:auto;" onclick="filterRoute(null)">Alle anzeigen</button>
                 </div>
                 <h1>Kunden (Gefiltert)</h1>`;
         }
@@ -820,8 +694,8 @@ async function geocodeAddress(address){
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             ${headerHTML}
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" data-action="toggleSelectMode" data-args="">${selectMode?'Abbrechen':'Auswahl'}</button>
-                ${!selectMode?'<button class="btn btn-primary" data-action="showForm" data-args="">+ Neu</button>':''}
+                <button class="btn btn-secondary" onclick="toggleSelectMode()">${selectMode?'Abbrechen':'Auswahl'}</button>
+                ${!selectMode?'<button class="btn btn-primary" onclick="showForm()">+ Neu</button>':''}
             </div>
         </div>
         <div class="card">
@@ -835,7 +709,7 @@ async function geocodeAddress(address){
             </div>
             <div id="tableContainer"></div>
         </div>
-        ${selectMode?`<div class="float-bar"><div style="font-weight:bold;">${selectedIds.size} gewählt</div><button class="btn btn-danger" data-action="deleteBatch" data-args="">Löschen</button><button class="btn btn-primary" data-action="addBatchToTour" data-args="">Zur Tour</button></div>`:''}`;
+        ${selectMode?`<div class="float-bar"><div style="font-weight:bold;">${selectedIds.size} gewählt</div><button class="btn btn-danger" onclick="deleteBatch()">Löschen</button><button class="btn btn-primary" onclick="addBatchToTour()">Zur Tour</button></div>`:''}`;
         renderTable();
     }
 
@@ -866,12 +740,11 @@ async function geocodeAddress(address){
 
         document.getElementById('tableContainer').innerHTML = list.map(c => {
             const isSelected = selectedIds.has(c.id);
-            const clickActionName = selectMode ? 'toggleSelection' : 'showDetail';
-            const clickActionArgs = `${c.id}`;
+            const clickAction = selectMode ? `toggleSelection(${c.id})` : `showDetail(${c.id})`;
             const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
             
             return `
-            <div class="cust-row ${isSelected?'selected':''}" data-action="${clickActionName}" data-args="${clickActionArgs}">
+            <div class="cust-row ${isSelected?'selected':''}" onclick="${clickAction}">
                 ${selectMode?`<div class="check-circle"></div>`:''}
                 <div style="flex:1;">
                     <div style="font-weight:700;">
@@ -882,7 +755,7 @@ async function geocodeAddress(address){
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
                     <div style="font-size:11px; color:#999;">${c.route||''}</div>
-                    ${!selectMode?`<button class="btn btn-danger" style="padding:4px 8px; font-size:10px; z-index:10;" data-action="deleteCustomerDirect" data-args="event, ${c.id}">🗑️</button>`:''}
+                    ${!selectMode?`<button class="btn btn-danger" style="padding:4px 8px; font-size:10px; z-index:10;" onclick="deleteCustomerDirect(event, ${c.id})">🗑️</button>`:''}
                 </div>
             </div>`;
         }).join('') || '<div style="padding:20px; text-align:center;">Keine Ergebnisse</div>';
@@ -892,40 +765,14 @@ async function geocodeAddress(address){
         const c = db.customers.find(x => x.id === id); if(!c) return; 
         const inTour = db.tour.includes(id); 
         
-        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>${r.date}</b><div><span style="cursor:pointer; margin-right:10px; font-size:16px;" data-action="editRep" data-args="${id},${i}">✏️</span><span style="cursor:pointer; color:#ef4444; font-size:16px;" data-action="delRep" data-args="${id},${i}">🗑️</span></div></div><div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" data-action="openImageSelf">`:''}</div>`).join(''); 
+        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>${r.date}</b><div><span style="cursor:pointer; margin-right:10px; font-size:16px;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer; color:#ef4444; font-size:16px;" onclick="delRep(${id},${i})">🗑️</span></div></div><div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
         const todayStr = new Date().toISOString().split('T')[0]; 
-        const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} data-action="toggleTask" data-args="${id},${i}"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#ef4444;cursor:pointer;font-weight:bold;margin-left:5px;" data-action="delTask" data-args="${id},${i}">×</span></div>` }).join(''); 
+        const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} onclick="toggleTask(${id},${i})"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#ef4444;cursor:pointer;font-weight:bold;margin-left:5px;" onclick="delTask(${id},${i})">×</span></div>` }).join(''); 
     
-        
-        // ===== NEU: Tags / Dokumente / Checkliste (offline) =====
-        if(!c.tags) c.tags = [];
-        if(!c.docs) c.docs = [];
-        if(!c.checklist) c.checklist = [];
-
-        const tagsStr = (c.tags||[]).join(', ');
-        const docsHTML = (c.docs||[]).map(d => `
-            <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);">
-              <div style="min-width:0;">
-                <div style="font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${d.name||'Datei'}</div>
-                <div style="font-size:11px; color:var(--text-light);">${new Date(d.ts||Date.now()).toLocaleDateString('de-DE')} • ${(d.type||'').toUpperCase()}</div>
-              </div>
-              <div style="display:flex; gap:6px; flex-shrink:0;">
-                <button class="btn btn-secondary" style="padding:6px 10px;" data-action="openDoc" data-args="${id},'${d.id}'">Öffnen</button>
-                <button class="btn btn-danger" style="padding:6px 10px;" data-action="delDoc" data-args="${id},'${d.id}'">✕</button>
-              </div>
-            </div>
-        `).join('');
-        const checklistHTML = (c.checklist||[]).map((it,ix)=>`
-            <div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px dashed var(--border);">
-              <input type="checkbox" ${it.done?'checked':''} data-action="toggleChecklist" data-args="${id},${ix}">
-              <div style="flex:1; ${it.done?'text-decoration:line-through; color:#999;':''}">${it.text}</div>
-              <span style="cursor:pointer; color:var(--danger); font-weight:800;" data-action="delChecklist" data-args="${id},${ix}">×</span>
-            </div>
-        `).join('');
-const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
+        const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
         document.getElementById('content').innerHTML = `
-        <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" data-action="showCustomers" data-args="">← Zurück</button></div>
+        <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
         
         <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px; align-items:stretch;">
             <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; height:100%; margin:0; border-top: 4px solid var(--brand);">
@@ -936,15 +783,15 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
                             <div style="color:var(--text-light); font-size:14px; margin-top:5px;">${c.address||'-'} | Tour: ${c.route||'-'}</div>
                         </div>
                         <div class="no-print" style="display:flex; gap:5px;">
-                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" data-action="togTour" data-args="${id}">${inTour?'Aus Tour':'In Tour'}</button>
-                            <button class="btn btn-secondary" data-action="showForm" data-args="${id}">✏️</button>
+                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'In Tour'}</button>
+                            <button class="btn btn-secondary" onclick="showForm(${id})">✏️</button>
                         </div>
                     </div>
                 </div>
                 <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
                     <a href="tel:${c.phone}" class="btn btn-secondary btn-full">📞 Anrufen</a>
                     <a href="mailto:${c.email}" class="btn btn-secondary btn-full">✉️ E-Mail</a>
-                    <a href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
+                    <a href="https://maps.google.com/?q=$${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
                 </div>
             </div>
 
@@ -954,7 +801,7 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
                     <input id="newT" placeholder="Aufgabe..." style="margin:0; background:white; font-size:12px;">
                     <div style="display:flex; gap:5px;">
                         <input type="date" id="newTDate" style="margin:0; background:white; font-size:12px; flex:1;">
-                        <button class="btn btn-secondary" data-action="addTask" data-args="${id}" style="padding:5px 10px;">+</button>
+                        <button class="btn btn-secondary" onclick="addTask(${id})" style="padding:5px 10px;">+</button>
                     </div>
                 </div>
                 <div>${taskHTML || '<div style="color:#999;font-size:12px;">Keine Aufgaben</div>'}</div>
@@ -966,48 +813,11 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
                 <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f8fafc;"></div>
                 <div><label>Umsatz</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="Umsatz/Potenzial" onchange="saveDetail(${id})"></div>
                 <div><label>Intervall (Wo)</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
-                <div><label>Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" data-action="saveDetail" data-args="${id}">💾</button></div></div>
+                <div><label>Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
             </div>
         </div>
 
-        
-        <div class="grid-2" style="margin-top:15px;">
-          <div class="card">
-            <h2>🏷️ Tags & Dateien</h2>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <input id="tagsInput" placeholder="Tags, z.B. VIP, Neukunde" value="${tagsStr}" style="flex:1; min-width:220px;">
-              <button class="btn btn-secondary" data-action="saveTags" data-args="${id}">Speichern</button>
-            </div>
-            <div style="margin-top:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <div style="font-weight:700;">Dokumente</div>
-                <button class="btn btn-secondary" data-action="triggerFile" data-target="docIn">+ Datei</button>
-              </div>
-              <input type="file" id="docIn" style="display:none" onchange="addDocFromInput(${id}, this)">
-              <div style="margin-top:8px; max-height:220px; overflow:auto;">
-                ${docsHTML || '<div style="color:var(--text-light); font-size:12px;">Keine Dateien gespeichert.</div>'}
-              </div>
-              <div style="margin-top:8px; font-size:11px; color:var(--text-light);">Hinweis: Dateien werden offline im Browser gespeichert (LocalStorage-Limit beachten).</div>
-            </div>
-          </div>
-
-          <div class="card" style="background:#f8fafc;">
-            <h2>✅ Besuchs-Checkliste</h2>
-            <div style="display:flex; gap:10px;">
-              <input id="chkNew" placeholder="Punkt hinzufügen..." style="flex:1;">
-              <button class="btn btn-secondary" data-action="addChecklist" data-args="${id}">+</button>
-            </div>
-            <div style="margin-top:10px; max-height:240px; overflow:auto;">
-              ${checklistHTML || '<div style="color:var(--text-light); font-size:12px;">Noch keine Checkliste.</div>'}
-            </div>
-            <div style="display:flex; gap:10px; margin-top:12px;">
-              <button class="btn btn-primary btn-full" data-action="reportFromChecklist" data-args="${id}">📝 Bericht aus Checkliste</button>
-              <button class="btn btn-secondary btn-full" data-action="clearChecklist" data-args="${id}">Leeren</button>
-            </div>
-          </div>
-        </div>
-
-<div class="card">
+        <div class="card">
             <h2>Berichte</h2>
             <div class="no-print">
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
@@ -1015,7 +825,7 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
                     <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">📸 Foto <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
                 </div>
                 <textarea id="repTxt" rows="2" placeholder="Ergebnis..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
-                <button class="btn btn-primary btn-full" data-action="addRep" data-args="${id}">Bericht Speichern</button>
+                <button class="btn btn-primary btn-full" onclick="addRep(${id})">Bericht Speichern</button>
             </div>
             <div style="margin-top:20px; max-height:400px; overflow-y:auto;">${reports}</div>
         </div>`; 
@@ -1039,7 +849,7 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
                 <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
                 <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
                 <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
-                <button class="btn btn-primary btn-full" data-action="saveData" data-args="${id}">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" data-action="delData" data-args="${id}">Löschen</button>`:''}
+                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
             </div>
         </div>`;
     }
@@ -1067,11 +877,11 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
         save();showDetail(d.id);
     }
 
-    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" data-action="togTourThenShow" data-args="${id}">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" data-action="saveHomeStart">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" data-action="optTour" data-args="">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" data-action="openMaps" data-args="">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" data-action="clearTourConfirm">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
+    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
-    function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
+    function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
-    function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen</h1><div class="grid-3">${r.map(x=>`<div class="card" data-action="filterRoute" data-args="'${x}'" style="cursor:pointer;text-align:center;"><h2>${x}</h2><div style="color:#666">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
+    function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen</h1><div class="grid-3">${r.map(x=>`<div class="card" onclick="filterRoute('${x}')" style="cursor:pointer;text-align:center;"><h2>${x}</h2><div style="color:#666">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
     
     function filterRoute(r){
         viewState.filterRoute = r; 
@@ -1144,12 +954,12 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
                             <b>${c.name}</b> <span style="font-size:10px; color:#666;">(ID: ${c.id})</span><br>
                             Tour: ${c.route || '-'} | Status: ${c.status}
                         </div>
-                        <button class="btn btn-danger" style="font-size:12px;" data-action="deleteDuplicate" data-args="${c.id}">Löschen</button>
+                        <button class="btn btn-danger" style="font-size:12px;" onclick="deleteDuplicate(${c.id})">Löschen</button>
                     </div>
                 `).join('')}
             </div>`;
         });
-        html = `<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" data-action="showHome" data-args="">← Zurück</button></div>` + html;
+        html = `<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div>` + html;
         document.getElementById('content').innerHTML = html;
     }
 
@@ -1163,12 +973,12 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
     }
 
     // --- CALENDAR LOGIC ---
-    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" data-action="changeCal" data-args="-1">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" data-action="changeCal" data-args="1">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" data-action="openEventModal" data-args="">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" data-action="setCalView" data-view="day">Tag</button><button class="view-btn ${calView==='week'?'active':''}" data-action="setCalView" data-view="week">Woche</button><button class="view-btn ${calView==='month'?'active':''}" data-action="setCalView" data-view="month">Monat</button><button class="view-btn ${calView==='year'?'active':''}" data-action="setCalView" data-view="year">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;"><label style="font-size:10px;font-weight:bold;color:#999;">POOL</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
+    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;"><label style="font-size:10px;font-weight:bold;color:#999;">POOL</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
     function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${i}</b>${getEvts(ds)}</div>`;}con.innerHTML=h+`</div>`;}
     function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
-    function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" data-action="setMonth" data-month="${i}"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
+    function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
     function renderPoolList(){const r=document.getElementById('poolFilter').value;document.getElementById('poolContainer').innerHTML=db.customers.filter(c=>c.status==='aktiv'&&(!r||c.route===r)).map(c=>`<div class="pool-item" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${c.name}</div>`).join('');}
     function changeCal(d){if(calView==='month')currentCalDate.setMonth(currentCalDate.getMonth()+d);else if(calView==='day')currentCalDate.setDate(currentCalDate.getDate()+d);else if(calView==='week')currentCalDate.setDate(currentCalDate.getDate()+(d*7));else currentCalDate.setFullYear(currentCalDate.getFullYear()+d);showCalendar();}
     function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
@@ -1187,849 +997,7 @@ const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' 
         
         save();
     }
-    function getEvts(ds, t) { let html = db.customers.filter(c => { if(!c.nextAppointment || !c.nextAppointment.startsWith(ds)) return false; if(!t) return true; return c.nextAppointment.includes(t); }).map(c => `<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span data-action="showDetail" data-args="${c.id}">${c.nextAppointment.split('T')[1]} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" data-action="delAppt" data-args="${c.id}">×</span></div>`).join(''); if(db.events) { html += db.events.filter(e => { if(!e.start.startsWith(ds)) return false; if(!t) return true; const slotHour = parseInt(t.split(':')[0]); const startHour = parseInt(e.start.split('T')[1].split(':')[0]); const startMin = parseInt(e.start.split('T')[1].split(':')[1]); let endHour = startHour + 1; let endMin = startMin; if(e.end) { endHour = parseInt(e.end.split('T')[1].split(':')[0]); endMin = parseInt(e.end.split('T')[1].split(':')[1]); } const evtStartMins = startHour * 60 + startMin; const evtEndMins = endHour * 60 + endMin; const slotStartMins = slotHour * 60; const slotEndMins = (slotHour + 1) * 60; return evtStartMins < slotEndMins && evtEndMins > slotStartMins; }).map(e => { const s = e.start.split('T')[1]; const end = e.end ? e.end.split('T')[1] : ''; return `<div class="cal-event manual" data-action="openEventModal" data-args="${e.id}"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`; }).join(''); } return html; }
-
-
-/* ============================================================
-   EVENT-DELEGATION + KEYBOARD (CSP-freundlich)
-   - Alle Klicks laufen über data-action / data-args
-   - Kein inline-onclick mehr
-   - Esc schließt Modals / Enter speichert im Termin-Modal
-   ============================================================ */
-(function wireDelegation(){
-  function parseArgs(raw) {
-    if (!raw) return [];
-    const parts = [];
-    let cur = '', q = null;
-    for (let i=0;i<raw.length;i++){
-      const ch = raw[i];
-      if ((ch === '"' || ch === "'")) {
-        if (q === ch) q = null;
-        else if (!q) q = ch;
-        cur += ch; continue;
-      }
-      if (ch === ',' && !q) { parts.push(cur.trim()); cur=''; continue; }
-      cur += ch;
-    }
-    if (cur.trim()) parts.push(cur.trim());
-    return parts.map(p => {
-      if (p === 'this') return null;
-      if ((p.startsWith("'") && p.endsWith("'")) || (p.startsWith('"') && p.endsWith('"'))) return p.slice(1,-1);
-      if (p === 'true') return true;
-      if (p === 'false') return false;
-      if (p === 'null') return null;
-      const n = Number(p);
-      if (!Number.isNaN(n) && p !== '') return n;
-      return p;
-    });
-  }
-
-  document.addEventListener('click', (ev) => {
-    const el = ev.target.closest('[data-action]');
-    if (!el) return;
-
-    const action = el.getAttribute('data-action');
-    const args = parseArgs(el.getAttribute('data-args') || '');
-
-    // Replace legacy 'this' placeholders with element
-    for (let i=0;i<args.length;i++) if (args[i] === null) args[i] = el;
-
-    tr
-/* ============================================================
-   NEUERUNGEN (Offline-Paket)
-   - Agenda (Heute)
-   - Globale Suche
-   - Tags / Dokumente pro Kunde
-   - Besuchs-Checkliste + Bericht-Generator
-   - PIN-Sperre (optional)
-   - Snapshots (Versionen) + Restore
-   ============================================================ */
-
-const SNAP_KEY = 'crm_snapshots_v1';
-const SESSION_UNLOCK_KEY = 'crm_unlocked_v1';
-
-// --- DB Schema erweitern (ohne bestehende Daten zu zerstören) ---
-function ensureNewSchema(){
-  if(!db) db = {};
-  if(!db.customers) db.customers = [];
-  if(!db.expenses) db.expenses = [];
-  if(!db.events) db.events = [];
-  if(!db.security) db.security = { pinEnabled:false, pinHash:'' };
-  if(!db.settings) db.settings = { kmRate: 0.30 };
-
-  db.customers.forEach(c=>{
-    if(!c.tags) c.tags = [];
-    if(!c.docs) c.docs = [];
-    if(!c.checklist) c.checklist = [];
-  });
-  save();
-}
-
-/* -----------------------------
-   PIN-Sperre (optional)
--------------------------------- */
-function isPinLocked(){
-  try{
-    if(!db.security || !db.security.pinEnabled || !db.security.pinHash) return false;
-    return sessionStorage.getItem(SESSION_UNLOCK_KEY) !== '1';
-  }catch(e){ return false; }
-}
-
-function showPinOverlay(){
-  const o = document.getElementById('pinOverlay');
-  const i = document.getElementById('pinInput');
-  const msg = document.getElementById('pinMsg');
-  if(msg){ msg.style.display='none'; msg.textContent=''; }
-  if(o){ o.style.display='flex'; }
-  setTimeout(()=>{ if(i){ i.value=''; i.focus(); } }, 50);
-}
-
-function hidePinOverlay(){
-  const o = document.getElementById('pinOverlay');
-  if(o) o.style.display='none';
-}
-
-async function sha256Hex(str){
-  const enc = new TextEncoder();
-  const data = enc.encode(str);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function unlockWithPin(){
-  const i = document.getElementById('pinInput');
-  const msg = document.getElementById('pinMsg');
-  const pin = (i?.value || '').trim();
-  if(!pin){ if(msg){ msg.textContent='Bitte PIN eingeben.'; msg.style.display='block'; } return; }
-  const h = await sha256Hex(pin);
-  if(h === db.security.pinHash){
-    sessionStorage.setItem(SESSION_UNLOCK_KEY,'1');
-    hidePinOverlay();
-    showHome();
-  } else {
-    if(msg){ msg.textContent='Falsche PIN.'; msg.style.display='block'; }
-    if(i) i.select();
-  }
-}
-
-function pinOverlayHelp(){
-  alert("PIN vergessen?\n\nDa alles offline ist, gibt es keinen Server-Reset.\nWenn du noch Zugriff auf ein Backup hast: Backup importieren.\nOder in localStorage den Key '"+DB_KEY+"' löschen (Achtung: alle Daten weg).");
-}
-
-// In Chrome: Enter im PIN-Feld entsperrt
-document.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter'){
-    const o = document.getElementById('pinOverlay');
-    if(o && o.style.display !== 'none'){
-      unlockWithPin();
-    }
-  }
-});
-
-/* -----------------------------
-   Views: Agenda / Suche / Tools
--------------------------------- */
-function showAgenda(){
-  const todayISO = new Date().toISOString().slice(0,10);
-  const todayDE = new Date().toLocaleDateString('de-DE');
-
-  // Termine (Kunden)
-  const appts = db.customers
-    .filter(c => c.nextAppointment && c.nextAppointment.startsWith(todayISO))
-    .sort((a,b)=>a.nextAppointment.localeCompare(b.nextAppointment))
-    .map(c=>({
-      time: (c.nextAppointment.split('T')[1]||'').slice(0,5) || '',
-      title: c.name,
-      sub: c.address || '',
-      action: `data-action="showDetail" data-args="${c.id}"`
-    }));
-
-  // Manuelle Events (db.events)
-  const evts = (db.events||[])
-    .filter(e => e.start && e.start.startsWith(todayISO))
-    .sort((a,b)=>a.start.localeCompare(b.start))
-    .map(e=>({
-      time: (e.start.split('T')[1]||'').slice(0,5) || '',
-      title: e.title || 'Termin',
-      sub: e.note || '',
-      action: `data-action="openEventModal" data-args="${e.id}"`
-    }));
-
-  // Aufgaben (heute/überfällig)
-  const todayStr = todayISO;
-  const tasks = [];
-  db.customers.forEach(c=>{
-    (c.tasks||[]).forEach((t,ix)=>{
-      if(t.done) return;
-      const due = t.dueDate || '';
-      if(!due || due <= todayStr){
-        tasks.push({
-          due,
-          text: t.text || 'Aufgabe',
-          customerId: c.id,
-          customerName: c.name
-        });
-      }
-    });
-  });
-  tasks.sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
-
-  const itemsHTML = (arr, emptyText) => arr.length
-    ? arr.map(x=>`
-        <div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
-          <div style="width:56px; font-weight:800; color:var(--text-light);">${x.time||'--:--'}</div>
-          <div style="flex:1; min-width:0;">
-            <div style="font-weight:800;" ${x.action||''}>${x.title}</div>
-            <div style="font-size:12px; color:var(--text-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${x.sub||''}</div>
-          </div>
-        </div>
-      `).join('')
-    : `<div style="color:var(--text-light); font-size:13px; padding:10px 0;">${emptyText}</div>`;
-
-  const tasksHTML = tasks.length
-    ? tasks.map(t=>`
-        <div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
-          <div style="width:90px; font-weight:800; color:${t.due && t.due < todayStr ? 'var(--danger)' : 'var(--text-light)'};">
-            ${t.due ? t.due.split('-').reverse().join('.') : 'ohne Datum'}
-          </div>
-          <div style="flex:1; min-width:0;">
-            <div style="font-weight:800;">${t.text}</div>
-            <div style="font-size:12px; color:var(--text-light); cursor:pointer;" data-action="showDetail" data-args="${t.customerId}">👤 ${t.customerName}</div>
-          </div>
-        </div>
-      `).join('')
-    : `<div style="color:var(--text-light); font-size:13px; padding:10px 0;">Keine offenen Aufgaben.</div>`;
-
-  document.getElementById('content').innerHTML = `
-    <h1>🗓️ Agenda – ${todayDE}</h1>
-    <div class="grid-2">
-      <div class="card">
-        <h2>Termine (Kunden)</h2>
-        ${itemsHTML(appts, 'Keine Kundentermine heute.')}
-        <div style="margin-top:12px;"><button class="btn btn-secondary btn-full" data-action="nav" data-args="'calendar', null">📅 Kalender öffnen</button></div>
-      </div>
-      <div class="card">
-        <h2>Manuelle Termine</h2>
-        ${itemsHTML(evts, 'Keine manuellen Termine heute.')}
-        <div style="margin-top:12px; display:flex; gap:10px;">
-          <button class="btn btn-primary btn-full" data-action="openEventModal" data-args="">+ Neuer Termin</button>
-          <button class="btn btn-secondary btn-full" data-action="nav" data-args="'calendar', null">Kalender</button>
-        </div>
-      </div>
-    </div>
-    <div class="card" style="margin-top:15px;">
-      <h2>✅ Aufgaben (heute/überfällig)</h2>
-      ${tasksHTML}
-      <div style="margin-top:12px;"><button class="btn btn-secondary btn-full" data-action="showAllTasks" data-args="">Alle Aufgaben anzeigen</button></div>
-    </div>
-  `;
-}
-
-function showSearch(){
-  document.getElementById('content').innerHTML = `
-    <h1>🔎 Globale Suche</h1>
-    <div class="card">
-      <input id="globalSearchInput" placeholder="Suche in Kunden, Aufgaben, Berichten, Spesen…" style="width:100%; font-size:15px;">
-      <div id="globalSearchResults" style="margin-top:12px;"></div>
-    </div>
-  `;
-  const inp = document.getElementById('globalSearchInput');
-  const out = document.getElementById('globalSearchResults');
-  const render = () => {
-    const q = (inp.value||'').trim().toLowerCase();
-    if(!q){ out.innerHTML = '<div style="color:var(--text-light); font-size:13px;">Tippe, um Ergebnisse zu sehen.</div>'; return; }
-
-    const hits = [];
-
-    db.customers.forEach(c=>{
-      const hay = [c.name,c.address,c.phone,c.email,c.nr,c.route,(c.tags||[]).join(' ')].join(' ').toLowerCase();
-      if(hay.includes(q)) hits.push({type:'Kunde', title:c.name, sub:c.address||'', action:`data-action="showDetail" data-args="${c.id}"`});
-      (c.tasks||[]).forEach((t,ix)=>{
-        const ht = (t.text||'').toLowerCase();
-        if(ht.includes(q)) hits.push({type:'Aufgabe', title:t.text, sub:`👤 ${c.name}`, action:`data-action="showDetail" data-args="${c.id}"`});
-      });
-      (c.reports||[]).forEach((r,ix)=>{
-        const hr = (r.text||'').toLowerCase();
-        if(hr.includes(q)) hits.push({type:'Bericht', title:`${c.name} • ${r.date}`, sub:(r.text||'').slice(0,120), action:`data-action="showDetail" data-args="${c.id}"`});
-      });
-    });
-
-    (db.expenses||[]).forEach(e=>{
-      const he = [e.note,e.category,String(e.amount),e.date].join(' ').toLowerCase();
-      if(he.includes(q)) hits.push({type:'Spese', title:`${e.note||'Spese'} • ${parseFloat(e.amount||0).toFixed(2)} €`, sub:e.date||'', action:`data-action="nav" data-args="'expenses', null"`});
-    });
-
-    if(!hits.length){ out.innerHTML = '<div style="color:var(--text-light); font-size:13px;">Keine Treffer.</div>'; return; }
-
-    out.innerHTML = hits.slice(0,200).map(h=>`
-      <div style="padding:12px 0; border-bottom:1px solid var(--border);">
-        <div style="font-size:11px; color:var(--text-light); font-weight:800;">${h.type}</div>
-        <div style="font-weight:900; cursor:pointer;" ${h.action}>${escapeHtml(h.title)}</div>
-        <div style="font-size:12px; color:var(--text-light); white-space:pre-wrap;">${escapeHtml(h.sub||'')}</div>
-      </div>
-    `).join('');
-  };
-  inp.addEventListener('input', render);
-  render();
-}
-
-// Hilfsfunktion für sichere Anzeige
-function escapeHtml(s){
-  return String(s ?? '').replace(/[&<>"']/g, (c)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-}
-
-function showTools(){
-  const snaps = loadSnapshots();
-  const pinEnabled = !!(db.security && db.security.pinEnabled && db.security.pinHash);
-  document.getElementById('content').innerHTML = `
-    <h1>🧰 Tools</h1>
-
-    <div class="grid-2">
-      <div class="card">
-        <h2>🔒 PIN-Sperre</h2>
-        <div style="color:var(--text-light); font-size:13px; line-height:1.4;">
-          PIN schützt dein CRM lokal in diesem Browser. Kein Server-Reset möglich.
-        </div>
-        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-          <input id="pinSetInput" type="password" inputmode="numeric" placeholder="Neue PIN setzen" style="flex:1; min-width:220px;">
-          <button class="btn btn-primary" data-action="setPin" data-args="">PIN speichern</button>
-        </div>
-        <div style="margin-top:10px; display:flex; gap:10px;">
-          <button class="btn btn-secondary btn-full" data-action="disablePin" data-args="" ${pinEnabled?'':'disabled'}>PIN deaktivieren</button>
-          <button class="btn btn-secondary btn-full" data-action="lockNow" data-args="" ${pinEnabled?'':'disabled'}>Jetzt sperren</button>
-        </div>
-        <div style="margin-top:10px; font-size:12px; color:${pinEnabled?'var(--success)':'var(--text-light)'}; font-weight:800;">
-          Status: ${pinEnabled?'aktiv':'inaktiv'}
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>🕒 Snapshots</h2>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <input id="snapLabel" placeholder="Name (z.B. 'vor Import')" style="flex:1; min-width:220px;">
-          <button class="btn btn-primary" data-action="createSnapshot" data-args="">Snapshot erstellen</button>
-        </div>
-        <div style="margin-top:12px; max-height:320px; overflow:auto;">
-          ${snaps.length ? snaps.map(s=>`
-            <div style="display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);">
-              <div style="min-width:0;">
-                <div style="font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.label || 'Snapshot')}</div>
-                <div style="font-size:12px; color:var(--text-light);">${new Date(s.ts).toLocaleString('de-DE')}</div>
-              </div>
-              <div style="display:flex; gap:8px; flex-shrink:0;">
-                <button class="btn btn-secondary" style="padding:6px 10px;" data-action="restoreSnapshot" data-args="'${s.id}'">Restore</button>
-                <button class="btn btn-danger" style="padding:6px 10px;" data-action="deleteSnapshot" data-args="'${s.id}'">✕</button>
-              </div>
-            </div>
-          `).join('') : `<div style="color:var(--text-light); font-size:13px;">Noch keine Snapshots.</div>`}
-        </div>
-        <div style="margin-top:10px; font-size:11px; color:var(--text-light);">Snapshots werden separat gespeichert. Bei Problemen kannst du jederzeit zu einem Snapshot zurück.</div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:15px;">
-      <h2>📈 Spesen-Übersicht (Monat)</h2>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <select id="expMonthSel" style="min-width:200px;"></select>
-        <button class="btn btn-secondary" data-action="renderExpenseChart" data-args="">Aktualisieren</button>
-      </div>
-      <canvas id="expChart" width="900" height="260" style="width:100%; margin-top:12px; background:white; border:1px solid var(--border); border-radius:10px;"></canvas>
-      <div id="expChartSum" style="margin-top:10px; font-weight:900;"></div>
-    </div>
-  `;
-
-  initExpenseMonthSelect();
-  renderExpenseChart();
-}
-
-function initExpenseMonthSelect(){
-  const sel = document.getElementById('expMonthSel');
-  if(!sel) return;
-  const months = {};
-  (db.expenses||[]).forEach(e=>{
-    const d = parseExpenseDate(e.date);
-    if(!d) return;
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    months[key] = true;
-  });
-  const keys = Object.keys(months).sort().reverse();
-  const cur = new Date();
-  const curKey = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
-  if(!keys.includes(curKey)) keys.unshift(curKey);
-  sel.innerHTML = keys.map(k=>{
-    const [y,m] = k.split('-');
-    return `<option value="${k}">${m}.${y}</option>`;
-  }).join('');
-}
-
-function parseExpenseDate(deStr){
-  if(!deStr) return null;
-  // unterstützt "DD.MM.YYYY" oder ISO
-  if(deStr.includes('.')){
-    const p = deStr.split('.');
-    if(p.length===3){
-      const [dd,mm,yy]=p.map(x=>parseInt(x,10));
-      if(!dd||!mm||!yy) return null;
-      return new Date(yy, mm-1, dd);
-    }
-  }
-  const d = new Date(deStr);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function renderExpenseChart(){
-  const sel = document.getElementById('expMonthSel');
-  const c = document.getElementById('expChart');
-  const sumEl = document.getElementById('expChartSum');
-  if(!sel || !c || !c.getContext) return;
-
-  const key = sel.value;
-  const [yS,mS] = key.split('-');
-  const y = parseInt(yS,10), m = parseInt(mS,10);
-
-  const cats = {};
-  let total = 0;
-  (db.expenses||[]).forEach(e=>{
-    const d = parseExpenseDate(e.date);
-    if(!d) return;
-    if(d.getFullYear()!==y || (d.getMonth()+1)!==m) return;
-    const cat = (e.category||'Sonstiges');
-    const amt = parseFloat(e.amount||0) || 0;
-    cats[cat] = (cats[cat]||0) + amt;
-    total += amt;
-  });
-
-  const entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0,0,c.width,c.height);
-
-  // simple Bar-Chart (offline, ohne libs)
-  const padL=40, padT=20, padB=30, padR=20;
-  const w=c.width-padL-padR, h=c.height-padT-padB;
-  const max = Math.max(...entries.map(e=>e[1]), 1);
-
-  ctx.font='12px system-ui';
-  ctx.fillText('€', 10, 18);
-
-  entries.slice(0,10).forEach((e,ix)=>{
-    const x = padL + (w/10)*ix + 6;
-    const barW = (w/10) - 12;
-    const barH = Math.round((e[1]/max)*h);
-    const y0 = padT + (h - barH);
-    ctx.fillRect(x, y0, barW, barH);
-    ctx.save();
-    ctx.translate(x, padT+h+14);
-    ctx.rotate(-Math.PI/6);
-    ctx.fillText(e[0].slice(0,10), 0, 0);
-    ctx.restore();
-  });
-
-  if(sumEl) sumEl.textContent = `Summe ${m}.${y}: ${total.toFixed(2)} € (${entries.length} Kategorien)`;
-}
-
-/* -----------------------------
-   Tags / Dokumente / Checkliste
--------------------------------- */
-function saveTags(id){
-  const c = db.customers.find(x=>x.id===id);
-  if(!c) return;
-  const inp = document.getElementById('tagsInput');
-  const raw = (inp?.value || '').split(',').map(x=>x.trim()).filter(Boolean);
-  c.tags = Array.from(new Set(raw));
-  save();
-  showDetail(id);
-}
-
-function addDocFromInput(id, input){
-  const c = db.customers.find(x=>x.id===id);
-  if(!c) return;
-  const f = input?.files?.[0];
-  if(!f) return;
-  // Warnung bei großen Dateien (LocalStorage Limit)
-  if(f.size > 3_000_000){
-    if(!confirm("Datei ist größer als ~3MB. LocalStorage kann voll laufen.\nTrotzdem speichern?")) return;
-  }
-  const r = new FileReader();
-  r.onload = e=>{
-    const dataUrl = e.target.result;
-    const doc = { id: String(Date.now())+Math.random().toString(16).slice(2), name: f.name, type: f.type || 'application/octet-stream', data: dataUrl, ts: Date.now() };
-    c.docs = c.docs || [];
-    c.docs.unshift(doc);
-    save();
-    showDetail(id);
-  };
-  r.readAsDataURL(f);
-}
-
-function openDoc(id, docId){
-  const c = db.customers.find(x=>x.id===id);
-  const d = (c?.docs||[]).find(x=>x.id===docId);
-  if(!d) return;
-  const w = window.open('', '_blank', 'noopener');
-  if(!w) return alert('Popup blockiert. Bitte Popups erlauben.');
-  // simple viewer
-  w.document.write(`<title>${escapeHtml(d.name||'Dokument')}</title>`);
-  if((d.type||'').startsWith('image/')){
-    w.document.write(`<img src="${d.data}" style="max-width:100%; height:auto;">`);
-  } else if((d.type||'') === 'application/pdf'){
-    w.document.write(`<iframe src="${d.data}" style="width:100%; height:100vh; border:0;"></iframe>`);
-  } else {
-    w.document.write(`<a download="${escapeHtml(d.name||'download')}" href="${d.data}">Download</a>`);
-  }
-}
-
-function delDoc(id, docId){
-  const c = db.customers.find(x=>x.id===id);
-  if(!c) return;
-  if(!confirm('Dokument löschen?')) return;
-  c.docs = (c.docs||[]).filter(x=>x.id!==docId);
-  save();
-  showDetail(id);
-}
-
-function addChecklist(id){
-  const c = db.customers.find(x=>x.id===id);
-  const inp = document.getElementById('chkNew');
-  const txt = (inp?.value || '').trim();
-  if(!c || !txt) return;
-  c.checklist = c.checklist || [];
-  c.checklist.push({text: txt, done:false});
-  if(inp) inp.value='';
-  save();
-  showDetail(id);
-}
-
-function toggleChecklist(id, ix){
-  const c = db.customers.find(x=>x.id===id);
-  if(!c || !c.checklist || !c.checklist[ix]) return;
-  c.checklist[ix].done = !c.checklist[ix].done;
-  save();
-  showDetail(id);
-}
-
-function delChecklist(id, ix){
-  const c = db.customers.find(x=>x.id===id);
-  if(!c || !c.checklist) return;
-  c.checklist.splice(ix,1);
-  save();
-  showDetail(id);
-}
-
-function clearChecklist(id){
-  const c = db.customers.find(x=>x.id===id);
-  if(!c) return;
-  if(!confirm('Checkliste leeren?')) return;
-  c.checklist = [];
-  save();
-  showDetail(id);
-}
-
-function reportFromChecklist(id){
-  const c = db.customers.find(x=>x.id===id);
-  if(!c) return;
-  const items = (c.checklist||[]);
-  if(!items.length) return alert('Checkliste ist leer.');
-  const lines = items.map(it=>`${it.done ? '[x]' : '[ ]'} ${it.text}`);
-  const txt = `Besuch – Checkliste\n\n` + lines.join('\n');
-  // Report hinzufügen
-  const d = new Date().toLocaleDateString('de-DE');
-  c.reports = c.reports || [];
-  c.reports.unshift({date:d, text:txt, img:null});
-  save();
-  showDetail(id);
-}
-
-/* -----------------------------
-   Snapshots
--------------------------------- */
-function loadSnapshots(){
-  try { return JSON.parse(localStorage.getItem(SNAP_KEY) || '[]'); } catch { return []; }
-}
-function saveSnapshots(snaps){
-  try { localStorage.setItem(SNAP_KEY, JSON.stringify(snaps)); } catch {}
-}
-function createSnapshot(){
-  const label = (document.getElementById('snapLabel')?.value || '').trim();
-  const snaps = loadSnapshots();
-  const s = { id: String(Date.now())+Math.random().toString(16).slice(2), ts: Date.now(), label: label || 'Snapshot', data: JSON.stringify(db) };
-  snaps.unshift(s);
-  // Limit (z.B. 25) um Storage zu schonen
-  const limited = snaps.slice(0,25);
-  saveSnapshots(limited);
-  alert('Snapshot erstellt.');
-  showTools();
-}
-function restoreSnapshot(id){
-  const snaps = loadSnapshots();
-  const s = snaps.find(x=>x.id===id);
-  if(!s) return alert('Snapshot nicht gefunden.');
-  if(!confirm('Snapshot wiederherstellen? Aktueller Stand geht verloren (aber du kannst vorher einen Snapshot erstellen).')) return;
-  try{
-    db = JSON.parse(s.data);
-    ensureNewSchema();
-    save();
-    alert('Wiederhergestellt.');
-    showHome();
-  }catch(e){
-    console.error(e);
-    alert('Snapshot beschädigt.');
-  }
-}
-function deleteSnapshot(id){
-  if(!confirm('Snapshot löschen?')) return;
-  const snaps = loadSnapshots().filter(x=>x.id!==id);
-  saveSnapshots(snaps);
-  showTools();
-}
-
-/* -----------------------------
-   PIN setzen / deaktivieren
--------------------------------- */
-async function setPin(){
-  const v = (document.getElementById('pinSetInput')?.value || '').trim();
-  if(v.length < 3) return alert('Bitte eine PIN mit mindestens 3 Zeichen setzen.');
-  const h = await sha256Hex(v);
-  db.security = db.security || {};
-  db.security.pinEnabled = true;
-  db.security.pinHash = h;
-  save();
-  alert('PIN gespeichert.');
-  showTools();
-}
-
-function disablePin(){
-  if(!confirm('PIN wirklich deaktivieren?')) return;
-  db.security = db.security || {};
-  db.security.pinEnabled = false;
-  db.security.pinHash = '';
-  try{ sessionStorage.removeItem(SESSION_UNLOCK_KEY); }catch(e){}
-  save();
-  alert('PIN deaktiviert.');
-  showTools();
-}
-
-function lockNow(){
-  if(!db.security || !db.security.pinEnabled || !db.security.pinHash) return;
-  try{ sessionStorage.removeItem(SESSION_UNLOCK_KEY); }catch(e){}
-  showPinOverlay();
-}
-
-try {
-      if (typeof window[action] === 'function') {
-        window[action](...args, el);
-      } else {
-        console.warn('Unbekannte Aktion:', action, el);
-      }
-    } catch (e) {
-      console.error('Action-Fehler:', action, e);
-      alert('Fehler bei Aktion: ' + action + '\n' + (e && e.message ? e.message : e));
-    }
-
-    if (el.tagName === 'BUTTON' || el.tagName === 'A') ev.preventDefault();
-  }, {passive:false});
-
-  // Keyboard UX
-  document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') {
-      const evt = document.getElementById('eventModal');
-      if (evt && evt.style.display === 'flex') { evt.style.display = 'none'; return; }
-      const tm = document.getElementById('timeModal');
-      if (tm && tm.style.display === 'flex') { tm.style.display = 'none'; return; }
-    }
-    if (ev.key === 'Enter') {
-      const evt = document.getElementById('eventModal');
-      if (evt && evt.style.display === 'flex') {
-        const tag = (ev.target && ev.target.tagName || '').toLowerCase();
-        if (tag !== 'textarea') {
-          ev.preventDefault();
-          if (typeof window.saveManualEvent === 'function') window.saveManualEvent();
-        }
-      }
-    }
-  });
-
-  // Basic focus management when opening modals (if functions exist)
-  const _openEventModal = window.openEventModal;
-  if (typeof _openEventModal === 'function') {
-    window.openEventModal = function(...a){
-      _openEventModal.apply(this, a);
-      setTimeout(()=>{ const first = document.querySelector('#eventModal input, #eventModal select, #eventModal textarea, #eventModal button'); if(first) first.focus(); }, 0);
-    };
-  }
-})();
-
-
-
-/* ============================================================
-   DELEGATION-HILFSFUNKTIONEN (Actions)
-   ============================================================ */
-
-// Öffnet versteckte File-Inputs (CSV/Backup/Logo/Belegbilder)
-function triggerFile(_unused, el){
-  const target = el.getAttribute('data-target');
-  const inp = target ? document.getElementById(target) : null;
-  if (inp) inp.click();
-}
-
-// Drucken
-function printPage(){ window.print(); }
-
-// Bild öffnen (statt inline window.open(this.src))
-function openImageSelf(_unused, el){
-  // CSP-freundlicher: new tab wird trotzdem erlaubt, aber ohne inline handler
-  const img = el;
-  if (img && img.src) window.open(img.src, '_blank', 'noopener');
-}
-
-// Flag setzen (z.B. stopGeocoding=true)
-function setFlag(_unused, el){
-  const flag = el.getAttribute('data-flag');
-  const value = el.getAttribute('data-value');
-  if (!flag) return;
-  window[flag] = (value === 'true') ? true : (value === 'false' ? false : value);
-}
-
-// Event-Modal schließen
-function closeEventModal(){
-  const m = document.getElementById('eventModal');
-  if (m) m.style.display = 'none';
-}
-
-// Kalender-Ansicht setzen
-function setCalView(_unused, el){
-  const v = el.getAttribute('data-view');
-  if (!v) return;
-  window.calView = v;
-  if (typeof window.showCalendar === 'function') window.showCalendar();
-}
-
-// Monat setzen (Kalender)
-function setMonth(_unused, el){
-  const m = Number(el.getAttribute('data-month'));
-  if (Number.isNaN(m)) return;
-  if (window.currentCalDate) window.currentCalDate.setMonth(m);
-  window.calView = 'month';
-  if (typeof window.showCalendar === 'function') window.showCalendar();
-}
-
-// Tour leeren (mit confirm)
-function clearTourConfirm(){
-  if (!confirm('Leeren?')) return;
-  if (!window.db) return;
-  db.tour = [];
-  if (typeof window.save === 'function') save();
-  if (typeof window.showTour === 'function') showTour();
-}
-
-// Logo löschen (mit confirm)
-function deleteLogoConfirm(){
-  if (!confirm('Logo löschen?')) return;
-  if (!window.db) return;
-  db.logo = null;
-  if (typeof window.save === 'function') save();
-  if (typeof window.updateLogoUI === 'function') updateLogoUI();
-}
-
-// Home/Start für Tour speichern
-function saveHomeStart(){
-  if (!window.db) return;
-  const inp = document.getElementById('t-start');
-  db.home = inp ? inp.value : '';
-  if (typeof window.save === 'function') save();
-  alert('Gespeichert');
-}
-
-// Tour togglen + neu anzeigen
-function togTourThenShow(id){
-  if (typeof window.togTour === 'function') window.togTour(id);
-  if (typeof window.showTour === 'function') window.showTour();
-}
-
-
+    function getEvts(ds, t) { let html = db.customers.filter(c => { if(!c.nextAppointment || !c.nextAppointment.startsWith(ds)) return false; if(!t) return true; return c.nextAppointment.includes(t); }).map(c => `<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${c.nextAppointment.split('T')[1]} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`).join(''); if(db.events) { html += db.events.filter(e => { if(!e.start.startsWith(ds)) return false; if(!t) return true; const slotHour = parseInt(t.split(':')[0]); const startHour = parseInt(e.start.split('T')[1].split(':')[0]); const startMin = parseInt(e.start.split('T')[1].split(':')[1]); let endHour = startHour + 1; let endMin = startMin; if(e.end) { endHour = parseInt(e.end.split('T')[1].split(':')[0]); endMin = parseInt(e.end.split('T')[1].split(':')[1]); } const evtStartMins = startHour * 60 + startMin; const evtEndMins = endHour * 60 + endMin; const slotStartMins = slotHour * 60; const slotEndMins = (slotHour + 1) * 60; return evtStartMins < slotEndMins && evtEndMins > slotStartMins; }).map(e => { const s = e.start.split('T')[1]; const end = e.end ? e.end.split('T')[1] : ''; return `<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`; }).join(''); } return html; }
 </script>
-
-<script>
-/* ============================================================
-   ACTION DISPATCHER (Fix)
-   - sorgt dafür, dass Buttons mit data-action in jedem Browser
-     zuverlässig funktionieren.
-   - Übergibt automatisch das geklickte Element an Handler, die
-     ein Element erwarten (z.B. setCalView, setMonth, ...).
-   - Stoppt alte/defekte Handler (capture + stopPropagation).
-   ============================================================ */
-(function(){
-  // parseArgs fallback, falls die Hauptfunktion aus irgendeinem Grund nicht im Scope ist
-  function parseArgsFallback(s){
-    if(!s) return [];
-    try { return JSON.parse(s); } catch {}
-    // Komma-separiert: 1,2,"x"
-    return String(s).split(',').map(x=>x.trim()).filter(Boolean).map(x=>{
-      if(x === 'this') return null;
-      if(x === 'true') return true;
-      if(x === 'false') return false;
-      const n = Number(x);
-      if(!Number.isNaN(n) && x !== '') return n;
-      return x.replace(/^["']|["']$/g,'');
-    });
-  }
-
-  function getArgs(el){
-    const raw = el.getAttribute('data-args') || '';
-    try {
-      if (typeof window.parseArgs === 'function') return window.parseArgs(raw);
-    } catch {}
-    return parseArgsFallback(raw);
-  }
-
-  document.addEventListener('click', function(ev){
-    const el = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
-    if(!el) return;
-
-    // Wir übernehmen die Aktion komplett, damit kein anderer (fehlerhafter)
-    // Listener sie nochmal ausführt.
-    ev.preventDefault();
-    ev.stopPropagation();
-
-    const action = el.getAttribute('data-action');
-    const fn = window[action];
-
-    if (typeof fn !== 'function') {
-      // Soft fail: nicht hart crashen
-      try { alert(`Fehler bei Action: ${action}\nFunktion nicht gefunden.`); } catch {}
-      return;
-    }
-
-    let args = getArgs(el);
-
-    // "this" Platzhalter (als null) durch das Element ersetzen
-    args = (args || []).map(a => (a === null ? el : a));
-
-    // Wenn keine Args angegeben sind, aber die Funktion ein Element erwartet:
-    // Konvention in deinem Code: ( _unused, el )
-    if (args.length === 0) {
-      // setCalView/setMonth/... brauchen el als 2. Parameter
-      fn(undefined, el);
-      return;
-    }
-
-    // Wenn Args vorhanden sind, aber kein Element mitgegeben wurde und fn erwartet 2+:
-    if (fn.length >= 2 && args.length === 1) {
-      fn(args[0], el);
-      return;
-    }
-
-    fn.apply(null, args);
-  }, true); // capture => läuft vor anderen Listenern
-
-  // Export/Bind: manche Funktionen können (je nach Block-Scope) nicht global sein.
-  // Wir binden sie hier explizit auf window, falls vorhanden.
-  try {
-    if (typeof showAgenda === 'function') window.showAgenda = showAgenda;
-    if (typeof showSearch === 'function') window.showSearch = showSearch;
-    if (typeof showTools === 'function') window.showTools = showTools;
-  } catch {}
-})();
-</script>
-
 </body>
 </html>
