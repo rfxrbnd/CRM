@@ -274,6 +274,24 @@ async function geocodeAddress(address){
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
     let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
+
+    /* ============================================================
+       i18n / Text-Helfer
+       - Im ursprünglichen UI gab es Aufrufe wie tr('...').
+       - Falls kein Übersetzungs-Layer vorhanden ist, ist tr() eine Identity-Funktion.
+       ============================================================ */
+    function tr(s){ return String(s ?? ''); }
+
+    /* ============================================================
+       PIN-Sperre – Guard
+       - Stellt sicher, dass isPinLocked() existiert, bevor onload läuft.
+       ============================================================ */
+    function isPinLocked(){
+        try{
+            if(!db.security || !db.security.pinEnabled || !db.security.pinHash) return false;
+            return sessionStorage.getItem('crm_pin_unlocked_v1') !== '1';
+        }catch(e){ return false; }
+    }
     // ===== NEU: Schema-Upgrade (damit neue Features mit alten Daten laufen) =====
     // Safari/Chrome-safe: Früh definieren, damit Startlogik es garantiert findet.
     function ensureNewSchema() {
