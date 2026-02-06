@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AD Board v123 - Layout Fix</title>
+    <title>AD Board v123 - Umsatz Layout</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -72,9 +72,8 @@
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        /* NEW GRID 4 FOR DETAIL BAR */
-        .grid-4-special { display: grid; grid-template-columns: 1.5fr 1.5fr 0.8fr 2fr; gap: 15px; }
-
+        .grid-4-custom { display: grid; grid-template-columns: 1.5fr 1.5fr 0.5fr 1fr; gap: 10px; align-items: end; }
+        
         .cust-row { display: flex; align-items: center; padding: 14px; background: #fff; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.1s; justify-content: space-between; }
         .cust-row:hover { background: #f8fafc; }
         .cust-row.selected { background: #fffbeb; border-color: var(--brand); }
@@ -133,7 +132,7 @@
             .cal-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; height: auto; }
             .cal-pool { height: 150px; margin-bottom: 20px; }
             .cal-main { height: 500px; }
-            .grid-2, .grid-3, .grid-4-special { grid-template-columns: 1fr; }
+            .grid-2, .grid-3, .grid-4-custom { grid-template-columns: 1fr; }
         }
         @media print {
             #sidebar, #menu-toggle, .no-print, .btn, .nav-menu, .del-x, .float-bar { display: none !important; }
@@ -209,7 +208,7 @@
 <div id="main"><div id="content" class="content-wrap"></div></div>
 
 <script>
-    const DB_KEY = 'raphael_crm_v123_layout';
+    const DB_KEY = 'raphael_crm_v122_revenue';
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
     let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
@@ -229,8 +228,7 @@
             const current = JSON.parse(localStorage.getItem(DB_KEY));
             if (current) db = current;
             else {
-                // Try legacy load
-                const legacy = JSON.parse(localStorage.getItem('raphael_crm_v122_revenue')) || JSON.parse(localStorage.getItem('raphael_crm_v121_visualcat'));
+                const legacy = JSON.parse(localStorage.getItem('raphael_crm_v121_visualcat')) || JSON.parse(localStorage.getItem('raphael_crm_v120_fixedcal'));
                 if(legacy) { db = legacy; save(); }
             }
         } catch(e) { console.error(e); }
@@ -239,7 +237,6 @@
         if(!db.events) db.events = [];
         if(!db.customers) db.customers = [];
         
-        // --- MIGRATION: LÖSCHEN DER ALTEN PRODUKTE ---
         if(!db.meta_revenue_migrated) {
             db.customers.forEach(c => {
                 c.products = ""; 
@@ -740,7 +737,6 @@
         document.getElementById('tableContainer').innerHTML = list.map(c => {
             const isSelected = selectedIds.has(c.id);
             const clickAction = selectMode ? `toggleSelection(${c.id})` : `showDetail(${c.id})`;
-            // Badge Logik
             const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
             
             return `
@@ -771,32 +767,32 @@
     
         const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
-        // NEW LAYOUT
+        // Umbau Layout: Grid mit "stretch" damit die Boxen gleich hoch sind
         document.getElementById('content').innerHTML = `
         <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
         
         <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px; align-items:stretch;">
-            <div class="card" style="border-top: 4px solid var(--brand); height:100%; display:flex; flex-direction:column; justify-content:space-between;">
+            <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; height:100%; margin:0; border-top: 4px solid var(--brand);">
                 <div>
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:15px; margin-bottom:20px;">
                         <div style="flex:1;">
                             <h1 style="margin:0;">${c.name} <span class="cat-badge ${badgeClass}" style="font-size:14px; vertical-align:middle;">${c.category}</span></h1>
                             <div style="color:var(--text-light); font-size:14px; margin-top:5px;">${c.address||'-'} | Tour: ${c.route||'-'}</div>
                         </div>
-                        <div class="no-print" style="display:flex; gap:5px; align-items:flex-start;">
+                        <div class="no-print" style="display:flex; gap:5px;">
                             <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'In Tour'}</button>
                             <button class="btn btn-secondary" onclick="showForm(${id})">✏️</button>
                         </div>
                     </div>
                 </div>
-                <div class="grid-3 no-print" style="margin-top:auto;">
+                <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
                     <a href="tel:${c.phone}" class="btn btn-secondary btn-full">📞 Anrufen</a>
                     <a href="mailto:${c.email}" class="btn btn-secondary btn-full">✉️ E-Mail</a>
                     <a href="https://maps.google.com/?q=${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
                 </div>
             </div>
-            
-            <div class="card" style="height:100%; max-height:400px; overflow-y:auto; background:#fffbeb; border:1px solid #fcd34d;">
+
+            <div class="card" style="height:100%; margin:0; overflow-y:auto; background:#fffbeb; border:1px solid #fcd34d;">
                 <h4 style="margin:0 0 10px 0;">Aufgaben</h4>
                 <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;">
                     <input id="newT" placeholder="Aufgabe..." style="margin:0; background:white; font-size:12px;">
@@ -810,26 +806,11 @@
         </div>
 
         <div class="card" style="margin-top:15px;">
-            <div class="grid-4-special" style="align-items:end;">
-                <div>
-                    <label>ANSPRECHPARTNER</label>
-                    <div style="font-weight:700; padding:12px 0;">${c.contact||'-'}</div>
-                </div>
-                <div>
-                    <label>UMSATZ / POTENZIAL</label>
-                    <input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" onchange="saveDetail(${id})" placeholder="z.B. 50k p.a.">
-                </div>
-                <div>
-                    <label>INTERVALL (WO)</label>
-                    <input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})">
-                </div>
-                <div>
-                    <label>TERMIN</label>
-                    <div style="display:flex; gap:5px;">
-                        <input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;">
-                        <button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button>
-                    </div>
-                </div>
+            <div class="grid-4-custom">
+                <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f8fafc;"></div>
+                <div><label>Umsatz</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="Umsatz/Potenzial" onchange="saveDetail(${id})"></div>
+                <div><label>Intervall (Wo)</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
+                <div><label>Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
             </div>
         </div>
 
@@ -864,7 +845,7 @@
                 <label>Adresse</label><input id="f_adr" value="${c.address||''}" placeholder="Straße, PLZ, Ort">
                 <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
                 <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
-                <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial, wichtige Notizen...">
+                <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
                 <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
             </div>
         </div>`;
@@ -883,7 +864,7 @@
             contact:document.getElementById('f_con').value,
             phone:document.getElementById('f_tel').value,
             email:document.getElementById('f_mail').value,
-            products:document.getElementById('f_prod').value, 
+            products:document.getElementById('f_prod').value, // Used for Revenue now
             nextAppointment:id?db.customers.find(x=>x.id===id).nextAppointment:'',
             reports:id?db.customers.find(x=>x.id===id).reports:[],
             visitInterval:4, 
@@ -901,8 +882,8 @@
     
     function filterRoute(r){
         viewState.filterRoute = r; 
-        viewState.search = "";      
-        showCustomers();            
+        viewState.search = "";       
+        showCustomers();             
     }
 
     function importBackup(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{db=JSON.parse(e.target.result);save();alert("Backup OK");showHome();}catch(e){alert("Fehler");}};r.readAsText(f);}
