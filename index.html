@@ -3,1049 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AD Board v3 - Kundenverwaltung</title>
+    <title>AD Board v123 - Layout Fix</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+
     <style>
-  /* =========================================================
-     AD Board – Clean 2026 UI (Design-only rewrite)
-     Keeps all existing IDs/classes so the JS logic stays intact.
-     ========================================================= */
-
-  :root{
-    /* Spacing / radius */
-    --radius: 16px;
-    --radius-sm: 12px;
-    --radius-xs: 10px;
-
-    /* Color system (light) */
-    --bg-body: #f6f7fb;
-    --bg-sidebar: rgba(255,255,255,0.82);
-    --surface: rgba(255,255,255,0.92);
-    --surface-2: rgba(255,255,255,0.72);
-
-    --text: #0b1220;
-    --muted: rgba(11,18,32,0.62);
-
-    --border: rgba(15,23,42,0.10);
-    --border-strong: rgba(15,23,42,0.16);
-
-    /* Brand (keep your yellow, but use as accent, not as a slab) */
-    --brand: #f4d03f;
-    --brand-2: #ffd45a;
-    --brand-ink: #0b1220;
-
-    /* Status colors */
-    --danger: #ef4444;
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --info: #3b82f6;
-
-    /* Elevation */
-    --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-sm: 0 6px 18px rgba(15,23,42,0.08);
-    --shadow-md: 0 18px 50px rgba(15,23,42,0.12);
-
-    /* Focus ring */
-    --ring: 0 0 0 4px rgba(244,208,63,0.24);
-  }
-
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg-body: #0b1020;
-      --bg-sidebar: rgba(17,24,39,0.60);
-      --surface: rgba(17,24,39,0.72);
-      --surface-2: rgba(17,24,39,0.54);
-
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.62);
-
-      --border: rgba(255,255,255,0.12);
-      --border-strong: rgba(255,255,255,0.18);
-
-      --shadow-xs: 0 1px 2px rgba(0,0,0,0.25);
-      --shadow-sm: 0 10px 26px rgba(0,0,0,0.35);
-      --shadow-md: 0 22px 70px rgba(0,0,0,0.45);
-
-      --ring: 0 0 0 4px rgba(244,208,63,0.22);
-    }
-  }
-
-  *{ box-sizing:border-box; }
-  html, body{ height:100%; }
-  body{
-    margin:0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(244,208,63,0.18), transparent 60%),
-      radial-gradient(900px 500px at 100% 0%, rgba(59,130,246,0.16), transparent 55%),
-      radial-gradient(900px 600px at 20% 110%, rgba(34,197,94,0.10), transparent 55%),
-      var(--bg-body);
-    color: var(--text);
-    overflow:hidden;
-  }
-
-  /* Scrollbars (subtle) */
-  *::-webkit-scrollbar{ width:10px; height:10px; }
-  *::-webkit-scrollbar-thumb{
-    background: rgba(15,23,42,0.18);
-    border-radius: 999px;
-    border: 3px solid transparent;
-    background-clip: padding-box;
-  }
-  @media (prefers-color-scheme: dark){
-    *::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.18); }
-  }
-
-  /* Layout */
-  #app{
-    height:100vh;
-    display:flex;
-    gap: 14px;
-    padding: 14px;
-  }
-
-  .sidebar{
-    width: 320px;
-    background: var(--bg-sidebar);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    overflow:hidden;
-    display:flex;
-    flex-direction:column;
-    min-width: 280px;
-  }
-
-  .sidebar-header{
-    padding: 16px 16px 12px 16px;
-    border-bottom: 1px solid var(--border);
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap: 12px;
-  }
-
-  .brand{
-    display:flex;
-    flex-direction:column;
-    gap: 4px;
-  }
-
-  .brand .title{
-    font-weight: 750;
-    letter-spacing: -0.02em;
-    font-size: 16px;
-    line-height: 1.2;
-  }
-  .brand .sub{
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  .sidebar-header .header-actions{
-    display:flex;
-    gap: 8px;
-    align-items:center;
-  }
-
-  /* Nav */
-  .nav{
-    padding: 10px;
-    display:flex;
-    flex-direction:column;
-    gap: 6px;
-  }
-
-  .nav-item{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    color: var(--text);
-    text-decoration:none;
-    cursor:pointer;
-    user-select:none;
-    transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
-  }
-
-  .nav-item:hover{
-    background: rgba(15,23,42,0.04);
-    border-color: rgba(15,23,42,0.06);
-  }
-  @media (prefers-color-scheme: dark){
-    .nav-item:hover{
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.08);
-    }
-  }
-
-  .nav-item.active{
-    background: linear-gradient(180deg, rgba(244,208,63,0.26), rgba(244,208,63,0.12));
-    border-color: rgba(244,208,63,0.32);
-    box-shadow: var(--shadow-xs);
-    position: relative;
-  }
-  .nav-item.active::before{
-    content:"";
-    position:absolute;
-    left: 8px;
-    top: 9px;
-    bottom: 9px;
-    width: 3px;
-    border-radius: 999px;
-    background: rgba(244,208,63,0.95);
-  }
-  .nav-item .label{
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    font-size: 13px;
-  }
-  .nav-item .hint{
-    margin-left:auto;
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  /* Sidebar content / panels */
-  .sidebar-content{
-    padding: 12px;
-    overflow:auto;
-    display:flex;
-    flex-direction:column;
-    gap: 12px;
-  }
-
-  .panel{
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-  }
-
-  .panel-title{
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin: 0 0 10px 0;
-  }
-
-  /* Customer list */
-  .cust-list{
-    display:flex;
-    flex-direction:column;
-    gap: 6px;
-  }
-  .cust-row{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    padding: 10px 10px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    cursor:pointer;
-    transition: background 160ms ease, border-color 160ms ease;
-  }
-  .cust-row:hover{
-    background: rgba(15,23,42,0.04);
-    border-color: rgba(15,23,42,0.06);
-  }
-  @media (prefers-color-scheme: dark){
-    .cust-row:hover{
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.08);
-    }
-  }
-
-  .cust-row.selected{
-    background: linear-gradient(180deg, rgba(244,208,63,0.22), rgba(244,208,63,0.10));
-    border-color: rgba(244,208,63,0.28);
-  }
-
-  .cust-name{
-    font-weight: 650;
-    font-size: 13px;
-    letter-spacing: -0.01em;
-  }
-  .cust-meta{
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  /* Badges */
-  .badge{
-    display:inline-flex;
-    align-items:center;
-    gap: 6px;
-    padding: 4px 9px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.55);
-    font-size: 12px;
-    line-height: 1;
-    color: var(--text);
-    white-space:nowrap;
-  }
-  @media (prefers-color-scheme: dark){
-    .badge{ background: rgba(17,24,39,0.45); }
-  }
-
-  .badge.cat-a{ border-color: rgba(34,197,94,0.35); }
-  .badge.cat-b{ border-color: rgba(245,158,11,0.35); }
-  .badge.cat-c{ border-color: rgba(239,68,68,0.35); }
-
-  /* Main area */
-  .main{
-    flex:1;
-    min-width: 0;
-    display:flex;
-    flex-direction:column;
-    gap: 14px;
-  }
-
-  .topbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 12px;
-    padding: 14px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-xs);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .topbar .page-title{
-    display:flex;
-    flex-direction:column;
-    gap: 3px;
-    min-width: 0;
-  }
-  .topbar .page-title h1{
-    margin:0;
-    font-size: 16px;
-    letter-spacing: -0.02em;
-    font-weight: 780;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .topbar .page-title .subtitle{
-    font-size: 12px;
-    color: var(--muted);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-
-  .topbar .actions{
-    display:flex;
-    align-items:center;
-    gap: 8px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
-  }
-
-  /* Page container / cards */
-  .content{
-    flex: 1;
-    min-height: 0;
-    overflow:auto;
-    padding-bottom: 6px;
-  }
-
-  .card{
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-xs);
-    padding: 16px;
-    margin-bottom: 14px;
-  }
-
-  .card h2{
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 760;
-    letter-spacing: -0.01em;
-  }
-
-  .card .muted{
-    color: var(--muted);
-  }
-
-  /* Buttons */
-  .btn{
-    appearance:none;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.65);
-    color: var(--text);
-    border-radius: 12px;
-    padding: 10px 12px;
-    font-size: 13px;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-    cursor:pointer;
-    transition: transform 80ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-    user-select:none;
-    display:inline-flex;
-    align-items:center;
-    gap: 8px;
-    line-height: 1;
-  }
-  @media (prefers-color-scheme: dark){
-    .btn{ background: rgba(17,24,39,0.58); }
-  }
-
-  .btn:hover{
-    background: rgba(255,255,255,0.85);
-    border-color: var(--border-strong);
-    box-shadow: var(--shadow-xs);
-  }
-  @media (prefers-color-scheme: dark){
-    .btn:hover{ background: rgba(17,24,39,0.72); }
-  }
-
-  .btn:active{ transform: translateY(1px); }
-  .btn:focus{ outline:none; box-shadow: var(--ring); border-color: rgba(244,208,63,0.42); }
-
-  .btn-primary{
-    background: linear-gradient(180deg, rgba(244,208,63,0.95), rgba(244,208,63,0.78));
-    border-color: rgba(244,208,63,0.55);
-    color: var(--brand-ink);
-  }
-  .btn-primary:hover{
-    border-color: rgba(244,208,63,0.70);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .btn-secondary{
-    background: rgba(255,255,255,0.60);
-  }
-  @media (prefers-color-scheme: dark){
-    .btn-secondary{ background: rgba(17,24,39,0.50); }
-  }
-
-  .btn-danger{
-    border-color: rgba(239,68,68,0.35);
-    background: rgba(239,68,68,0.08);
-  }
-  .btn-success{
-    border-color: rgba(34,197,94,0.35);
-    background: rgba(34,197,94,0.08);
-  }
-
-  /* Inputs */
-  input, select, textarea{
-    width:100%;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.70);
-    color: var(--text);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
-  }
-  @media (prefers-color-scheme: dark){
-    input, select, textarea{ background: rgba(17,24,39,0.55); }
-  }
-
-  input:focus, select:focus, textarea:focus{
-    box-shadow: var(--ring);
-    border-color: rgba(244,208,63,0.42);
-    background: rgba(255,255,255,0.90);
-  }
-  @media (prefers-color-scheme: dark){
-    input:focus, select:focus, textarea:focus{ background: rgba(17,24,39,0.72); }
-  }
-
-  input:disabled, select:disabled, textarea:disabled{
-    opacity: 0.72;
-    cursor:not-allowed;
-  }
-
-  label{
-    font-size: 12px;
-    font-weight: 650;
-    color: var(--muted);
-    display:block;
-    margin: 0 0 6px 0;
-  }
-
-  .grid{
-    display:grid;
-    gap: 12px;
-  }
-  .grid.two{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 980px){
-    .sidebar{ width: 300px; }
-    .grid.two{ grid-template-columns: 1fr; }
-  }
-  @media (max-width: 820px){
-    #app{ padding: 10px; gap: 10px; }
-    .sidebar{ display:none; }
-  }
-
-  /* Tables */
-  table{
-    width:100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    overflow:hidden;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.50);
-  }
-  @media (prefers-color-scheme: dark){
-    table{ background: rgba(17,24,39,0.46); }
-  }
-
-  th, td{
-    padding: 10px 10px;
-    font-size: 13px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  th{
-    text-align:left;
-    font-size: 12px;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 800;
-    background: rgba(255,255,255,0.40);
-  }
-  @media (prefers-color-scheme: dark){
-    th{ background: rgba(17,24,39,0.40); }
-  }
-  tr:last-child td{ border-bottom:none; }
-
-  /* Modals / overlays */
-  .modal-backdrop{
-    position: fixed;
-    inset: 0;
-    background: rgba(2,6,23,0.55);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding: 14px;
-    z-index: 50;
-  }
-  .modal-backdrop.show{ display:flex; }
-
-  .modal{
-    width: min(720px, 100%);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: calc(var(--radius) + 4px);
-    box-shadow: var(--shadow-md);
-    overflow:hidden;
-    transform: translateY(6px);
-    opacity: 0.98;
-    animation: modalIn 180ms ease-out both;
-  }
-
-  @keyframes modalIn{
-    from{ transform: translateY(18px); opacity: 0.0; }
-    to{ transform: translateY(6px); opacity: 0.98; }
-  }
-
-  .modal-header{
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 10px;
-  }
-  .modal-header h3{
-    margin:0;
-    font-size: 14px;
-    font-weight: 780;
-    letter-spacing: -0.01em;
-  }
-  .modal-body{ padding: 16px; }
-  .modal-footer{
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    display:flex;
-    gap: 10px;
-    justify-content:flex-end;
-    flex-wrap:wrap;
-  }
-
-  /* Toast / floating bar */
-  #float-bar{
-    position: fixed;
-    bottom: 14px;
-    left: 14px;
-    right: 14px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 10px;
-    padding: 12px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    box-shadow: var(--shadow-sm);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 60;
-  }
-
-  #float-bar .left{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    min-width: 0;
-  }
-  #float-bar .title{
-    font-weight: 760;
-    letter-spacing: -0.01em;
-    font-size: 13px;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  #float-bar .desc{
-    font-size: 12px;
-    color: var(--muted);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-
-  /* Loader */
-  .loader{
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    border: 2px solid rgba(15,23,42,0.18);
-    border-top-color: rgba(244,208,63,0.95);
-    animation: spin 0.9s linear infinite;
-  }
-  @media (prefers-color-scheme: dark){
-    .loader{ border-color: rgba(255,255,255,0.18); border-top-color: rgba(244,208,63,0.95); }
-  }
-  @keyframes spin{ to{ transform: rotate(360deg);} }
-
-  /* Utility */
-  .row{ display:flex; gap: 12px; align-items:center; flex-wrap:wrap; }
-  .spacer{ flex:1; }
-  .divider{ height:1px; background: var(--border); margin: 10px 0; }
-  .small{ font-size: 12px; color: var(--muted); }
-
-  /* Respect reduced motion */
-  @media (prefers-reduced-motion: reduce){
-    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-  }
-
-/* =========================================================
-   Clean tweaks (requested):
-   - smaller, lighter typography
-   - ultra-light grey app background + clean white accent
-   - buttons in soft grey (swap feel)
-   - larger emoji-to-text spacing in left menu
-   - iOS-like chevrons: left menu items + selected action buttons
-   ========================================================= */
-
-:root{
-  --bg-body: #f5f6f8;
-  --bg-sidebar: rgba(255,255,255,0.92);
-  --surface: rgba(255,255,255,0.96);
-  --surface-2: rgba(255,255,255,0.86);
-
-  --text: #0f172a;
-  --muted: rgba(15,23,42,0.55);
-
-  --brand: #ffffff;
-  --brand-2: #ffffff;
-  --brand-ink: #0f172a;
-
-  --ring: 0 0 0 4px rgba(15,23,42,0.08);
-}
-
-body{
-  font-size: 13px;
-  font-weight: 400;
-  background: var(--bg-body) !important;
-}
-
-.brand .title,
-.topbar .page-title h1,
-.card h2{
-  font-weight: 600 !important;
-}
-
-.nav-item .label,
-.cust-name,
-label,
-.btn{
-  font-weight: 500 !important;
-}
-
-/* Left menu: more space between emoji and text + iOS chevron */
-.nav-item{
-  gap: 18px !important;
-}
-.nav-item::after{
-  content: "›";
-  margin-left: auto;
-  color: rgba(15,23,42,0.35);
-  font-size: 18px;
-  line-height: 1;
-}
-
-/* Make active nav neutral (no colored accent slabs) */
-.nav-item.active{
-  background: #eef0f3 !important;
-  border-color: rgba(15,23,42,0.10) !important;
-}
-.nav-item.active::before{
-  background: rgba(15,23,42,0.22) !important;
-}
-
-/* Buttons: soft grey, minimal emphasis */
-.btn{
-  background: #eef0f3 !important;
-  border-color: rgba(15,23,42,0.10) !important;
-  box-shadow: none !important;
-}
-.btn:hover{
-  background: #e7eaee !important;
-  border-color: rgba(15,23,42,0.14) !important;
-}
-.btn-primary{
-  background: #eef0f3 !important;
-  border-color: rgba(15,23,42,0.14) !important;
-  color: var(--text) !important;
-}
-
-/* iOS-like chevron on specific “open/next” buttons via .chev */
-.btn.chev{
-  justify-content: space-between;
-}
-.btn.chev::after{
-  content: "›";
-  margin-left: auto;
-  color: rgba(15,23,42,0.35);
-  font-size: 18px;
-  line-height: 1;
-}
-
-/* Select already indicates menu; keep the chevron */
-select{
-  background-position: right 10px center !important;
-}
-
-
-
-/* Missing utility/layout classes used by the JS templates */
-.grid-2{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-@media (max-width: 980px){
-  .grid-2{ grid-template-columns: 1fr; }
-}
-
-.btn-full{ width: 100%; justify-content: center; }
-
-.stat-container{
-  height: 160px;
-  display:flex;
-  align-items:flex-end;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(255,255,255,0.50);
-  overflow:hidden;
-}
-.stat-bar{
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  border-radius: 12px;
-  background: rgba(15,23,42,0.10);
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
-}
-.stat-val{
-  position:absolute;
-  top: 6px;
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-}
-.stat-lbl{
-  position:absolute;
-  bottom: 6px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-#map-container{
-  min-height: 420px;
-  border-radius: var(--radius);
-}
-
-@media print{
-  .no-print{ display:none !important; }
-  body{ overflow: visible !important; }
-  #app{ height:auto !important; }
-}
-
-</style>
+        /* --- DESIGN CORE --- */
+        :root {
+            --brand: #fcd34d; 
+            --brand-dark: #d97706; 
+            --bg-body: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --radius: 10px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --stat-green: #22c55e;
+            --stat-yellow: #eab308;
+            --stat-red: #ef4444;
+            --event-blue: #dbeafe; 
+            --event-blue-text: #1e40af;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg-body); color: var(--text-main); overflow: hidden; }
+
+        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.98); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--text-main); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        #sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 50; flex-shrink: 0; transition: transform 0.3s ease; }
+        .logo-area { padding: 20px; text-align: center; border-bottom: 1px solid var(--border); background: #fff; }
+        .logo-img { max-width: 100%; max-height: 60px; object-fit: contain; }
+        
+        .nav-menu { padding: 20px; display: flex; flex-direction: column; gap: 5px; flex: 1; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-light); font-size: 14px; font-weight: 500; transition: 0.1s; border: none; background: transparent; width: 100%; text-align: left; }
+        .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
+        .nav-item.active { background: #fffbeb; color: var(--text-main); font-weight: 700; border: 1px solid var(--brand); }
+
+        #main { flex: 1; overflow-y: auto; padding: 0; position: relative; }
+        .content-wrap { max-width: 1000px; margin: 0 auto; padding: 30px; padding-bottom: 100px; }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+        h1 { margin: 0 0 20px 0; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 700; color: var(--text-light); text-transform: uppercase; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; margin-bottom: 15px; font-family: inherit; background: #fff; }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); gap: 6px; text-decoration: none !important; transition: 0.1s; user-select: none; }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: #ffffff; color: var(--text-main); border-color: var(--border); }
+        .btn-primary:hover { background: #f8fafc; border-color: #94a3b8; }
+        .btn-secondary { background: #ffffff; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-secondary:hover { background: #f8fafc; }
+        .btn-danger { background: #fff; color: #991b1b; border-color: #fee2e2; }
+        .btn-success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+        .btn-full { width: 100%; }
+
+        /* --- VISUAL CATEGORY BADGES --- */
+        .cat-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; color: #fff; display: inline-block; min-width: 24px; text-align: center; }
+        .cat-A { background-color: #f59e0b; color: #fff; } /* Gold */
+        .cat-B { background-color: #3b82f6; color: #fff; } /* Blau */
+        .cat-C { background-color: #94a3b8; color: #fff; } /* Grau */
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .grid-4-custom { display: grid; grid-template-columns: 1.5fr 1.5fr 0.5fr 1fr; gap: 10px; align-items: end; }
+        
+        .cust-row { display: flex; align-items: center; padding: 14px; background: #fff; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.1s; justify-content: space-between; }
+        .cust-row:hover { background: #f8fafc; }
+        .cust-row.selected { background: #fffbeb; border-color: var(--brand); }
+        .check-circle { width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
+        .cust-row.selected .check-circle { background: var(--brand); border-color: var(--brand-dark); }
+        .cust-row.selected .check-circle::after { content: '✓'; font-size: 12px; font-weight: bold; color: #451a03; }
+        
+        .exp-row { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; background: #fff; }
+        .exp-amount { font-weight: 800; color: var(--text-main); }
+        .exp-cat { font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; margin-right: 5px; }
+        .exp-img { max-height: 100px; border: 1px solid #eee; border-radius: 4px; margin-top: 5px; cursor: pointer; }
+
+        .float-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #fff; padding: 15px 25px; border-radius: 50px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); border: 1px solid var(--border); display: flex; gap: 15px; align-items: center; z-index: 1000; animation: slideUp 0.3s; }
+        @keyframes slideUp { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
+
+        .report-entry { padding: 15px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--brand); }
+        .rep-img { max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid #ddd; }
+        
+        .task-mini-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+        .task-chk { margin-right: 8px; cursor: pointer; }
+        .task-done { text-decoration: line-through; color: #999; }
+        .task-date { font-size: 10px; background: #eee; padding: 1px 4px; border-radius: 4px; margin-left: 5px; white-space: nowrap; }
+        .task-date.overdue { background: #fee2e2; color: #b91c1c; }
+        .global-task-row { padding: 15px; border-bottom: 1px solid #eee; background: #fff; display: flex; align-items: flex-start; }
+
+        .cal-layout { display: grid; grid-template-columns: 250px 1fr; gap: 20px; height: calc(100vh - 120px); min-height: 500px; }
+        .cal-pool { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; }
+        .cal-main { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .pool-list { flex: 1; overflow-y: auto; padding: 10px; background: #f8fafc; }
+        .pool-item { padding: 8px 10px; margin-bottom: 5px; background: #fff; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: grab; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #e2e8f0; gap: 1px; flex: 1; overflow-y: auto; }
+        .cal-head { background: #f1f5f9; padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: #64748b; }
+        .cal-day { background: #ffffff; min-height: 100px; padding: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+        .cal-day.today { background: #fffbeb; }
+        .cal-event { background: var(--brand); color: #451a03; padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(0,0,0,0.05); margin-top: 2px; }
+        .cal-event.manual { background: var(--event-blue); color: var(--event-blue-text); border-color: #93c5fd; }
+
+        .view-controls { display: flex; gap: 5px; }
+        .view-btn { padding: 6px 12px; font-size: 12px; border: 1px solid var(--border); background: #fff; border-radius: 6px; cursor: pointer; }
+        .view-btn.active { background: #fff; border-color: var(--text-main); font-weight: 700; color: var(--text-main); }
+
+        .stat-container { display: flex; align-items: flex-end; height: 80px; gap: 5px; margin-top: 15px; }
+        .stat-bar { flex: 1; background: var(--brand); border-radius: 4px 4px 0 0; position: relative; min-height: 2px; }
+        .stat-val { position: absolute; top: -16px; width: 100%; text-align: center; font-size: 10px; font-weight: bold; }
+        .stat-lbl { position: absolute; bottom: -18px; width: 100%; text-align: center; font-size: 9px; color: #666; }
+
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-box { background: #fff; padding: 30px; border-radius: var(--radius); width: 90%; max-width: 350px; }
+        #map-container { height: 600px; width: 100%; border-radius: var(--radius); border: 1px solid var(--border); z-index: 1; }
+
+        #menu-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 100; background: #fff; color: #000; border: 1px solid #ddd; width: 45px; height: 45px; border-radius: 50%; font-size: 24px; box-shadow: var(--shadow); }
+        @media (max-width: 800px) {
+            #sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 80%; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+            #sidebar.open { transform: translateX(0); }
+            #menu-toggle { display: block; }
+            .cal-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; height: auto; }
+            .cal-pool { height: 150px; margin-bottom: 20px; }
+            .cal-main { height: 500px; }
+            .grid-2, .grid-3, .grid-4-custom { grid-template-columns: 1fr; }
+        }
+        @media print {
+            #sidebar, #menu-toggle, .no-print, .btn, .nav-menu, .del-x, .float-bar { display: none !important; }
+            #main { padding: 0; margin: 0; width: 100%; height: auto; overflow: visible; }
+            body { background: #fff; height: auto; overflow: visible; font-family: sans-serif; }
+            .card { box-shadow: none; border: none; margin: 0; padding: 0; border-bottom: 1px solid #eee; margin-bottom: 20px; }
+            h1 { font-size: 18pt; border-bottom: 2px solid #000; margin-bottom: 20px; }
+            .report-row { border-bottom: 1px solid #ccc; padding: 10px 0; page-break-inside: avoid; }
+            #rep-input-area, textarea { display: none; }
+        }
+    </style>
 </head>
 <body>
-<div id="app">
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="brand">
-                <div class="title">AD Board</div>
-                <div class="sub">Kundenverwaltung</div>
-            </div>
-            <div class="header-actions">
-                <button class="btn btn-secondary" style="padding:8px 10px;" onclick="exportPDF()">PDF</button>
-                <button class="btn btn-secondary" style="padding:8px 10px;" onclick="downloadBackup()">Backup</button>
-            </div>
-        </div>
 
-        <div class="nav">
-            <div class="nav-item active" id="nav-home" onclick="showHome()"><span>🏠</span><span class="label">Dashboard</span></div>
-            <div class="nav-item" id="nav-customers" onclick="showCustomers()"><span>👥</span><span class="label">Kunden</span></div>
-            <div class="nav-item" id="nav-tasks" onclick="showTasks()"><span>✅</span><span class="label">Aufgaben</span></div>
-            <div class="nav-item" id="nav-expenses" onclick="showExpenses()"><span>🧾</span><span class="label">Spesen</span></div>
-            <div class="nav-item" id="nav-map" onclick="showMap()"><span>🗺️</span><span class="label">Karte</span></div>
-            <div class="nav-item" id="nav-tour" onclick="showTour()"><span>🚗</span><span class="label">Tour</span></div>
-            <div class="nav-item" id="nav-settings" onclick="showSettings()"><span>⚙️</span><span class="label">Einstellungen</span></div>
-        </div>
+<div id="loader">
+    <div class="spinner"></div>
+    <div id="loader-text" style="margin-top:10px; font-weight:bold;">Lädt...</div>
+    <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" onclick="stopGeocoding=true">STOPP</button>
+</div>
+<button id="menu-toggle" onclick="toggleSidebar()">☰</button>
 
-        <div class="sidebar-content" id="sidebarContent">
-            <!-- content injected -->
+<div id="timeModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="text-align:center">Zeit wählen</h2>
+        <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
+        <div class="grid-2" style="margin-top:20px;">
+            <button class="btn btn-primary btn-full" onclick="confirmDrop()">Speichern</button>
+            <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
         </div>
-    </div>
-
-    <div class="main">
-        <div class="topbar">
-            <div class="page-title">
-                <h1 id="pageTitle">Dashboard</h1>
-                <div class="subtitle" id="pageSubtitle">Übersicht</div>
-            </div>
-            <div class="actions" id="topActions"></div>
-        </div>
-
-        <div class="content" id="content"></div>
     </div>
 </div>
 
-<!-- Float Bar -->
-<div id="float-bar" style="display:none;">
-    <div class="left">
-        <div class="loader" id="float-loader" style="display:none;"></div>
-        <div>
-            <div class="title" id="float-title">Info</div>
-            <div class="desc" id="float-desc">...</div>
+<div id="eventModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="text-align:center">Termin</h2>
+        <input type="hidden" id="evtId">
+        <label>Titel / Art</label>
+        <div style="display:flex; gap:5px; margin-bottom:10px;">
+            <input id="evtTitle" placeholder="Titel" style="margin:0;">
+            <select style="width:40px;" onchange="document.getElementById('evtTitle').value=this.value">
+                <option value="">...</option><option>Büro</option><option>Meeting</option><option>Werkstatt</option><option>Privat</option><option>Arzt</option><option>Urlaub</option>
+            </select>
         </div>
-    </div>
-    <div class="right">
-        <button class="btn btn-secondary" onclick="hideFloat()">OK</button>
+        <div class="grid-2">
+            <div><label>Datum</label><input type="date" id="evtDate" style="margin:0;"></div>
+            <div><label>Von</label><input type="time" id="evtStart" value="09:00" style="margin:0;"></div>
+        </div>
+        <div style="margin-top:10px;"><label>Bis</label><input type="time" id="evtEnd" value="10:00" style="margin:0;"></div>
+        <div class="grid-2" style="margin-top:20px;">
+            <button class="btn btn-success btn-full" onclick="saveManualEvent()">Speichern</button>
+            <button class="btn btn-danger btn-full" onclick="delManualEvent()" id="btnDelEvt" style="display:none;">Löschen</button>
+            <button class="btn btn-secondary btn-full" onclick="document.getElementById('eventModal').style.display='none'">Abbrechen</button>
+        </div>
     </div>
 </div>
 
-<!-- Modal -->
-<div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal" id="modal">
-        <div class="modal-header">
-            <h3 id="modalTitle">Modal</h3>
-            <button class="btn btn-secondary" style="padding:8px 10px;" onclick="closeModal()">✕</button>
-        </div>
-        <div class="modal-body" id="modalBody"></div>
-        <div class="modal-footer" id="modalFooter"></div>
+<div id="sidebar">
+    <div class="logo-area">
+        <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
+        <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
+    </div>
+    <div class="nav-menu">
+        <button class="nav-item active" onclick="nav('home', this)">🏠 Dashboard</button>
+        <button class="nav-item" onclick="nav('customers', this)">👥 Kunden</button>
+        <button class="nav-item" onclick="nav('expenses', this)">💶 Spesen</button>
+        <button class="nav-item" onclick="nav('map', this)">🗺️ Karte</button>
+        <button class="nav-item" onclick="nav('calendar', this)">📅 Kalender</button>
+        <button class="nav-item" onclick="nav('tour', this)">🚗 Tour</button>
+        <button class="nav-item" onclick="nav('routes', this)">📂 Routen</button>
     </div>
 </div>
+
+<div id="main"><div id="content" class="content-wrap"></div></div>
 
 <script>
-/* 
-  Hinweis: Dein kompletter JS-Code ist enthalten.
-  Ich habe nur bei den von dir genannten Aktionen die Klasse "chev" ergänzt:
-  - + Neuer Kunde
-  - Tagesbericht drucken
-  - Wochenbericht drucken
-  - Duplikate finden
-  - Beleg Scannen (AI)
-  - Abrechnung drucken
-  - Positionen laden
-  - 🗺️ Maps
-*/
+    const DB_KEY = 'raphael_crm_v122_revenue';
+    const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
+    
+    let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
+    let currentCalDate = new Date();
+    let calView = 'month'; 
+    let dragId = null, dragTargetDate = null;
+    let selectMode = false;
+    let selectedIds = new Set();
+    let viewState = { sort: 'name', search: '', filterRoute: null };
+    let mapInstance = null; 
+    let editingExpenseId = null;
+    window.currentOcrImage = null; 
+    let stopGeocoding = false;
 
-/* === Original JS (unverändert bis auf class="... chev" an den genannten Buttons) === */
-const KEY="adboard.v3";
-const genId=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+    window.onload = () => {
+        try {
+            const current = JSON.parse(localStorage.getItem(DB_KEY));
+            if (current) db = current;
+            else {
+                const legacy = JSON.parse(localStorage.getItem('raphael_crm_v121_visualcat')) || JSON.parse(localStorage.getItem('raphael_crm_v120_fixedcal'));
+                if(legacy) { db = legacy; save(); }
+            }
 
-/* === Storage abstraction (works even if localStorage is blocked) === */
-let _memStore = {};
-function storageAvailable(){
-  try{
-    const k="__t";
-    window.localStorage.setItem(k,"1");
-    window.localStorage.removeItem(k);
-    return true;
-  }catch(e){ return false; }
-}
-const HAS_LS = storageAvailable();
-function storeGet(key){
-  try{
-    return HAS_LS ? window.localStorage.getItem(key) : (_memStore[key] ?? null);
-  }catch(e){ return (_memStore[key] ?? null); }
-}
-function storeSet(key, val){
-  try{
-    if(HAS_LS) window.localStorage.setItem(key, val);
-    else _memStore[key] = String(val);
-  }catch(e){
-    _memStore[key] = String(val);
-  }
-}
-function storeRemove(key){
-  try{
-    if(HAS_LS) window.localStorage.removeItem(key);
-    else delete _memStore[key];
-  }catch(e){
-    delete _memStore[key];
-  }
-}
+            if(!db.expenses) db.expenses = [];
+            if(!db.events) db.events = [];
+            if(!db.customers) db.customers = [];
+            
+            if(!db.meta_revenue_migrated) {
+                db.customers.forEach(c => {
+                    c.products = ""; 
+                });
+                db.meta_revenue_migrated = true;
+                save();
+            }
 
-let db={
-    customers:[],
-    tour:[]
-};
+            db.customers.forEach(c => {
+                if(!c.reports) c.reports = [];
+                if(!c.tasks) c.tasks = [];
+                if(!c.nextAppointment) c.nextAppointment = "";
+                if(!c.visitInterval) c.visitInterval = 4;
+            });
+            updateLogoUI();
+            showHome();
+        } catch(e) {
+            console.error(e);
+            alert("Fehler beim Starten: " + e.message + "\nBitte Backup prüfen.");
+        } finally {
+            document.getElementById('loader').style.display='none';
+        }
+    };
 
-function save(){
-  try{ storeSet(KEY, JSON.stringify(db)); }
-  catch(e){ console.warn('Speichern fehlgeschlagen:', e); }
-}
-function load(){
-  try{
-    const raw = storeGet(KEY);
-    if(raw) db = JSON.parse(raw);
-  }catch(e){ console.warn('Laden fehlgeschlagen:', e); }
-}
-
-function normalizeDb(){
-    db = db && typeof db === "object" ? db : { customers: [], tour: [] };
-    db.customers = Array.isArray(db.customers) ? db.customers : [];
-    db.tour = Array.isArray(db.tour) ? db.tour : [];
-
-    for(const c of db.customers){
-        if(!c || typeof c !== "object") continue;
-        c.reports  = Array.isArray(c.reports)  ? c.reports  : [];
-        c.tasks    = Array.isArray(c.tasks)    ? c.tasks    : [];
-        c.expenses = Array.isArray(c.expenses) ? c.expenses : [];
-        c.category = c.category || "B";
+    function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+    function updateLogoUI() {
+        const img = document.getElementById('sidebar-logo');
+        const txt = document.getElementById('text-logo');
+        if(db.logo) { img.src = db.logo; img.style.display = 'inline-block'; txt.style.display = 'none'; } 
+        else { img.src = DEFAULT_LOGO; img.style.display = 'inline-block'; txt.style.display = 'none'; }
     }
-}
 
-load();
-normalizeDb();
+    function nav(page, el) {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        if(el) el.classList.add('active');
+        if(window.innerWidth <= 768) toggleSidebar();
+        selectMode = false; selectedIds.clear();
+        viewState.filterRoute = null; 
+        if(mapInstance) { mapInstance.remove(); mapInstance = null; }
+        if(page === 'home') showHome();
+        else if(page === 'map') showMap();
+        else if(page === 'calendar') showCalendar();
+        else if(page === 'customers') showCustomers();
+        else if(page === 'tour') showTour();
+        else if(page === 'routes') showRoutes();
+        else if(page === 'expenses') showExpenses();
+    }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
-/* === Leaflet + Geocode helpers === */
-let _leafletReady = false;
-let _map = null;
-let _markersLayer = null;
+    // --- CSV IMPORT ---
+    function importCSV(input) {
+        const f = input.files[0];
+        if(!f) return;
+        const r = new FileReader();
+        r.readAsText(f, 'UTF-8');
+        r.onload = e => {
+            const text = e.target.result;
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            if(lines.length < 2) return alert("Datei leer oder ungültig");
+            const firstLine = lines[0];
+            const sep = firstLine.includes(';') ? ';' : ','; 
+            const headers = firstLine.split(sep).map(h => h.replace(/"/g, '').trim().toLowerCase());
+            const iName = headers.findIndex(h => h === 'name');
+            const iStr = headers.findIndex(h => h.includes('straße') || h.includes('str'));
+            const iPlz = headers.findIndex(h => h === 'plz');
+            const iOrt = headers.findIndex(h => h === 'ort');
+            const iTel = headers.findIndex(h => h.includes('tel'));
+            const iNr = headers.findIndex(h => h === 'nr' || h.includes('kundennummer'));
+            const iTour = headers.findIndex(h => h === 'tour');
+            if (iName === -1) return alert("Fehler: Spalte 'Name' nicht gefunden.");
+            let count = 0;
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(sep).map(s => s.replace(/^"|"$/g, '').trim());
+                const name = row[iName];
+                let addressParts = [];
+                if(iStr > -1 && row[iStr]) addressParts.push(row[iStr]);
+                if(iPlz > -1 && row[iPlz] && iOrt > -1 && row[iOrt]) {
+                    addressParts.push(row[iPlz] + " " + row[iOrt]);
+                } else {
+                    if(iPlz > -1 && row[iPlz]) addressParts.push(row[iPlz]);
+                    if(iOrt > -1 && row[iOrt]) addressParts.push(row[iOrt]);
+                }
+                const fullAddress = addressParts.join(', ');
+                if (name && !db.customers.some(x => x.name === name)) {
+                    db.customers.push({
+                        id: Date.now() + i, name: name, address: fullAddress, 
+                        phone: iTel > -1 ? row[iTel] : "", nr: iNr > -1 ? row[iNr] : "",
+                        route: iTour > -1 ? row[iTour] : "", category: 'C', status: 'aktiv', 
+                        products: '', reports: [], nextAppointment: '', visitInterval: 4, tasks: []
+                    });
+                    count++;
+                }
+            }
+            save(); alert(count + " Kunden importiert!"); showHome();
+        };
+    }
 
-function ensureLeaflet(){
-  // Leaflet removed for reliability. Kept as compatibility no-op.
-  return Promise.resolve();
-}
-
-function getCustomerCoords(c){
-  if(!c) return null;
-  if(c.coords && typeof c.coords.lat==="number" && typeof c.coords.lon==="number") return {lat:c.coords.lat, lon:c.coords.lon};
-  if(typeof c.lat==="number" && typeof c.lon==="number") return {lat:c.lat, lon:c.lon};
-  return null;
-}
-function setCustomerCoords(c, lat, lon){
-  if(!c.coords) c.coords = {};
-  c.coords.lat = lat;
-  c.coords.lon = lon;
-}
-
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-async function geocodeAddress(addr){
-  const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=0&q=" + encodeURIComponent(addr);
-  const res = await fetch(url, { headers: { "Accept":"application/json" }});
-  if(!res.ok) throw new Error("Geocode HTTP " + res.status);
-  const data = await res.json();
-  if(!Array.isArray(data) || !data.length) return null;
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-}
-
-function haversineKm(a, b){
-  const R=6371;
-  const toRad=x=>x*Math.PI/180;
-  const dLat=toRad(b.lat-a.lat);
-  const dLon=toRad(b.lon-a.lon);
-  const lat1=toRad(a.lat);
-  const lat2=toRad(b.lat);
-  const s=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
-  return 2*R*Math.asin(Math.sqrt(s));
-}
-
-
-/* ===== UI helpers ===== */
-function setActiveNav(id){
-    document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
-    const el=document.getElementById(id);
-    if(el) el.classList.add('active');
-}
-function setPage(title, subtitle=""){
-    document.getElementById('pageTitle').textContent=title;
-    document.getElementById('pageSubtitle').textContent=subtitle;
-}
-function setTopActions(html=""){
-    document.getElementById('topActions').innerHTML=html;
-}
-
-/* Float */
-function showFloat(title, desc, loading=false){
-    const fb=document.getElementById('float-bar');
-    fb.style.display="flex";
-    document.getElementById('float-title').textContent=title;
-    document.getElementById('float-desc').textContent=desc;
-    document.getElementById('float-loader').style.display=loading?"inline-block":"none";
-}
-function hideFloat(){
-    document.getElementById('float-bar').style.display="none";
-}
-
-/* Modal */
-function openModal(title, bodyHTML, footerHTML=""){
-    document.getElementById('modalTitle').textContent=title;
-    document.getElementById('modalBody').innerHTML=bodyHTML;
-    document.getElementById('modalFooter').innerHTML=footerHTML;
-    document.getElementById('modalBackdrop').classList.add('show');
-}
-function closeModal(){
-    document.getElementById('modalBackdrop').classList.remove('show');
-}
-
-/* ===== Views ===== */
-function showHome(){
+    // --- DASHBOARD ---
+    function showHome(){
         const today=new Date().toLocaleDateString('de-DE');
         const count=db.customers.length;
         const visited=db.customers.filter(c=>c.reports&&c.reports.some(r=>r.date===today)).length;
@@ -1054,832 +343,661 @@ function showHome(){
         let stats={};
         for(let i=5;i>=0;i--){
             const d=new Date();d.setMonth(d.getMonth()-i);
-            const k=d.toLocaleString('de-DE',{month:'short'});
+            const k=d.toLocaleString('de',{month:'short'});
             stats[k]=0;
-            db.customers.forEach(c => (c.reports || []).forEach(r => {
-                const [D,M,Y] = (r.date || '').split('.');
-                if(parseInt(M)==d.getMonth()+1 && parseInt(Y)==d.getFullYear()) stats[k]++;
-            }));
+            db.customers.forEach(c=>c.reports.forEach(r=>{const[D,M,Y]=r.date.split('.');if(parseInt(M)==d.getMonth()+1&&parseInt(Y)==d.getFullYear()) stats[k]++;}));
         }
         const maxV=Math.max(...Object.values(stats))||1;
         const bars=Object.keys(stats).map(k=>`<div class="stat-bar" style="height:${(stats[k]/maxV)*100}%"><span class="stat-val">${stats[k]}</span><span class="stat-lbl">${k}</span></div>`).join('');
         
         document.getElementById('content').innerHTML=`
+        <h1>Dashboard</h1>
+        <div class="grid-3">
+            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800;">${count}</div><div style="font-size:12px; color:var(--text-light);">Kunden</div></div>
+            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; color:var(--brand-dark);">${visited}</div><div style="font-size:12px; color:var(--text-light);">Heute</div></div>
+            <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben (Anzeigen)</div></div>
+        </div>
+        <div class="card"><h2>📈 Besuchstrend</h2><div class="stat-container">${bars}</div></div>
         <div class="grid-2">
-            <div class="card"><h2>Übersicht</h2>
-                <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                    <span class="badge">👥 Kunden: <b>${count}</b></span>
-                    <span class="badge">✅ Heute besucht: <b>${visited}</b></span>
-                    <span class="badge">📌 Offene Aufgaben: <b>${openTasksCount}</b></span>
+            <div class="card"><h2>Schnellzugriff</h2>
+                <button class="btn btn-primary btn-full" onclick="showForm()">+ Neuer Kunde</button>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button class="btn btn-secondary btn-full" onclick="downloadBackup()">💾 Backup Speichern</button>
+                    <button class="btn btn-secondary btn-full" onclick="document.getElementById('bakIn').click()">📂 Backup Laden</button>
                 </div>
-                <div style="margin-top:14px;">
-                    <div class="panel-title" style="margin:0 0 8px 0;">Besuche (letzte 6 Monate)</div>
-                    <div class="stat-container">${bars}</div>
-                </div>
+                <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('csvIn').click()">CSV Import</button>
+                <input type="file" id="csvIn" style="display:none" onchange="importCSV(this)">
+                <input type="file" id="bakIn" style="display:none" onchange="importBackup(this)">
             </div>
-            <div class="grid-2">
-                <div class="card"><h2>Schnellzugriff</h2>
-                    <button class="btn btn-primary btn-full chev" onclick="showForm()">+ Neuer Kunde</button>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button class="btn btn-secondary btn-full" onclick="downloadBackup()">💾 Backup Speichern</button>
-                        <button class="btn btn-secondary btn-full" onclick="uploadBackup()">📤 Backup Laden</button>
-                    </div>
-                </div>
-                <div class="card"><h2>Berichte</h2>
-                    <div style="display:flex; gap:10px; flex-direction:column;">
-                        <button class="btn btn-secondary btn-full chev" onclick="generateReportPDF('day')">📄 Tagesbericht drucken</button>
-                        <button class="btn btn-secondary btn-full chev" onclick="generateReportPDF('week')">📄 Wochenbericht drucken</button>
-                    </div>
-                </div>
-            </div>
+            <div class="card"><h2>Berichte</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">📄 Tagesbericht drucken</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">📄 Wochenbericht drucken</button></div></div>
         </div>
         <div class="card"><h2>Einstellungen</h2>
-            <button class="btn btn-secondary btn-full chev" onclick="showDuplicates()">⚠️ Duplikate finden</button>
-            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="clearAll()">🧨 Alle Daten löschen</button>
+            <button class="btn btn-secondary btn-full" onclick="showDuplicates()">⚠️ Duplikate finden</button>
+            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
         </div>`;
-    setActiveNav('nav-home');
-    setPage("Dashboard","Übersicht & Schnellaktionen");
-    setTopActions('');
-    renderSidebarCustomers();
-}
+    }
 
-function showCustomers(){
-    setActiveNav('nav-customers');
-    setPage("Kunden","Liste & Details");
-    setTopActions(`<button class="btn btn-primary" onclick="showForm()">+ Kunde</button>`);
-    renderSidebarCustomers();
-    if(db.customers.length) showCustomer(db.customers[0].id);
-    else document.getElementById('content').innerHTML=`<div class="card"><h2>Keine Kunden</h2><p class="muted">Lege einen neuen Kunden an.</p></div>`;
-}
-
-/* Sidebar render */
-function renderSidebarCustomers(){
-    const cont=document.getElementById('sidebarContent');
-    const list = db.customers.map(c=>{
-        const cat=c.category||"B";
-        const badgeClass=cat==="A"?"cat-a":cat==="B"?"cat-b":"cat-c";
-        return `<div class="cust-row" id="cust-${c.id}" onclick="showCustomer('${c.id}')">
-            <div style="flex:1; min-width:0;">
-                <div class="cust-name">${c.name}</div>
-                <div class="cust-meta">${c.address||""}</div>
-            </div>
-            <span class="badge ${badgeClass}">Cat ${cat}</span>
-        </div>`;
-    }).join('');
-    cont.innerHTML = `
-      <div class="panel">
-        <div class="panel-title">Kunden</div>
-        <div class="cust-list">${list || `<div class="small">Noch keine Kunden.</div>`}</div>
-      </div>
-    `;
-}
-
-/* Customer detail */
-function showCustomer(id){
-    document.querySelectorAll('.cust-row').forEach(x=>x.classList.remove('selected'));
-    const row=document.getElementById('cust-'+id);
-    if(row) row.classList.add('selected');
-
-    const c=db.customers.find(x=>x.id===id);
-    if(!c) return;
-
-    const reports=(c.reports||[]).slice().reverse().map((r,i)=>`
-      <tr>
-        <td>${r.date}</td>
-        <td>${r.text||""}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-secondary" style="padding:8px 10px;" onclick="editReport('${id}',${c.reports.length-1-i})">✏️</button>
-          <button class="btn btn-danger" style="padding:8px 10px;" onclick="delReport('${id}',${c.reports.length-1-i})">🗑️</button>
-        </td>
-      </tr>
-    `).join('');
-
-    const tasks=(c.tasks||[]).map((t,idx)=>`
-      <div style="display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,0.45);">
-        <input type="checkbox" ${t.done?"checked":""} onchange="toggleTask('${id}',${idx},this.checked)" style="width:auto;">
-        <div style="flex:1;">
-          <div style="font-weight:600; font-size:13px; ${t.done?'text-decoration:line-through; opacity:.65;':''}">${t.title}</div>
-          <div class="small">${t.note||""}</div>
-        </div>
-        <button class="btn btn-danger" style="padding:8px 10px;" onclick="delTask('${id}',${idx})">🗑️</button>
-      </div>
-    `).join('');
-
-    document.getElementById('content').innerHTML=`
-      <div class="card">
-        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-          <div style="min-width:0;">
-            <h2 style="margin:0 0 6px 0;">${c.name}</h2>
-            <div class="small">${c.address||""}</div>
-            <div class="small">${c.phone||""} ${c.email?(" · "+c.email):""}</div>
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
-            <button class="btn btn-secondary" onclick="editCustomer('${id}')">Bearbeiten</button>
-            <button class="btn btn-secondary" onclick="addToTour('${id}'); showFloat('Tour', 'Kunde zur Tour hinzugefügt.', false);">Zur Tour</button>
-            <button class="btn btn-danger" onclick="delCustomer('${id}')">Löschen</button>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="grid two">
-          <div>
-            <h2>Berichte</h2>
-            <button class="btn btn-primary" onclick="addReport('${id}')">+ Bericht</button>
-            <div style="margin-top:10px;">
-              <table>
-                <thead><tr><th>Datum</th><th>Text</th><th></th></tr></thead>
-                <tbody>
-                  ${reports || `<tr><td colspan="3" class="small">Noch keine Berichte.</td></tr>`}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div>
-            <h2>Aufgaben</h2>
-            <button class="btn btn-primary" onclick="addTask('${id}')">+ Aufgabe</button>
-            <div style="margin-top:10px; display:flex; flex-direction:column; gap:10px;">
-              ${tasks || `<div class="small">Keine Aufgaben.</div>`}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-}
-
-/* ===== Tasks view ===== */
-function showTasks(){
-    setActiveNav('nav-tasks');
-    setPage("Aufgaben","Alle offenen Aufgaben");
-    setTopActions('');
-    renderSidebarCustomers();
-
-    let all=[];
-    db.customers.forEach(c=>{
-        (c.tasks||[]).forEach((t,idx)=>{
-            if(!t.done) all.push({cid:c.id, cname:c.name, idx, t});
+    // --- GLOBAL TASKS ---
+    function showAllTasks() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        let html = '<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div><h1>Offene Aufgaben</h1><div class="card">';
+        let count = 0;
+        db.customers.forEach(c => {
+            if(c.tasks && c.tasks.length > 0) {
+                c.tasks.forEach((t, index) => {
+                    if(!t.done) {
+                        const isOverdue = t.dueDate && t.dueDate < todayStr;
+                        html += `
+                        <div class="global-task-row">
+                            <input type="checkbox" style="margin-right:10px; width:20px; height:20px;" onclick="toggleTaskGlobal(${c.id}, ${index})">
+                            <div style="flex:1;">
+                                <div style="font-weight:bold; ${isOverdue ? 'color:#ef4444;' : ''}">${t.text}</div>
+                                <div style="font-size:12px; color:#666; cursor:pointer;" onclick="showDetail(${c.id})">
+                                    👤 ${c.name} ${t.dueDate ? '📅 ' + t.dueDate.split('-').reverse().join('.') : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                        count++;
+                    }
+                });
+            }
         });
-    });
+        if(count === 0) html += '<div style="padding:20px; text-align:center; color:#999;">Alles erledigt! 🎉</div>';
+        html += '</div>';
+        document.getElementById('content').innerHTML = html;
+    }
+    function toggleTaskGlobal(cid, tid) { const c = db.customers.find(x => x.id === cid); if(c && c.tasks[tid]) { c.tasks[tid].done = true; save(); showAllTasks(); } }
 
-    document.getElementById('content').innerHTML=`
-      <div class="card">
-        <h2>Offene Aufgaben</h2>
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          ${all.map(x=>`
-            <div style="display:flex; gap:10px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,0.45);">
-              <div style="flex:1;">
-                <div style="font-weight:600;">${x.t.title}</div>
-                <div class="small">${x.cname}</div>
-              </div>
-              <button class="btn btn-secondary" onclick="showCustomer('${x.cid}')">Öffnen</button>
+    // --- EXPENSES + MAX OCR ---
+    function showExpenses(){
+        if(!db.expenses)db.expenses=[];
+        const currentMonth=new Date().getMonth();
+        const currentYear=new Date().getFullYear();
+        const total=db.expenses.reduce((sum,e)=>{
+            if(!e.date)return sum;
+            const parts=e.date.split('.');
+            if(parts.length!==3)return sum;
+            if(parseInt(parts[1])-1===currentMonth&&parseInt(parts[2])===currentYear) return sum+(parseFloat(e.amount)||0);
+            return sum;
+        },0);
+        
+        const list=db.expenses.sort((a,b)=>{
+            if(!a.date||!b.date)return 0;
+            const da=a.date.split('.').reverse().join('');
+            const db=b.date.split('.').reverse().join('');
+            return db.localeCompare(da);
+        }).map(e=>`
+            <div class="card exp-row">
+                <div>
+                    <div style="font-size:12px; color:#666;">${e.date} <span class="exp-cat">${e.category}</span></div>
+                    <div style="font-weight:bold; margin-top:2px;">${e.note||'Keine Notiz'}</div>
+                    ${e.img?`<img src="${e.img}" class="exp-img" onclick="window.open(this.src)">`:''}
+                </div>
+                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                    <div class="exp-amount">${parseFloat(e.amount).toFixed(2)} €</div>
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">✏️</button>
+                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">🗑️</button>
+                    </div>
+                </div>
+            </div>`).join('');
+
+        document.getElementById('content').innerHTML=`
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h1>Spesen</h1>
+            <div class="card" style="padding:10px; margin:0; text-align:right;"><div style="font-size:10px; color:#666;">DIESER MONAT</div><div id="monthTotalDisplay" style="font-size:18px; font-weight:800; color:var(--brand-dark);">${total.toFixed(2)} €</div></div>
+        </div>
+        <div class="card" id="expFormCard">
+            <h3 id="expFormTitle">Neuer Eintrag</h3>
+            <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:15px;">
+                <button class="btn btn-secondary btn-full" onclick="document.getElementById('ocrInput').click()">📄 Beleg Scannen (AI)</button>
+                <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="processOCR(this)">
+                <img id="ocr-preview" style="display:none; max-height:100px; margin:10px auto; border:1px solid #ccc;">
+                <div id="ocrStatus" style="font-size:12px; color:#666; margin-top:5px; text-align:center;"></div>
             </div>
-          `).join('') || `<div class="small">Keine offenen Aufgaben 🎉</div>`}
+            <div class="grid-2">
+                <input type="date" id="exp-date" value="${new Date().toISOString().split('T')[0]}">
+                <input type="number" id="exp-amount" placeholder="Betrag (€)">
+            </div>
+            <div class="grid-2">
+                <select id="exp-cat"><option>Sonstiges</option><option>Parken</option><option>Tanken</option><option>Verpflegung</option><option>Hotel</option></select>
+                <input type="text" id="exp-note" placeholder="Notiz (z.B. Ort)">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📸 Beleg</button>
+                <input type="file" id="exp-img" style="display:none" accept="image/*">
+                <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Speichern</button>
+                <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Abbrechen</button>
+            </div>
         </div>
-      </div>
-    `;
-}
+        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
+        <div>${list||'<div style="text-align:center; padding:20px; color:#999;">Keine Ausgaben</div>'}</div>`;
+        editingExpenseId = null;
+        window.currentOcrImage = null;
+    }
 
-/* ===== Expenses view ===== */
-function showExpenses(){
-    setActiveNav('nav-expenses');
-    setPage("Spesen","Belege & Abrechnung");
-    setTopActions('');
-    renderSidebarCustomers();
-
-    const expenses=db.customers.flatMap(c=>(c.expenses||[]).map(e=>({...e, customer:c.name}))).sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const list=expenses.map(e=>`
-      <tr>
-        <td>${e.date}</td>
-        <td>${e.customer}</td>
-        <td>${e.type||""}</td>
-        <td style="text-align:right;">${(e.amount||0).toFixed(2)} €</td>
-      </tr>
-    `).join('');
-
-    document.getElementById('content').innerHTML=`
-      <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <h2 style="margin:0;">Spesen</h2>
-          <button class="btn btn-primary" onclick="addExpense()">+ Spese</button>
-        </div>
-
-        <div class="panel" style="margin-bottom:12px;">
-          <div class="panel-title">AI OCR (Beleg)</div>
-          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                <button class="btn btn-secondary btn-full chev" onclick="document.getElementById('ocrInput').click()">📄 Beleg Scannen (AI)</button>
-                <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="handleOCR(this.files[0])"/>
-          </div>
-          <div class="small" style="margin-top:8px;">Hinweis: OCR benötigt ein Backend / API-Key. Hier ist nur der UI-Flow vorbereitet.</div>
-        </div>
-
-        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary chev" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
-        <table>
-          <thead><tr><th>Datum</th><th>Kunde</th><th>Typ</th><th style="text-align:right;">Betrag</th></tr></thead>
-          <tbody>
-            ${list||'<tr><td colspan="4" class="small">Keine Spesen.</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    `;
-}
-
-/* ===== Map view ===== */
-function showMap(){
-    setActiveNav('nav-map');
-    setPage("Karte","Kundenpositionen");
-    setTopActions('');
-    renderSidebarCustomers();
-    document.getElementById('content').innerHTML=`
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h1>Kundenkarte</h1>
-        <button class="btn btn-primary chev" onclick="batchGeocode()">📍 Positionen laden</button>
-      </div>
-      <div id="map-container"></div>
-    `;
-    setTimeout(()=>{initMap();},200);
-}
-
-/* ===== Tour view ===== */
-function showTour(){
-    setActiveNav('nav-tour');
-    setPage("Tour","Route planen");
-    setTopActions('');
-    renderSidebarCustomers();
-
-    const l=db.tour.map(id=>{
-        const c=db.customers.find(x=>x.id===id);
-        return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
-          <div><div style="font-weight:700">${c.name}</div><div class="small">${c.address||""}</div></div>
-          <button class="btn btn-danger" onclick="removeFromTour('${id}')">Entfernen</button>
-        </div>`:"";
-    }).join("");
-
-    document.getElementById('content').innerHTML=`
-      <div class="card">
-        <h2>Tour</h2>
-        <div class="small">Füge Kunden in die Tour hinzu und optimiere dann die Route.</div>
-        <div class="divider"></div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button>
-          <button class="btn btn-secondary btn-full chev" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button>
-          <button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">🗑️ Leeren</button>
-        </div>
-
-        <div style="margin-top:14px;">
-          ${l || `<div class="small">Tour ist leer.</div>`}
-        </div>
-      </div>
-    `;
-}
-
-/* ===== Settings ===== */
-function showSettings(){
-    setActiveNav('nav-settings');
-    setPage("Einstellungen","Daten & Tools");
-    setTopActions('');
-    renderSidebarCustomers();
-
-    document.getElementById('content').innerHTML=`
-      <div class="card">
-        <h2>Backup</h2>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn-secondary" onclick="downloadBackup()">💾 Backup speichern</button>
-          <button class="btn btn-secondary" onclick="uploadBackup()">📤 Backup laden</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>PDF Export</h2>
-        <button class="btn btn-secondary" onclick="exportPDF()">PDF erstellen</button>
-      </div>
-
-      <div class="card">
-        <h2>Daten</h2>
-        <button class="btn btn-danger" onclick="clearAll()">🧨 Alle Daten löschen</button>
-      </div>
-    `;
-}
-
-/* ===== Forms / CRUD ===== */
-function showForm(){
-    openModal("Neuer Kunde", `
-      <div class="grid two">
-        <div><label>Name</label><input id="f_name" placeholder="Name"></div>
-        <div><label>Kategorie</label>
-          <select id="f_cat">
-            <option value="A">A</option>
-            <option value="B" selected>B</option>
-            <option value="C">C</option>
-          </select>
-        </div>
-        <div><label>Adresse</label><input id="f_addr" placeholder="Adresse"></div>
-        <div><label>Telefon</label><input id="f_phone" placeholder="Telefon"></div>
-        <div><label>Email</label><input id="f_email" placeholder="Email"></div>
-      </div>
-    `, `
-      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="createCustomer()">Speichern</button>
-    `);
-}
-function createCustomer(){
-    const c={
-        id: genId(),
-        name: document.getElementById('f_name').value.trim(),
-        category: document.getElementById('f_cat').value,
-        address: document.getElementById('f_addr').value.trim(),
-        phone: document.getElementById('f_phone').value.trim(),
-        email: document.getElementById('f_email').value.trim(),
-        reports: [],
-        tasks: [],
-        expenses: []
-    };
-    if(!c.name){ showFloat("Fehler","Name fehlt"); return; }
-    db.customers.push(c); save();
-    closeModal();
-    showCustomers();
-}
-
-function editCustomer(id){
-    const c=db.customers.find(x=>x.id===id);
-    if(!c) return;
-    openModal("Kunde bearbeiten", `
-      <div class="grid two">
-        <div><label>Name</label><input id="e_name" value="${escapeHtml(c.name)}"></div>
-        <div><label>Kategorie</label>
-          <select id="e_cat">
-            <option value="A" ${c.category==="A"?"selected":""}>A</option>
-            <option value="B" ${c.category==="B"?"selected":""}>B</option>
-            <option value="C" ${c.category==="C"?"selected":""}>C</option>
-          </select>
-        </div>
-        <div><label>Adresse</label><input id="e_addr" value="${escapeHtml(c.address||"")}"></div>
-        <div><label>Telefon</label><input id="e_phone" value="${escapeHtml(c.phone||"")}"></div>
-        <div><label>Email</label><input id="e_email" value="${escapeHtml(c.email||"")}"></div>
-      </div>
-    `, `
-      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveCustomer('${id}')">Speichern</button>
-    `);
-}
-function saveCustomer(id){
-    const c=db.customers.find(x=>x.id===id);
-    if(!c) return;
-    c.name=document.getElementById('e_name').value.trim();
-    c.category=document.getElementById('e_cat').value;
-    c.address=document.getElementById('e_addr').value.trim();
-    c.phone=document.getElementById('e_phone').value.trim();
-    c.email=document.getElementById('e_email').value.trim();
-    save(); closeModal(); showCustomers();
-}
-function delCustomer(id){
-    if(!confirm("Kunde löschen?")) return;
-    db.customers=db.customers.filter(x=>x.id!==id);
-    db.tour=db.tour.filter(x=>x!==id);
-    save(); showCustomers();
-}
-
-/* Reports */
-function addReport(id){
-    const today=new Date().toLocaleDateString('de-DE');
-    openModal("Neuer Bericht", `
-      <div><label>Datum</label><input id="r_date" value="${today}"></div>
-      <div style="margin-top:10px;"><label>Text</label><textarea id="r_text" rows="6" placeholder="Bericht..."></textarea></div>
-    `, `
-      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveReport('${id}')">Speichern</button>
-    `);
-}
-function saveReport(id){
-    const c=db.customers.find(x=>x.id===id); if(!c) return;
-    const r={date: document.getElementById('r_date').value.trim(), text: document.getElementById('r_text').value.trim()};
-    c.reports.push(r); save(); closeModal(); showCustomer(id);
-}
-function editReport(id, idx){
-    const c=db.customers.find(x=>x.id===id); if(!c) return;
-    const r=c.reports[idx];
-    openModal("Bericht bearbeiten", `
-      <div><label>Datum</label><input id="r_date" value="${escapeHtml(r.date)}"></div>
-      <div style="margin-top:10px;"><label>Text</label><textarea id="r_text" rows="6">${escapeHtml(r.text||"")}</textarea></div>
-    `, `
-      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="updateReport('${id}',${idx})">Speichern</button>
-    `);
-}
-function updateReport(id, idx){
-    const c=db.customers.find(x=>x.id===id); if(!c) return;
-    c.reports[idx].date=document.getElementById('r_date').value.trim();
-    c.reports[idx].text=document.getElementById('r_text').value.trim();
-    save(); closeModal(); showCustomer(id);
-}
-function delReport(id, idx){
-    const c=db.customers.find(x=>x.id===id); if(!c) return;
-    if(!confirm("Bericht löschen?")) return;
-    c.reports.splice(idx,1); save(); showCustomer(id);
-}
-
-/* Tasks */
-function addTask(id){
-    openModal("Neue Aufgabe", `
-      <div><label>Titel</label><input id="t_title" placeholder="Aufgabe..."></div>
-      <div style="margin-top:10px;"><label>Notiz</label><input id="t_note" placeholder="optional"></div>
-    `, `
-      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveTask('${id}')">Speichern</button>
-    `);
-}
-function saveTask(id){
-    const c=db.customers.find(x=>x.id===id); if(!c) return;
-    c.tasks=c.tasks||[];
-    c.tasks.push({title: document.getElementById('t_title').value.trim(), note: document.getElementById('t_note').value.trim(), done:false});
-    save(); closeModal(); showCustomer(id);
-}
-function toggleTask(id, idx, done){
-    const c=db.customers.find(x=>x.id===id); if(!c) return;
-    c.tasks[idx].done=done; save();
-}
-function delTask(id, idx){
-    const c=db.customers.find(x=>x.id===id); if(!c) return;
-    c.tasks.splice(idx,1); save(); showCustomer(id);
-}
-
-/* Expenses */
-function addExpense(){
-    openModal("Neue Spese", `
-      <div class="grid two">
-        <div><label>Datum</label><input id="x_date" value="${new Date().toLocaleDateString('de-DE')}"></div>
-        <div><label>Kunde</label>
-          <select id="x_cust">
-            ${db.customers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
-          </select>
-        </div>
-        <div><label>Typ</label><input id="x_type" placeholder="z.B. Parken, Essen"></div>
-        <div><label>Betrag (€)</label><input id="x_amt" type="number" step="0.01" value="0"></div>
-      </div>
-    `, `
-      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveExpense()">Speichern</button>
-    `);
-}
-function saveExpense(){
-    const cid=document.getElementById('x_cust').value;
-    const c=db.customers.find(x=>x.id===cid); if(!c) return;
-    c.expenses=c.expenses||[];
-    c.expenses.push({date: document.getElementById('x_date').value.trim(), type: document.getElementById('x_type').value.trim(), amount: parseFloat(document.getElementById('x_amt').value||"0")});
-    save(); closeModal(); showExpenses();
-}
-function printExpenses(){
-    window.print();
-}
-
-/* Backup */
-function downloadBackup(){
-    const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download="adboard-backup.json";
-    a.click();
-}
-function uploadBackup(){
-    const inp=document.createElement('input');
-    inp.type="file";
-    inp.accept="application/json";
-    inp.onchange=()=>{
-        const f=inp.files[0]; if(!f) return;
-        const r=new FileReader();
-        r.onload=()=>{
-            try{
-                db=JSON.parse(r.result);
-                save();
-                showHome();
-                showFloat("Backup geladen","Daten wurden importiert");
-            }catch(e){ alert("Ungültiges Backup"); }
+    async function processOCR(input) {
+        const file = input.files[0];
+        if(!file) return;
+        const status = document.getElementById('ocrStatus');
+        status.innerText = "Bild wird verarbeitet...";
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('ocr-preview').src = e.target.result;
+            document.getElementById('ocr-preview').style.display = 'block';
+            window.currentOcrImage = e.target.result; 
         };
-        r.readAsText(f);
-    };
-    inp.click();
-}
+        reader.readAsDataURL(file);
+        
+        try {
+            const worker = await Tesseract.createWorker('deu');
+            status.innerText = "Lese Zahlen & Text...";
+            const ret = await worker.recognize(file);
+            const text = ret.data.text;
+            const lines = ret.data.lines.map(l => l.text.trim()).filter(l => l.length > 2);
+            
+            if(lines.length > 0) document.getElementById('exp-note').value = lines[0];
 
-function clearAll(){
-    if(!confirm("Wirklich ALLES löschen?")) return;
-    db={customers:[],tour:[]};
-    save(); showHome();
-}
+            const dateMatch = text.match(/(\d{2})[\.\/-](\d{2})[\.\/-](\d{2,4})/);
+            if(dateMatch) {
+                let y = dateMatch[3];
+                if(y.length === 2) y = "20" + y;
+                document.getElementById('exp-date').value = `${y}-${dateMatch[2]}-${dateMatch[1]}`;
+            }
 
-/* Duplicates */
-function showDuplicates(){
-    const map={};
-    db.customers.forEach(c=>{
-        const k=(c.name||"").toLowerCase().trim();
-        if(!k) return;
-        map[k]=map[k]||[];
-        map[k].push(c);
-    });
-    const dups=Object.values(map).filter(arr=>arr.length>1);
-    openModal("Duplikate", `
-      ${dups.length?dups.map(arr=>`
-        <div class="panel" style="margin-bottom:10px;">
-          <div style="font-weight:600; margin-bottom:6px;">${escapeHtml(arr[0].name)}</div>
-          <div class="small">${arr.map(x=>x.id).join(", ")}</div>
-        </div>
-      `).join(''):`<div class="small">Keine Duplikate gefunden.</div>`}
-    `, `<button class="btn btn-secondary" onclick="closeModal()">OK</button>`);
-}
+            let maxVal = 0.0;
+            const currentYear = new Date().getFullYear();
+            
+            lines.forEach(l => {
+                const numbers = l.match(/[0-9]+[,.][0-9]{2}\b/g);
+                if(numbers) {
+                    numbers.forEach(numStr => {
+                        let cleanStr = numStr.replace(/\./g, 'X').replace(/,/g, '.').replace(/X/g, ''); 
+                        if(numStr.includes(';')) { cleanStr = numStr.replace(/\./g, '').replace(',', '.'); }
+                        
+                        const val = parseFloat(cleanStr);
+                        if(!isNaN(val)) {
+                            if(val >= currentYear -1 && val <= currentYear + 1) {} 
+                            else { if(val > maxVal) maxVal = val; }
+                        }
+                    });
+                }
+            });
+            
+            if(maxVal > 0) document.getElementById('exp-amount').value = maxVal.toFixed(2);
 
-/* PDF / Reports (placeholder) */
-function exportPDF(){
-  // Simple print-friendly view of all customers + today’s open tasks count
-  const today=new Date().toLocaleDateString('de-DE');
-  const w = window.open("", "_blank");
-  if(!w){ showFloat("PDF","Popup blockiert. Bitte Popups erlauben.", false); return; }
+            const t = text.toLowerCase();
+            const cat = document.getElementById('exp-cat');
+            if(t.includes('tank') || t.includes('liter') || t.includes('diesel') || t.includes('super') || t.includes('shell') || t.includes('aral')) cat.value = 'Tanken';
+            else if(t.includes('park') || t.includes('ticket')) cat.value = 'Parken';
+            else if(t.includes('hotel') || t.includes('zimmer')) cat.value = 'Hotel';
+            else if(t.includes('burger') || t.includes('mcdonald') || t.includes('essen') || t.includes('trinken')) cat.value = 'Verpflegung';
+            
+            status.innerText = "Scan fertig!";
+            await worker.terminate();
+        } catch(e) {
+            status.innerText = "Fehler: " + e.message;
+        }
+    }
 
-  const rows = db.customers.map(c=>{
-    const openTasks = (c.tasks||[]).filter(t=>!t.done).length;
-    const todayVisited = (c.reports||[]).some(r=>r.date===today) ? "Ja" : "Nein";
-    return `<tr>
-      <td>${escapeHtml(c.name)}</td>
-      <td>${escapeHtml(c.category||"B")}</td>
-      <td>${escapeHtml(c.address||"")}</td>
-      <td>${todayVisited}</td>
-      <td style="text-align:right;">${openTasks}</td>
-    </tr>`;
-  }).join("");
+    function editExpense(id) {
+        const e = db.expenses.find(x => x.id === id);
+        if(!e) return;
+        document.getElementById('exp-date').value = e.date.split('.').reverse().join('-');
+        document.getElementById('exp-amount').value = e.amount;
+        document.getElementById('exp-cat').value = e.category;
+        document.getElementById('exp-note').value = e.note;
+        document.getElementById('expFormTitle').innerText = "Eintrag bearbeiten";
+        document.getElementById('btnSaveExp').innerText = "Update";
+        document.getElementById('btnCancelExp').style.display = 'block';
+        document.getElementById('expFormCard').scrollIntoView({behavior: 'smooth'});
+        editingExpenseId = id;
+    }
 
-  w.document.write(`<!doctype html>
-  <html><head><meta charset="utf-8">
-  <title>AD Board – Kundenübersicht</title>
-  <style>
-    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:24px; }
-    h1{ margin:0 0 6px 0; }
-    .muted{ color:#555; margin:0 0 16px 0; }
-    table{ width:100%; border-collapse:collapse; }
-    th,td{ border:1px solid #ddd; padding:8px; vertical-align:top; }
-    th{ background:#f5f5f5; text-align:left; }
-  </style></head><body>
-    <h1>Kundenübersicht</h1>
-    <p class="muted">Stand: ${today}</p>
-    <table>
-      <thead><tr><th>Name</th><th>Cat</th><th>Adresse</th><th>Heute besucht</th><th>Offene Aufgaben</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="5">Keine Kunden</td></tr>`}</tbody>
-    </table>
-    <script>window.onload=()=>window.print();</script>
-  </body></html>`);
-  w.document.close();
-}
-function generateReportPDF(mode){
-  const now = new Date();
-  const todayStr = now.toLocaleDateString('de-DE');
+    function resetExpForm() {
+        document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('exp-amount').value = '';
+        document.getElementById('exp-note').value = '';
+        document.getElementById('expFormTitle').innerText = "Neuer Eintrag";
+        document.getElementById('btnSaveExp').innerText = "Speichern";
+        document.getElementById('btnCancelExp').style.display = 'none';
+        document.getElementById('ocr-preview').style.display = 'none';
+        editingExpenseId = null;
+        window.currentOcrImage = null;
+    }
 
-  let from, to;
-  if(mode==="day"){
-    from = todayStr; to = todayStr;
-  }else{
-    // last 7 days inclusive
-    const d1=new Date(now); d1.setDate(d1.getDate()-6);
-    from = d1.toLocaleDateString('de-DE');
-    to = todayStr;
-  }
+    function addExpense(){
+        const dateIn=document.getElementById('exp-date').value;
+        const amount=document.getElementById('exp-amount').value;
+        const cat=document.getElementById('exp-cat').value;
+        const note=document.getElementById('exp-note').value;
+        const file=document.getElementById('exp-img').files[0];
+        if(!dateIn||!amount)return alert("Datum und Betrag fehlen");
+        const [y,m,d]=dateIn.split('-');
+        const dateStr=`${d}.${m}.${y}`;
+        const saveExp=(imgData)=>{
+            if(editingExpenseId) {
+                const e = db.expenses.find(x => x.id === editingExpenseId);
+                e.date = dateStr; e.amount = amount; e.category = cat; e.note = note;
+                if(imgData) e.img = imgData; 
+                editingExpenseId = null;
+            } else {
+                if(!db.expenses)db.expenses=[];
+                db.expenses.unshift({id:Date.now(),date:dateStr,amount:amount,category:cat,note:note,img:imgData});
+            }
+            save(); 
+            showExpenses(); 
+        };
+        if(file){
+            const r=new FileReader();
+            r.onload=e=>{
+                const img=new Image();
+                img.onload=()=>{
+                    const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d');
+                    const scale=600/img.width; cvs.width=600; cvs.height=img.height*scale;
+                    ctx.drawImage(img,0,0,cvs.width,cvs.height);
+                    saveExp(cvs.toDataURL('image/jpeg',0.5));
+                }; img.src=e.target.result;
+            }; r.readAsDataURL(file);
+        } else if (window.currentOcrImage) {
+            saveExp(window.currentOcrImage);
+        } else { saveExp(null); }
+    }
+    
+    function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();showExpenses();}}
+    function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showExpenses()">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
 
-  // Collect reports within range (dd.mm.yyyy)
-  const parse = (s)=>{
-    const [d,m,y]=(s||"").split(".");
-    if(!d||!m||!y) return null;
-    return new Date(parseInt(y,10), parseInt(m,10)-1, parseInt(d,10));
-  };
-  const dFrom=parse(from), dTo=parse(to);
-  const inRange=(ds)=>{
-    const d=parse(ds); 
-    if(!d||!dFrom||!dTo) return false;
-    return d>=dFrom && d<=dTo;
-  };
-
-  const items=[];
-  db.customers.forEach(c=>{
-    (c.reports||[]).forEach(r=>{
-      if(inRange(r.date)) items.push({c, r});
-    });
-  });
-  items.sort((a,b)=>{
-    const da=parse(a.r.date), dbb=parse(b.r.date);
-    return (da-dbb) || a.c.name.localeCompare(b.c.name);
-  });
-
-  const w = window.open("", "_blank");
-  if(!w){ showFloat("Report","Popup blockiert. Bitte Popups erlauben.", false); return; }
-
-  const rows = items.map(x=>`
-    <tr>
-      <td>${escapeHtml(x.r.date)}</td>
-      <td>${escapeHtml(x.c.name)}</td>
-      <td>${escapeHtml(x.c.address||"")}</td>
-      <td>${escapeHtml(x.r.text||"")}</td>
-    </tr>
-  `).join("");
-
-  const title = mode==="day" ? "Tagesbericht" : "Wochenbericht";
-  w.document.write(`<!doctype html>
-  <html><head><meta charset="utf-8">
-  <title>${title}</title>
-  <style>
-    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:24px; }
-    h1{ margin:0 0 6px 0; }
-    .muted{ color:#555; margin:0 0 16px 0; }
-    table{ width:100%; border-collapse:collapse; }
-    th,td{ border:1px solid #ddd; padding:8px; vertical-align:top; }
-    th{ background:#f5f5f5; text-align:left; }
-  </style></head><body>
-    <h1>${title}</h1>
-    <p class="muted">Zeitraum: ${from} – ${to}</p>
-    <table>
-      <thead><tr><th>Datum</th><th>Kunde</th><th>Adresse</th><th>Text</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="4">Keine Berichte im Zeitraum.</td></tr>`}</tbody>
-    </table>
-    <script>window.onload=()=>window.print();</script>
-  </body></html>`);
-  w.document.close();
-}
-
-/* Map / Geocode (placeholder) */
-async function initMap(){
-  const cont = document.getElementById('map-container');
-  if(!cont) return;
-
-  const opts = db.customers.map(c=>{
-    const cc=getCustomerCoords(c);
-    const label = `${c.name}${cc?` (${cc.lat.toFixed(5)}, ${cc.lon.toFixed(5)})`:''}`;
-    return `<option value="${c.id}">${escapeHtml(label)}</option>`;
-  }).join('');
-
-  cont.innerHTML = `
-    <div class="card">
-      <h2>Karte</h2>
-      <p class="muted">Zuverlässiger Modus ohne externe Kartenbibliothek. Wähle einen Kunden, um ihn auf OpenStreetMap zu sehen.</p>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <select id="mapCustomerSelect" class="input" style="flex:1; min-width:260px;">
-          ${opts || `<option value="">Keine Kunden</option>`}
-        </select>
-        <button class="btn btn-secondary" onclick="openSelectedOnOSM()">In OSM öffnen</button>
-      </div>
-      <div style="margin-top:12px; border:1px solid var(--border); border-radius: var(--radius); overflow:hidden;">
-        <iframe id="osmFrame" title="OSM" style="width:100%; height:520px; border:0;" loading="lazy"></iframe>
-      </div>
-      <p class="small" style="margin-top:10px;">Tipp: Wenn keine Koordinaten vorhanden sind, nutze „📍 Positionen laden“ (Geocoding) oder trage Lat/Lon im Kunden ein.</p>
-    </div>
-  `;
-
-  const sel = document.getElementById('mapCustomerSelect');
-  if(sel && sel.value){
-    renderOSMForCustomer(sel.value);
-    sel.addEventListener('change', ()=>renderOSMForCustomer(sel.value));
-  }
-}
-
-function renderOSMForCustomer(id){
-  const c=db.customers.find(x=>x.id===id);
-  const frame=document.getElementById('osmFrame');
-  if(!c || !frame) return;
-
-  const cc=getCustomerCoords(c);
-  if(!cc){
-    frame.src = "about:blank";
-    return;
-  }
-  const z=16;
-  const bbox = `${cc.lon-0.01}%2C${cc.lat-0.005}%2C${cc.lon+0.01}%2C${cc.lat+0.005}`;
-  frame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${cc.lat}%2C${cc.lon}`;
-}
-
-function openSelectedOnOSM(){
-  const sel=document.getElementById('mapCustomerSelect');
-  if(!sel || !sel.value) return;
-  const c=db.customers.find(x=>x.id===sel.value);
-  const cc=getCustomerCoords(c);
-  if(!cc){ showFloat("Karte","Keine Koordinaten vorhanden.", false); return; }
-  window.open(`https://www.openstreetmap.org/?mlat=${cc.lat}&mlon=${cc.lon}#map=17/${cc.lat}/${cc.lon}`,'_blank');
-}
-async function batchGeocode(){
-  const missing = db.customers.filter(c=>!getCustomerCoords(c) && (c.address||"").trim().length>0);
-  if(!missing.length){
-    showFloat("Positionen","Alle Kunden haben bereits Koordinaten (oder keine Adresse).", false);
-    initMap();
-    return;
-  }
-
-  showFloat("Positionen", `Geocoding startet… (${missing.length} fehlen)`, true);
-
-  let ok=0, fail=0;
-  for(let i=0;i<missing.length;i++){
-    const c = missing[i];
-    try{
-      document.getElementById('float-desc').textContent = `Suche: ${c.name} (${i+1}/${missing.length})`;
-      const res = await geocodeAddress(c.address);
-      if(res && isFinite(res.lat) && isFinite(res.lon)){
-        setCustomerCoords(c, res.lat, res.lon);
-        ok++;
+    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">📍 Positionen laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
+    async function batchGeocode(){
+        const missing=db.customers.filter(c=>!c.lat&&c.address.length>5);
+        if(missing.length===0)return alert("Alle Adressen haben bereits Koordinaten.");
+        if(!confirm(`${missing.length} Kunden ohne Koordinaten. Laden?`))return;
+        document.getElementById('loader').style.display='flex';
+        document.getElementById('stopGeoBtn').style.display='block';
+        stopGeocoding=false;
+        
+        for(let i=0;i<missing.length;i++){
+            if(stopGeocoding) break;
+            const c=missing[i];
+            document.getElementById('loader-text').innerText = `Lade ${i+1} von ${missing.length}...`;
+            try{
+                const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(c.address)}`);
+                const d=await r.json();
+                if(d&&d[0]){c.lat=d[0].lat;c.lon=d[0].lon;}
+            }catch(e){}
+            if(i%10===0) save(); 
+            await new Promise(r=>setTimeout(r,1100));
+        }
         save();
-      }else{
-        fail++;
-      }
-    }catch(e){
-      fail++;
+        document.getElementById('loader').style.display='none';
+        document.getElementById('stopGeoBtn').style.display='none';
+        showMap();
     }
-    // Nominatim rate limit
-    await sleep(1100);
-  }
+    function getStatus(c){if(!c.reports||c.reports.length===0)return'red';const lastRep=c.reports[0].date;const[d,m,y]=lastRep.split('.');const lastDate=new Date(y,m-1,d);const diffDays=(new Date()-lastDate)/(1000*60*60*24);const intervalDays=(c.visitInterval||4)*7;if(diffDays>intervalDays)return'red';if(diffDays>intervalDays-7)return'yellow';return'green';}
+    function toggleSelectMode(){selectMode=!selectMode;selectedIds.clear();showCustomers();}
+    function toggleSelection(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);showCustomers();}
+    function addBatchToTour(){if(selectedIds.size===0)return alert("Bitte Kunden auswählen.");selectedIds.forEach(id=>{if(!db.tour.includes(id))db.tour.push(id);});save();selectMode=false;selectedIds.clear();showTour();}
+    function deleteCustomerDirect(e, id) { e.stopPropagation(); if(confirm("Kunden löschen?")) { db.customers = db.customers.filter(x => x.id !== id); db.tour = db.tour.filter(x => x !== id); save(); renderTable(); } }
+    function deleteBatch() { if(selectedIds.size === 0) return alert("Keine Kunden ausgewählt."); if(!confirm(`${selectedIds.size} Kunden löschen?`)) return; db.customers = db.customers.filter(c => !selectedIds.has(c.id)); db.tour = db.tour.filter(id => !selectedIds.has(id)); save(); selectMode = false; selectedIds.clear(); showCustomers(); }
+    
+    // --- REPORTS (SORTED) ---
+    function generateReportPDF(range){
+        const today=new Date();
+        const dateStr=today.toLocaleDateString('de-DE');
+        let reportData=[];
+        
+        db.customers.forEach(c=>{
+            (c.reports||[]).forEach(r=>{
+                const parts=r.date.split('.');
+                if(parts.length===3){
+                    const repDate=new Date(parts[2],parts[1]-1,parts[0]);
+                    let include=false;
+                    if(range==='day'&&r.date===dateStr) include=true;
+                    if(range==='week'){
+                        const diff=(today-repDate)/(1000*60*60*24);
+                        if(diff<=7&&diff>=0) include=true;
+                    }
+                    if(include) reportData.push({...r, customerName:c.name, rawDate: repDate});
+                }
+            });
+        });
 
-  showFloat("Positionen", `Fertig. OK: ${ok}, Fehler: ${fail}`, false);
-  initMap();
-}
+        if(reportData.length===0) return alert("Keine Berichte gefunden.");
 
-/* Tour */
-function addToTour(id){
-    if(!db.tour.includes(id)) db.tour.push(id);
-    save();
-}
-function removeFromTour(id){
-    db.tour=db.tour.filter(x=>x!==id);
-    save(); showTour();
-}
-function optTour(){
-  if(!db.tour.length){ showFloat("Tour","Tour ist leer.", false); return; }
+        reportData.sort((a,b) => a.rawDate - b.rawDate);
 
-  // Build list with coords
-  const nodes = db.tour.map(id=>db.customers.find(c=>c.id===id)).filter(Boolean);
-  const withCoords = nodes.filter(c=>getCustomerCoords(c));
-  if(withCoords.length !== nodes.length){
-    showFloat("Tour","Einige Tour-Kunden haben keine Koordinaten. Erst '📍 Positionen laden' in der Karte ausführen.", false);
-    return;
-  }
-
-  // Nearest neighbor from first element
-  const ordered = [];
-  let current = withCoords[0];
-  const remaining = new Set(withCoords.slice(1));
-
-  ordered.push(current);
-  while(remaining.size){
-    const curC = getCustomerCoords(current);
-    let best=null, bestD=Infinity;
-    for(const c of remaining){
-      const d=haversineKm(curC, getCustomerCoords(c));
-      if(d<bestD){ bestD=d; best=c; }
+        let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showHome()">Zurück</button></div><h1>${range==='day'?'Tagesbericht':'Wochenbericht'}</h1>`;
+        
+        reportData.forEach(r=>{
+            html+=`<div class="card" style="page-break-inside:avoid;"><div style="font-weight:bold;font-size:16px;">${r.customerName}</div><div style="font-size:12px;color:#666;">Datum: ${r.date}</div><div style="white-space:pre-wrap;margin-top:10px;">${r.text}</div>${r.img?`<img src="${r.img}" style="max-width:300px;display:block;margin-top:10px;border:1px solid #eee;">`:''}</div>`;
+        });
+        
+        document.getElementById('content').innerHTML=html;
     }
-    remaining.delete(best);
-    ordered.push(best);
-    current=best;
-  }
 
-  db.tour = ordered.map(c=>c.id);
-  save();
-  showTour();
-  showFloat("Tour","Tour optimiert (Nearest-Neighbor).", false);
-}
-function openMaps(){
-  if(!db.tour.length){ showFloat("Maps","Tour ist leer.", false); return; }
-  const customers = db.tour.map(id=>db.customers.find(c=>c.id===id)).filter(Boolean);
+    function uploadLogo(input) { const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d'); const s=100/img.height; cvs.height=100; cvs.width=img.width*s; ctx.drawImage(img,0,0,cvs.width,cvs.height); db.logo=cvs.toDataURL('image/png'); save(); updateLogoUI(); }; img.src=e.target.result; }; r.readAsDataURL(f); }
+    
+    // --- CUSTOMERS & SEARCH ---
+    function showCustomers(){
+        let headerHTML = '<h1>Kunden</h1>';
+        if (viewState.filterRoute) {
+            headerHTML = `
+                <div style="background:var(--event-blue); color:var(--event-blue-text); padding:10px; border-radius:var(--radius); margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:bold;">Filter: Route "${viewState.filterRoute}"</div>
+                    <button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; height:auto;" onclick="filterRoute(null)">Alle anzeigen</button>
+                </div>
+                <h1>Kunden (Gefiltert)</h1>`;
+        }
 
-  // Prefer coords, fallback to address
-  const points = customers.map(c=>{
-    const cc=getCustomerCoords(c);
-    if(cc) return `${cc.lat},${cc.lon}`;
-    return (c.address||"").trim();
-  }).filter(Boolean);
+        document.getElementById('content').innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            ${headerHTML}
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="toggleSelectMode()">${selectMode?'Abbrechen':'Auswahl'}</button>
+                ${!selectMode?'<button class="btn btn-primary" onclick="showForm()">+ Neu</button>':''}
+            </div>
+        </div>
+        <div class="card">
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <input id="search" placeholder="Suche (Name, Nr, Ort, Kontakt, Tel, ...)" value="${viewState.search}" onkeyup="viewState.search=this.value; renderTable()" style="margin:0; flex:1;">
+                <select id="sort" onchange="viewState.sort=this.value; renderTable()" style="margin:0; width:120px;">
+                    <option value="name" ${viewState.sort==='name'?'selected':''}>A-Z</option>
+                    <option value="route" ${viewState.sort==='route'?'selected':''}>Tour</option>
+                    <option value="status" ${viewState.sort==='status'?'selected':''}>Fälligkeit</option>
+                </select>
+            </div>
+            <div id="tableContainer"></div>
+        </div>
+        ${selectMode?`<div class="float-bar"><div style="font-weight:bold;">${selectedIds.size} gewählt</div><button class="btn btn-danger" onclick="deleteBatch()">Löschen</button><button class="btn btn-primary" onclick="addBatchToTour()">Zur Tour</button></div>`:''}`;
+        renderTable();
+    }
 
-  if(points.length < 2){
-    showFloat("Maps","Mindestens 2 Stopps nötig.", false); 
-    return;
-  }
+    function renderTable(){
+        const s = viewState.search.toLowerCase();
+        let list = db.customers;
 
-  // Google Maps Directions URL: origin + destination + waypoints (max ~23)
-  const origin = points[0];
-  const dest = points[points.length-1];
-  const waypoints = points.slice(1,-1).slice(0, 20); // keep conservative
-  const url = new URL("https://www.google.com/maps/dir/");
-  url.searchParams.set("api","1");
-  url.searchParams.set("origin", origin);
-  url.searchParams.set("destination", dest);
-  if(waypoints.length) url.searchParams.set("waypoints", waypoints.join("|"));
-  window.open(url.toString(), "_blank");
-}
+        if (viewState.filterRoute) {
+            list = list.filter(c => c.route === viewState.filterRoute);
+        }
 
-/* OCR placeholder */
-function handleOCR(file){
-    if(!file){ return; }
-    showFloat("OCR","Bild ausgewählt (Placeholder).",false);
-}
+        if (s) {
+            list = list.filter(c => 
+                (c.name||'').toLowerCase().includes(s) || 
+                (c.nr||'').toLowerCase().includes(s) || 
+                (c.route||'').toLowerCase().includes(s) ||
+                (c.address||'').toLowerCase().includes(s) ||
+                (c.contact||'').toLowerCase().includes(s) || 
+                (c.phone||'').toLowerCase().includes(s) ||
+                (c.email||'').toLowerCase().includes(s) ||
+                (c.products||'').toLowerCase().includes(s)
+            );
+        }
 
-/* Utils */
-function escapeHtml(s){
-  return String(s??"")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
+        if(viewState.sort==='route') list.sort((a,b)=>(a.route||'z').localeCompare(b.route||'z'));
+        else if(viewState.sort==='status') list.sort((a,b)=>(getStatus(a)==='red'?-1:1));
+        else list.sort((a,b)=>a.name.localeCompare(b.name));
 
-/* Initial */
-showHome();
+        document.getElementById('tableContainer').innerHTML = list.map(c => {
+            const isSelected = selectedIds.has(c.id);
+            const clickAction = selectMode ? `toggleSelection(${c.id})` : `showDetail(${c.id})`;
+            const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
+            
+            return `
+            <div class="cust-row ${isSelected?'selected':''}" onclick="${clickAction}">
+                ${selectMode?`<div class="check-circle"></div>`:''}
+                <div style="flex:1;">
+                    <div style="font-weight:700;">
+                        ${c.name} 
+                        <span class="cat-badge ${badgeClass}">${c.category}</span>
+                    </div>
+                    <div style="font-size:12px; color:#64748b;">${c.address||'-'}</div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                    <div style="font-size:11px; color:#999;">${c.route||''}</div>
+                    ${!selectMode?`<button class="btn btn-danger" style="padding:4px 8px; font-size:10px; z-index:10;" onclick="deleteCustomerDirect(event, ${c.id})">🗑️</button>`:''}
+                </div>
+            </div>`;
+        }).join('') || '<div style="padding:20px; text-align:center;">Keine Ergebnisse</div>';
+    }
+    
+    function showDetail(id) { 
+        const c = db.customers.find(x => x.id === id); if(!c) return; 
+        const inTour = db.tour.includes(id); 
+        
+        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>${r.date}</b><div><span style="cursor:pointer; margin-right:10px; font-size:16px;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer; color:#ef4444; font-size:16px;" onclick="delRep(${id},${i})">🗑️</span></div></div><div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
+        const todayStr = new Date().toISOString().split('T')[0]; 
+        const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} onclick="toggleTask(${id},${i})"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#ef4444;cursor:pointer;font-weight:bold;margin-left:5px;" onclick="delTask(${id},${i})">×</span></div>` }).join(''); 
+    
+        const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
+
+        document.getElementById('content').innerHTML = `
+        <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
+        
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px; align-items:stretch;">
+            <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; height:100%; margin:0; border-top: 4px solid var(--brand);">
+                <div>
+                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:15px; margin-bottom:20px;">
+                        <div style="flex:1;">
+                            <h1 style="margin:0;">${c.name} <span class="cat-badge ${badgeClass}" style="font-size:14px; vertical-align:middle;">${c.category}</span></h1>
+                            <div style="color:var(--text-light); font-size:14px; margin-top:5px;">${c.address||'-'} | Tour: ${c.route||'-'}</div>
+                        </div>
+                        <div class="no-print" style="display:flex; gap:5px;">
+                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'In Tour'}</button>
+                            <button class="btn btn-secondary" onclick="showForm(${id})">✏️</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
+                    <a href="tel:${c.phone}" class="btn btn-secondary btn-full">📞 Anrufen</a>
+                    <a href="mailto:${c.email}" class="btn btn-secondary btn-full">✉️ E-Mail</a>
+                    <a href="https://maps.google.com/?q=$${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
+                </div>
+            </div>
+
+            <div class="card" style="height:100%; margin:0; overflow-y:auto; background:#fffbeb; border:1px solid #fcd34d;">
+                <h4 style="margin:0 0 10px 0;">Aufgaben</h4>
+                <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;">
+                    <input id="newT" placeholder="Aufgabe..." style="margin:0; background:white; font-size:12px;">
+                    <div style="display:flex; gap:5px;">
+                        <input type="date" id="newTDate" style="margin:0; background:white; font-size:12px; flex:1;">
+                        <button class="btn btn-secondary" onclick="addTask(${id})" style="padding:5px 10px;">+</button>
+                    </div>
+                </div>
+                <div>${taskHTML || '<div style="color:#999;font-size:12px;">Keine Aufgaben</div>'}</div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:15px;">
+            <div class="grid-4-custom">
+                <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f8fafc;"></div>
+                <div><label>Umsatz</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="Umsatz/Potenzial" onchange="saveDetail(${id})"></div>
+                <div><label>Intervall (Wo)</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
+                <div><label>Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Berichte</h2>
+            <div class="no-print">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
+                    <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">📸 Foto <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
+                </div>
+                <textarea id="repTxt" rows="2" placeholder="Ergebnis..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
+                <button class="btn btn-primary btn-full" onclick="addRep(${id})">Bericht Speichern</button>
+            </div>
+            <div style="margin-top:20px; max-height:400px; overflow-y:auto;">${reports}</div>
+        </div>`; 
+    }
+    function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showDetail(id); }
+    function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showDetail(id); }
+    function delTask(id, idx) { db.customers.find(x=>x.id===id).tasks.splice(idx,1); save(); showDetail(id); }
+    function addRep(id) { const t=document.getElementById('repTxt').value; const dInput=document.getElementById('repDate').value; const f=document.getElementById('repImg').files[0]; if(!t && !f) return; let dateStr = new Date().toLocaleDateString('de-DE'); if(dInput) { const [y,m,d] = dInput.split('-'); dateStr = `${d}.${m}.${y}`; } const sR=(img)=>{ db.customers.find(x=>x.id===id).reports.unshift({date:dateStr, text:t, img:img}); save(); showDetail(id); }; if(f){ const r=new FileReader(); r.onload=e=>{ const i=new Image(); i.onload=()=>{ const c=document.createElement('canvas'); const x=c.getContext('2d'); const s=600/i.width; c.width=600; c.height=i.height*s; x.drawImage(i,0,0,c.width,c.height); sR(c.toDataURL('image/jpeg',0.6)); }; i.src=e.target.result; }; r.readAsDataURL(f); } else sR(null); }
+    function editRep(cid, rid) { const c=db.customers.find(x=>x.id===cid); const r=c.reports[rid]; const newTxt = prompt("Text bearbeiten:", r.text); if(newTxt !== null) { const newDate = prompt("Datum (TT.MM.JJJJ):", r.date); if(newDate) { r.text = newTxt; r.date = newDate; save(); showDetail(cid); } } }
+    function togTour(id){if(db.tour.includes(id))db.tour=db.tour.filter(x=>x!==id);else db.tour.push(id);save();showDetail(id);}
+    
+    function showForm(id=null){
+        const c=id?db.customers.find(x=>x.id===id):{name:'',nr:'',category:'C',status:'aktiv',address:'',contact:'',phone:'',email:'',route:'',products:''};
+        document.getElementById('content').innerHTML=`
+        <div style="max-width:600px; margin:0 auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>${id?'Bearbeiten':'Neu'}</h1></div>
+            <div class="card"><label>Name *</label><input id="f_name" value="${c.name}">
+                <div class="grid-2"><div><label>Kundennummer</label><input id="f_nr" value="${c.nr||''}" placeholder="Nr"></div><div><label>Tour</label><input id="f_route" value="${c.route||''}" placeholder="Tour"></div></div>
+                <div class="grid-2"><select id="f_cat"><option value="A" ${c.category==='A'?'selected':''}>A (Gold)</option><option value="B" ${c.category==='B'?'selected':''}>B (Blau)</option><option value="C" ${c.category==='C'?'selected':''}>C (Grau)</option></select><select id="f_stat"><option value="aktiv" ${c.status==='aktiv'?'selected':''}>Aktiv</option><option value="inaktiv" ${c.status==='inaktiv'?'selected':''}>Inaktiv</option></select></div>
+                <label>Adresse</label><input id="f_adr" value="${c.address||''}" placeholder="Straße, PLZ, Ort">
+                <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
+                <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
+                <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
+                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
+            </div>
+        </div>`;
+    }
+    
+    function saveData(id){
+        const n=document.getElementById('f_name').value;
+        if(!n)return alert("Name fehlt");
+        const d={
+            id:id||Date.now(),name:n,
+            nr:document.getElementById('f_nr').value,
+            route:document.getElementById('f_route').value,
+            category:document.getElementById('f_cat').value,
+            status:document.getElementById('f_stat').value,
+            address:document.getElementById('f_adr').value,
+            contact:document.getElementById('f_con').value,
+            phone:document.getElementById('f_tel').value,
+            email:document.getElementById('f_mail').value,
+            products:document.getElementById('f_prod').value, // Used for Revenue now
+            nextAppointment:id?db.customers.find(x=>x.id===id).nextAppointment:'',
+            reports:id?db.customers.find(x=>x.id===id).reports:[],
+            visitInterval:4, 
+            tasks:id?db.customers.find(x=>x.id===id).tasks:[]
+        };
+        if(id)db.customers[db.customers.findIndex(x=>x.id===id)]=d;else db.customers.push(d);
+        save();showDetail(d.id);
+    }
+
+    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
+    async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
+    function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
+    function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
+    function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen</h1><div class="grid-3">${r.map(x=>`<div class="card" onclick="filterRoute('${x}')" style="cursor:pointer;text-align:center;"><h2>${x}</h2><div style="color:#666">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
+    
+    function filterRoute(r){
+        viewState.filterRoute = r; 
+        viewState.search = "";       
+        showCustomers();             
+    }
+
+    function importBackup(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{db=JSON.parse(e.target.result);save();alert("Backup OK");showHome();}catch(e){alert("Fehler");}};r.readAsText(f);}
+    
+    async function downloadBackup() {
+        const now = new Date();
+        const ts = now.getFullYear() + '-' +
+                   String(now.getMonth()+1).padStart(2,'0') + '-' +
+                   String(now.getDate()).padStart(2,'0') + '_' +
+                   String(now.getHours()).padStart(2,'0') + '-' +
+                   String(now.getMinutes()).padStart(2,'0') + '-' +
+                   String(now.getSeconds()).padStart(2,'0');
+        const filename = `crm_backup_${ts}.json`;
+        const jsonStr = JSON.stringify(db, null, 2);
+
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{ description: 'JSON Database', accept: {'application/json': ['.json']} }],
+                });
+                const writable = await handle.createWritable();
+                await writable.write(jsonStr);
+                await writable.close();
+                alert("Backup erfolgreich gespeichert!");
+                return;
+            } catch (err) {
+                if (err.name !== 'AbortError') console.error(err);
+                return; 
+            }
+        }
+
+        const blob = new Blob([jsonStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // --- DUPLIKATE ---
+    function showDuplicates() {
+        const groups = {};
+        db.customers.forEach(c => {
+            const key = (c.address || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!key) return; 
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+        });
+
+        const duplicates = Object.values(groups).filter(g => g.length > 1);
+
+        if (duplicates.length === 0) return alert("Keine doppelten Adressen gefunden.");
+
+        let html = `<h1>Doppelte Einträge (${duplicates.length} Gruppen)</h1>`;
+        duplicates.forEach(group => {
+            html += `<div class="card" style="border-left:4px solid #ef4444;">
+                <h3>📍 ${group[0].address}</h3>
+                ${group.map(c => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding:10px 0;">
+                        <div>
+                            <b>${c.name}</b> <span style="font-size:10px; color:#666;">(ID: ${c.id})</span><br>
+                            Tour: ${c.route || '-'} | Status: ${c.status}
+                        </div>
+                        <button class="btn btn-danger" style="font-size:12px;" onclick="deleteDuplicate(${c.id})">Löschen</button>
+                    </div>
+                `).join('')}
+            </div>`;
+        });
+        html = `<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div>` + html;
+        document.getElementById('content').innerHTML = html;
+    }
+
+    function deleteDuplicate(id) {
+        if(confirm("Diesen Eintrag wirklich löschen?")) {
+            db.customers = db.customers.filter(c => c.id !== id);
+            db.tour = db.tour.filter(x => x !== id);
+            save();
+            showDuplicates(); 
+        }
+    }
+
+    // --- CALENDAR LOGIC ---
+    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;"><label style="font-size:10px;font-weight:bold;color:#999;">POOL</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
+    function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
+    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${i}</b>${getEvts(ds)}</div>`;}con.innerHTML=h+`</div>`;}
+    function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
+    function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
+    function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
+    function renderPoolList(){const r=document.getElementById('poolFilter').value;document.getElementById('poolContainer').innerHTML=db.customers.filter(c=>c.status==='aktiv'&&(!r||c.route===r)).map(c=>`<div class="pool-item" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${c.name}</div>`).join('');}
+    function changeCal(d){if(calView==='month')currentCalDate.setMonth(currentCalDate.getMonth()+d);else if(calView==='day')currentCalDate.setDate(currentCalDate.getDate()+d);else if(calView==='week')currentCalDate.setDate(currentCalDate.getDate()+(d*7));else currentCalDate.setFullYear(currentCalDate.getFullYear()+d);showCalendar();}
+    function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
+    function dropTime(ev,ds,t){ev.preventDefault();db.customers.find(x=>x.id===dragId).nextAppointment=ds+'T'+t;save();showCalendar();}
+    function confirmDrop(){db.customers.find(x=>x.id===dragId).nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
+    function closeModal(){document.getElementById('timeModal').style.display='none';}
+    function delAppt(id){if(confirm("Termin löschen?")){db.customers.find(x=>x.id===id).nextAppointment="";save();showCalendar();}}
+    function saveDetail(id){
+        const c=db.customers.find(x=>x.id===id);
+        c.nextAppointment=document.getElementById('nextAppt').value;
+        c.visitInterval=parseInt(document.getElementById('visitInt').value)||4;
+        
+        // Speichert das neue Umsatzfeld
+        const rev = document.getElementById('det-revenue');
+        if(rev) c.products = rev.value;
+        
+        save();
+    }
+    function getEvts(ds, t) { let html = db.customers.filter(c => { if(!c.nextAppointment || !c.nextAppointment.startsWith(ds)) return false; if(!t) return true; return c.nextAppointment.includes(t); }).map(c => `<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${c.nextAppointment.split('T')[1]} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`).join(''); if(db.events) { html += db.events.filter(e => { if(!e.start.startsWith(ds)) return false; if(!t) return true; const slotHour = parseInt(t.split(':')[0]); const startHour = parseInt(e.start.split('T')[1].split(':')[0]); const startMin = parseInt(e.start.split('T')[1].split(':')[1]); let endHour = startHour + 1; let endMin = startMin; if(e.end) { endHour = parseInt(e.end.split('T')[1].split(':')[0]); endMin = parseInt(e.end.split('T')[1].split(':')[1]); } const evtStartMins = startHour * 60 + startMin; const evtEndMins = endHour * 60 + endMin; const slotStartMins = slotHour * 60; const slotEndMins = (slotHour + 1) * 60; return evtStartMins < slotEndMins && evtEndMins > slotStartMins; }).map(e => { const s = e.start.split('T')[1]; const end = e.end ? e.end.split('T')[1] : ''; return `<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`; }).join(''); } return html; }
 </script>
 </body>
 </html>
