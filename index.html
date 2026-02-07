@@ -265,6 +265,43 @@
   box-shadow: none !important;
 }
 
+/* Leere Tage am Monatsanfang NICHT hervorheben */
+.cal-day.empty,
+.cal-day.other-month {
+  background: #fff !important;
+  opacity: .4;
+}
+
+.cal-day.empty .day-num,
+.cal-day.other-month .day-num {
+  visibility: hidden;
+}
+
+/* iOS-like: Today = roter gefüllter Kreis um die Tageszahl */
+.cal-day.today .day-num,
+.cal-day.today .cal-day-num{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:22px !important;
+  height:22px !important;
+  border-radius:999px !important;
+  background:#ff3b30 !important;   /* iOS Rot */
+  color:#fff !important;
+  font-weight:700 !important;
+  line-height:1 !important;
+}
+
+/* damit die Zahl nicht „klebt“ */
+.cal-day .day-num,
+.cal-day .cal-day-num{margin:6px 0 6px 6px !important;}
+
+.cal-more{font-size:11px;color:#6b7280;margin-top:2px;cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-more:hover{color:#111827;}
+
+.calendar-grid{grid-auto-rows:120px;}
+.cal-day{overflow:hidden;}
+        
         
     </style>
 </head>
@@ -1105,7 +1142,8 @@
     // --- CALENDAR LOGIC ---
     function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;"><label style="font-size:10px;font-weight:bold;color:#999;">POOL</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
-    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${i}</b>${getEvts(ds)}</div>`;}con.innerHTML=h+`</div>`;}
+    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${i}</b>${getEvtsMonth(ds,5)}
+</div>`;}con.innerHTML=h+`</div>`;}
     function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
@@ -1128,6 +1166,33 @@
         save();
     }
     function getEvts(ds, t) { let html = db.customers.filter(c => { if(!c.nextAppointment || !c.nextAppointment.startsWith(ds)) return false; if(!t) return true; return c.nextAppointment.includes(t); }).map(c => `<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${c.nextAppointment.split('T')[1]} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`).join(''); if(db.events) { html += db.events.filter(e => { if(!e.start.startsWith(ds)) return false; if(!t) return true; const slotHour = parseInt(t.split(':')[0]); const startHour = parseInt(e.start.split('T')[1].split(':')[0]); const startMin = parseInt(e.start.split('T')[1].split(':')[1]); let endHour = startHour + 1; let endMin = startMin; if(e.end) { endHour = parseInt(e.end.split('T')[1].split(':')[0]); endMin = parseInt(e.end.split('T')[1].split(':')[1]); } const evtStartMins = startHour * 60 + startMin; const evtEndMins = endHour * 60 + endMin; const slotStartMins = slotHour * 60; const slotEndMins = (slotHour + 1) * 60; return evtStartMins < slotEndMins && evtEndMins > slotStartMins; }).map(e => { const s = e.start.split('T')[1]; const end = e.end ? e.end.split('T')[1] : ''; return `<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`; }).join(''); } return html; }
+    function openDayFromMonth(ds){ currentCalDate = new Date(ds); calView = 'day'; showCalendar(); }
+
+function getEvtsMonth(ds, limit){
+  let items = [];
+
+  // Kunden-Termine (nextAppointment)
+  db.customers.forEach(c => {
+    if(!c.nextAppointment || !c.nextAppointment.startsWith(ds)) return;
+    const time = (c.nextAppointment.split('T')[1] || '').slice(0,5);
+    items.push(`<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`);
+  });
+
+  // Manuelle Events (db.events)
+  if(db.events){
+    db.events.forEach(e => {
+      if(!e.start || !e.start.startsWith(ds)) return;
+      const s = (e.start.split('T')[1] || '').slice(0,5);
+      const end = e.end ? (e.end.split('T')[1] || '').slice(0,5) : '';
+      items.push(`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`);
+    });
+  }
+
+  const shown = items.slice(0, limit);
+  const more = items.length - limit;
+  return shown.join('') + (more > 0 ? `<div class="cal-more" onclick="openDayFromMonth('${ds}')">+${more} mehr</div>` : '');
+}
+
 </script>
 </body>
 </html>
