@@ -324,6 +324,23 @@
 .cal-more{font-size:11px;color:#6b7280;margin-top:2px;cursor:pointer;user-select:none;}
 .cal-more:hover{color:#111827;}
 
+
+
+/* Kalender-Hintergrund komplett weiß (kein blauer Balken) */
+.calendar-grid {
+  background: #ffffff !important;
+}
+
+/* Sicherheit: auch leere Tageszellen weiß */
+.cal-day,
+.cal-day.empty {
+  background: #ffffff !important;
+}
+        
+.cal-day.empty {
+  opacity: 0.35;
+}
+
         
     </style>
 </head>
