@@ -256,13 +256,13 @@
         <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
     </div>
     <div class="nav-menu">
-        <button class="nav-item active" onclick="nav('home', this)">🏠 Dashboard</button>
-        <button class="nav-item" onclick="nav('customers', this)">👥 Kunden</button>
-        <button class="nav-item" onclick="nav('expenses', this)">💶 Spesen</button>
-        <button class="nav-item" onclick="nav('map', this)">🗺️ Karte</button>
-        <button class="nav-item" onclick="nav('calendar', this)">📅 Kalender</button>
-        <button class="nav-item" onclick="nav('tour', this)">🚗 Tour</button>
-        <button class="nav-item" onclick="nav('routes', this)">📂 Routen</button>
+        <button class="nav-item active" onclick="nav('home', this)">◻︎ Dashboard</button>
+        <button class="nav-item" onclick="nav('customers', this)">≡ Kunden</button>
+        <button class="nav-item" onclick="nav('expenses', this)">✓ Spesen</button>
+        <button class="nav-item" onclick="nav('map', this)">◦ Karte</button>
+        <button class="nav-item" onclick="nav('calendar', this)">• Kalender</button>
+        <button class="nav-item" onclick="nav('tour', this)">▸ Tour</button>
+        <button class="nav-item" onclick="nav('routes', this)">— Routen</button>
     </div>
 </div>
 
@@ -429,7 +429,7 @@
                 <input type="file" id="csvIn" style="display:none" onchange="importCSV(this)">
                 <input type="file" id="bakIn" style="display:none" onchange="importBackup(this)">
             </div>
-            <div class="card"><h2>Berichte drucken</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">📄 Tagesbericht</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">📄 Wochenbericht</button></div></div>
+            <div class="card"><h2>Drucken</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">Tagesbericht</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">Wochenbericht</button></div></div>
         </div>
         <div class="card"><h2>Sonstiges</h2>
             <button class="btn btn-secondary btn-full" onclick="showDuplicates()">Duplikate finden</button>
@@ -510,7 +510,7 @@
         <div class="card" id="expFormCard">
             <h3 id="expFormTitle">Neuer Eintrag</h3>
             <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:15px;">
-                <button class="btn btn-secondary btn-full" onclick="document.getElementById('ocrInput').click()">📄 Beleg Scannen (AI)</button>
+                <button class="btn btn-secondary btn-full" onclick="document.getElementById('ocrInput').click()">Beleg Scannen (AI)</button>
                 <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="processOCR(this)">
                 <img id="ocr-preview" style="display:none; max-height:100px; margin:10px auto; border:1px solid #ccc;">
                 <div id="ocrStatus" style="font-size:12px; color:#666; margin-top:5px; text-align:center;"></div>
@@ -524,13 +524,13 @@
                 <input type="text" id="exp-note" placeholder="Notiz (z.B. Ort)">
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📸 Beleg</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">Beleg Laden</button>
                 <input type="file" id="exp-img" style="display:none" accept="image/*">
                 <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Sichern</button>
                 <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Abbrechen</button>
             </div>
         </div>
-        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
+        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">Abrechnung drucken</button></div>
         <div>${list||'<div style="text-align:center; padding:20px; color:#999;">Keine Ausgaben</div>'}</div>`;
         editingExpenseId = null;
         window.currentOcrImage = null;
@@ -740,7 +740,7 @@
     
     // --- CUSTOMERS & SEARCH ---
     function showCustomers(){
-        let headerHTML = '<h1>Kunden</h1>';
+        let headerHTML = '<h1>Kundenliste</h1>';
         if (viewState.filterRoute) {
             headerHTML = `
                 <div style="background:var(--event-blue); color:var(--event-blue-text); padding:10px; border-radius:var(--radius); margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
@@ -843,14 +843,14 @@
                         </div>
                         <div class="no-print" style="display:flex; gap:5px;">
                             <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'Tour'}</button>
-                            <button class="btn btn-secondary" onclick="showForm(${id})">✏️</button>
+                            <button class="btn btn-secondary" onclick="showForm(${id})">✎</button>
                         </div>
                     </div>
                 </div>
                 <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
-                    <a href="tel:${c.phone}" class="btn btn-secondary btn-full">📞 Anrufen</a>
-                    <a href="mailto:${c.email}" class="btn btn-secondary btn-full">✉️ E-Mail</a>
-                    <a href="https://maps.google.com/?q=${encodeURIComponent(c.address||'')}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
+                    <a href="tel:${c.phone}" class="btn btn-secondary btn-full">Anrufen ></a>
+                    <a href="mailto:${c.email}" class="btn btn-secondary btn-full">E-Mail ></a>
+                    <a href="https://maps.google.com/?q=${encodeURIComponent(c.address||'')}" target="_blank" class="btn btn-secondary btn-full">Maps></a>
                 </div>
             </div>
 
