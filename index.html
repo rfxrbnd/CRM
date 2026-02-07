@@ -204,6 +204,26 @@
         .cal-event { background:#111827 !important; color:#fff !important; border-color:rgba(0,0,0,0.15) !important; }
         .cal-event.manual { background:#e5e7eb !important; color:#111827 !important; border-color:#d1d5db !important; }
 
+/* Sidebar Navigation – saubere Ausrichtung */
+.nav-item {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.nav-arrow {
+  color:#9ca3af;
+  font-size:14px;
+  opacity:0.4;
+}
+
+.nav-item:hover .nav-arrow,
+.nav-item.active .nav-arrow {
+  opacity:1;
+  color:#111827;
+}
+
+        
     </style>
 </head>
 <body>
@@ -251,19 +271,20 @@
 </div>
 
 <div id="sidebar">
-    <div class="logo-area">
-        <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
-        <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
-    </div>
-    <div class="nav-menu">
-        <button class="nav-item active" onclick="nav('home', this)">Dashboard    ></button>
-        <button class="nav-item" onclick="nav('customers', this)">Kunden         ></button>
-        <button class="nav-item" onclick="nav('expenses', this)">Spesen          ></button>
-        <button class="nav-item" onclick="nav('map', this)">Karte                ></button>
-        <button class="nav-item" onclick="nav('calendar', this)">Kalender        ></button>
-        <button class="nav-item" onclick="nav('tour', this)">Tour                ></button>
-        <button class="nav-item" onclick="nav('routes', this)">Routen            ></button>
-    </div>
+  <div class="logo-area">
+    <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
+    <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
+  </div>
+
+  <div class="nav-menu">
+    <button class="nav-item active" onclick="nav('home', this)"><span>Dashboard</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('customers', this)"><span>Kunden</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('expenses', this)"><span>Spesen</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('map', this)"><span>Karte</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('calendar', this)"><span>Kalender</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('tour', this)"><span>Tour</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('routes', this)"><span>Routen</span><span class="nav-arrow">›</span></button>
+  </div>
 </div>
 
 <div id="main"><div id="content" class="content-wrap"></div></div>
