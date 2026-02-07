@@ -856,7 +856,7 @@
             </div>
 
             <div class="card" style="height:100%; margin:0; overflow-y:auto;">
-                <h4 style="margin:0 0 10px 0;">ToDos</h4>
+                <h4 style="margin:0 0 10px 0;">ToDo</h4>
                 <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;">
                     <input id="newT" placeholder="..." style="margin:0; background:white; font-size:12px;">
                     <div style="display:flex; gap:5px;">
@@ -864,6 +864,7 @@
                         <button class="btn btn-secondary" onclick="addTask(${id})" style="padding:5px 10px;">+</button>
                     </div>
                 </div>
+                <div>${taskHTML || '<div style="color:#999;font-size:12px;padding:10px;">Keine Aufgaben</div>'}</div>
             </div>
         </div>
 
