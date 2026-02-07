@@ -3,666 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AD Board v123 - Layout Fix</title>
+    <title>Raphaels CRM</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
-   <style>
-  /* =========================================================
-     AD Board – Clean 2026 UI (Design-only rewrite)
-     Keeps all existing IDs/classes so the JS logic stays intact.
-     ========================================================= */
-
-  :root{
-    /* Spacing / radius */
-    --radius: 16px;
-    --radius-sm: 12px;
-    --radius-xs: 10px;
-
-    /* Color system (light) */
-    --bg-body: #f6f7fb;
-    --bg-sidebar: rgba(255,255,255,0.82);
-    --surface: rgba(255,255,255,0.92);
-    --surface-2: rgba(255,255,255,0.72);
-
-    --text: #0b1220;
-    --muted: rgba(11,18,32,0.62);
-
-    --border: rgba(15,23,42,0.10);
-    --border-strong: rgba(15,23,42,0.16);
-
-    /* Brand (keep your yellow, but use as accent, not as a slab) */
-    --brand: #f4d03f;
-    --brand-2: #ffd45a;
-    --brand-ink: #0b1220;
-
-    /* Status colors */
-    --danger: #ef4444;
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --info: #3b82f6;
-
-    /* Elevation */
-    --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-sm: 0 6px 18px rgba(15,23,42,0.08);
-    --shadow-md: 0 18px 50px rgba(15,23,42,0.12);
-
-    /* Focus ring */
-    --ring: 0 0 0 4px rgba(244,208,63,0.24);
-  }
-
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg-body: #0b1020;
-      --bg-sidebar: rgba(17,24,39,0.60);
-      --surface: rgba(17,24,39,0.72);
-      --surface-2: rgba(17,24,39,0.54);
-
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.62);
-
-      --border: rgba(255,255,255,0.12);
-      --border-strong: rgba(255,255,255,0.18);
-
-      --shadow-xs: 0 1px 2px rgba(0,0,0,0.25);
-      --shadow-sm: 0 10px 26px rgba(0,0,0,0.35);
-      --shadow-md: 0 22px 70px rgba(0,0,0,0.45);
-
-      --ring: 0 0 0 4px rgba(244,208,63,0.22);
-    }
-  }
-
-  *{ box-sizing:border-box; }
-  html, body{ height:100%; }
-  body{
-    margin:0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(244,208,63,0.18), transparent 60%),
-      radial-gradient(900px 500px at 100% 0%, rgba(59,130,246,0.16), transparent 55%),
-      radial-gradient(900px 600px at 20% 110%, rgba(34,197,94,0.10), transparent 55%),
-      var(--bg-body);
-    color: var(--text);
-    overflow:hidden;
-  }
-
-  /* Scrollbars (subtle) */
-  *::-webkit-scrollbar{ width:10px; height:10px; }
-  *::-webkit-scrollbar-thumb{
-    background: rgba(15,23,42,0.18);
-    border-radius: 999px;
-    border: 3px solid transparent;
-    background-clip: padding-box;
-  }
-  @media (prefers-color-scheme: dark){
-    *::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.18); }
-  }
-
-  /* Layout */
-  #app{
-    height:100vh;
-    display:flex;
-    gap: 14px;
-    padding: 14px;
-  }
-
-  .sidebar{
-    width: 320px;
-    background: var(--bg-sidebar);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    overflow:hidden;
-    display:flex;
-    flex-direction:column;
-    min-width: 280px;
-  }
-
-  .sidebar-header{
-    padding: 16px 16px 12px 16px;
-    border-bottom: 1px solid var(--border);
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap: 12px;
-  }
-
-  .brand{
-    display:flex;
-    flex-direction:column;
-    gap: 4px;
-  }
-
-  .brand .title{
-    font-weight: 750;
-    letter-spacing: -0.02em;
-    font-size: 16px;
-    line-height: 1.2;
-  }
-  .brand .sub{
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  .sidebar-header .header-actions{
-    display:flex;
-    gap: 8px;
-    align-items:center;
-  }
-
-  /* Nav */
-  .nav{
-    padding: 10px;
-    display:flex;
-    flex-direction:column;
-    gap: 6px;
-  }
-
-  .nav-item{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    color: var(--text);
-    text-decoration:none;
-    cursor:pointer;
-    user-select:none;
-    transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
-  }
-
-  .nav-item:hover{
-    background: rgba(15,23,42,0.04);
-    border-color: rgba(15,23,42,0.06);
-  }
-  @media (prefers-color-scheme: dark){
-    .nav-item:hover{
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.08);
-    }
-  }
-
-  .nav-item.active{
-    background: linear-gradient(180deg, rgba(244,208,63,0.26), rgba(244,208,63,0.12));
-    border-color: rgba(244,208,63,0.32);
-    box-shadow: var(--shadow-xs);
-    position: relative;
-  }
-  .nav-item.active::before{
-    content:"";
-    position:absolute;
-    left: 8px;
-    top: 9px;
-    bottom: 9px;
-    width: 3px;
-    border-radius: 999px;
-    background: rgba(244,208,63,0.95);
-  }
-  .nav-item .label{
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    font-size: 13px;
-  }
-  .nav-item .hint{
-    margin-left:auto;
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  /* Sidebar content / panels */
-  .sidebar-content{
-    padding: 12px;
-    overflow:auto;
-    display:flex;
-    flex-direction:column;
-    gap: 12px;
-  }
-
-  .panel{
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-  }
-
-  .panel-title{
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin: 0 0 10px 0;
-  }
-
-  /* Customer list */
-  .cust-list{
-    display:flex;
-    flex-direction:column;
-    gap: 6px;
-  }
-  .cust-row{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    padding: 10px 10px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    cursor:pointer;
-    transition: background 160ms ease, border-color 160ms ease;
-  }
-  .cust-row:hover{
-    background: rgba(15,23,42,0.04);
-    border-color: rgba(15,23,42,0.06);
-  }
-  @media (prefers-color-scheme: dark){
-    .cust-row:hover{
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.08);
-    }
-  }
-
-  .cust-row.selected{
-    background: linear-gradient(180deg, rgba(244,208,63,0.22), rgba(244,208,63,0.10));
-    border-color: rgba(244,208,63,0.28);
-  }
-
-  .cust-name{
-    font-weight: 650;
-    font-size: 13px;
-    letter-spacing: -0.01em;
-  }
-  .cust-meta{
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  /* Badges */
-  .badge{
-    display:inline-flex;
-    align-items:center;
-    gap: 6px;
-    padding: 4px 9px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.55);
-    font-size: 12px;
-    line-height: 1;
-    color: var(--text);
-    white-space:nowrap;
-  }
-  @media (prefers-color-scheme: dark){
-    .badge{ background: rgba(17,24,39,0.45); }
-  }
-
-  .badge.cat-a{ border-color: rgba(34,197,94,0.35); }
-  .badge.cat-b{ border-color: rgba(245,158,11,0.35); }
-  .badge.cat-c{ border-color: rgba(239,68,68,0.35); }
-
-  /* Main area */
-  .main{
-    flex:1;
-    min-width: 0;
-    display:flex;
-    flex-direction:column;
-    gap: 14px;
-  }
-
-  .topbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 12px;
-    padding: 14px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-xs);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .topbar .page-title{
-    display:flex;
-    flex-direction:column;
-    gap: 3px;
-    min-width: 0;
-  }
-  .topbar .page-title h1{
-    margin:0;
-    font-size: 16px;
-    letter-spacing: -0.02em;
-    font-weight: 780;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .topbar .page-title .subtitle{
-    font-size: 12px;
-    color: var(--muted);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-
-  .topbar .actions{
-    display:flex;
-    align-items:center;
-    gap: 8px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
-  }
-
-  /* Page container / cards */
-  .content{
-    flex: 1;
-    min-height: 0;
-    overflow:auto;
-    padding-bottom: 6px;
-  }
-
-  .card{
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-xs);
-    padding: 16px;
-    margin-bottom: 14px;
-  }
-
-  .card h2{
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 760;
-    letter-spacing: -0.01em;
-  }
-
-  .card .muted{
-    color: var(--muted);
-  }
-
-  /* Buttons */
-  .btn{
-    appearance:none;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.65);
-    color: var(--text);
-    border-radius: 12px;
-    padding: 10px 12px;
-    font-size: 13px;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-    cursor:pointer;
-    transition: transform 80ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-    user-select:none;
-    display:inline-flex;
-    align-items:center;
-    gap: 8px;
-    line-height: 1;
-  }
-  @media (prefers-color-scheme: dark){
-    .btn{ background: rgba(17,24,39,0.58); }
-  }
-
-  .btn:hover{
-    background: rgba(255,255,255,0.85);
-    border-color: var(--border-strong);
-    box-shadow: var(--shadow-xs);
-  }
-  @media (prefers-color-scheme: dark){
-    .btn:hover{ background: rgba(17,24,39,0.72); }
-  }
-
-  .btn:active{ transform: translateY(1px); }
-  .btn:focus{ outline:none; box-shadow: var(--ring); border-color: rgba(244,208,63,0.42); }
-
-  .btn-primary{
-    background: linear-gradient(180deg, rgba(244,208,63,0.95), rgba(244,208,63,0.78));
-    border-color: rgba(244,208,63,0.55);
-    color: var(--brand-ink);
-  }
-  .btn-primary:hover{
-    border-color: rgba(244,208,63,0.70);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .btn-secondary{
-    background: rgba(255,255,255,0.60);
-  }
-  @media (prefers-color-scheme: dark){
-    .btn-secondary{ background: rgba(17,24,39,0.50); }
-  }
-
-  .btn-danger{
-    border-color: rgba(239,68,68,0.35);
-    background: rgba(239,68,68,0.08);
-  }
-  .btn-success{
-    border-color: rgba(34,197,94,0.35);
-    background: rgba(34,197,94,0.08);
-  }
-
-  /* Inputs */
-  input, select, textarea{
-    width:100%;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.70);
-    color: var(--text);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
-  }
-  @media (prefers-color-scheme: dark){
-    input, select, textarea{ background: rgba(17,24,39,0.55); }
-  }
-
-  input:focus, select:focus, textarea:focus{
-    box-shadow: var(--ring);
-    border-color: rgba(244,208,63,0.42);
-    background: rgba(255,255,255,0.90);
-  }
-  @media (prefers-color-scheme: dark){
-    input:focus, select:focus, textarea:focus{ background: rgba(17,24,39,0.72); }
-  }
-
-  input:disabled, select:disabled, textarea:disabled{
-    opacity: 0.72;
-    cursor:not-allowed;
-  }
-
-  label{
-    font-size: 12px;
-    font-weight: 650;
-    color: var(--muted);
-    display:block;
-    margin: 0 0 6px 0;
-  }
-
-  .grid{
-    display:grid;
-    gap: 12px;
-  }
-  .grid.two{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 980px){
-    .sidebar{ width: 300px; }
-    .grid.two{ grid-template-columns: 1fr; }
-  }
-  @media (max-width: 820px){
-    #app{ padding: 10px; gap: 10px; }
-    .sidebar{ display:none; }
-  }
-
-  /* Tables */
-  table{
-    width:100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    overflow:hidden;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.50);
-  }
-  @media (prefers-color-scheme: dark){
-    table{ background: rgba(17,24,39,0.46); }
-  }
-
-  th, td{
-    padding: 10px 10px;
-    font-size: 13px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  th{
-    text-align:left;
-    font-size: 12px;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 800;
-    background: rgba(255,255,255,0.40);
-  }
-  @media (prefers-color-scheme: dark){
-    th{ background: rgba(17,24,39,0.40); }
-  }
-  tr:last-child td{ border-bottom:none; }
-
-  /* Modals / overlays */
-  .modal-backdrop{
-    position: fixed;
-    inset: 0;
-    background: rgba(2,6,23,0.55);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding: 14px;
-    z-index: 50;
-  }
-  .modal-backdrop.show{ display:flex; }
-
-  .modal{
-    width: min(720px, 100%);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: calc(var(--radius) + 4px);
-    box-shadow: var(--shadow-md);
-    overflow:hidden;
-    transform: translateY(6px);
-    opacity: 0.98;
-    animation: modalIn 180ms ease-out both;
-  }
-
-  @keyframes modalIn{
-    from{ transform: translateY(18px); opacity: 0.0; }
-    to{ transform: translateY(6px); opacity: 0.98; }
-  }
-
-  .modal-header{
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 10px;
-  }
-  .modal-header h3{
-    margin:0;
-    font-size: 14px;
-    font-weight: 780;
-    letter-spacing: -0.01em;
-  }
-  .modal-body{ padding: 16px; }
-  .modal-footer{
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    display:flex;
-    gap: 10px;
-    justify-content:flex-end;
-    flex-wrap:wrap;
-  }
-
-  /* Toast / floating bar */
-  #float-bar{
-    position: fixed;
-    bottom: 14px;
-    left: 14px;
-    right: 14px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 10px;
-    padding: 12px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    box-shadow: var(--shadow-sm);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 60;
-  }
-
-  #float-bar .left{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    min-width: 0;
-  }
-  #float-bar .title{
-    font-weight: 760;
-    letter-spacing: -0.01em;
-    font-size: 13px;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  #float-bar .desc{
-    font-size: 12px;
-    color: var(--muted);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-
-  /* Loader */
-  .loader{
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    border: 2px solid rgba(15,23,42,0.18);
-    border-top-color: rgba(244,208,63,0.95);
-    animation: spin 0.9s linear infinite;
-  }
-  @media (prefers-color-scheme: dark){
-    .loader{ border-color: rgba(255,255,255,0.18); border-top-color: rgba(244,208,63,0.95); }
-  }
-  @keyframes spin{ to{ transform: rotate(360deg);} }
-
-  /* Utility */
-  .row{ display:flex; gap: 12px; align-items:center; flex-wrap:wrap; }
-  .spacer{ flex:1; }
-  .divider{ height:1px; background: var(--border); margin: 10px 0; }
-  .small{ font-size: 12px; color: var(--muted); }
-
-  /* Respect reduced motion */
-  @media (prefers-reduced-motion: reduce){
-    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-  }
-</style>
-
+    <style>
+        /* --- APPLE UI CORE --- */
+        :root {
+            --ios-blue: #007AFF;
+            --ios-blue-dim: #eef7ff;
+            --ios-gray-bg: #F2F2F7;
+            --ios-surface: #FFFFFF;
+            --ios-input-bg: #E5E5EA;
+            --ios-text: #000000;
+            --ios-text-sec: #8E8E93;
+            --ios-border: #C6C6C8; /* Separators */
+            --ios-red: #FF3B30;
+            --ios-green: #34C759;
+            --ios-orange: #FF9500;
+            
+            --radius-card: 16px;
+            --radius-btn: 10px;
+            --radius-input: 10px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+            
+            /* Legacy Brand Vars mapping to new style */
+            --brand: var(--ios-blue); 
+            --brand-dark: #0056b3; 
+            --bg-body: var(--ios-gray-bg);
+            --text-main: var(--ios-text);
+            --text-light: var(--ios-text-sec);
+            --border: #E5E5EA; /* Weichere Grenzen */
+            --event-blue: var(--ios-blue-dim);
+            --event-blue-text: var(--ios-blue);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; display: flex; height: 100vh; background: var(--bg-body); color: var(--text-main); overflow: hidden; 
+            font-size: 15px; letter-spacing: -0.01em;
+        }
+
+        /* --- LOADER --- */
+        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { width: 30px; height: 30px; border: 3px solid #E5E5EA; border-top-color: var(--ios-text-sec); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* --- SIDEBAR (iPad Style) --- */
+        #sidebar { 
+            width: 260px; background: rgba(255,255,255,0.95); 
+            border-right: 1px solid rgba(0,0,0,0.1); 
+            display: flex; flex-direction: column; z-index: 50; flex-shrink: 0; 
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            backdrop-filter: blur(20px);
+        }
+        .logo-area { padding: 30px 20px 20px 20px; text-align: left; background: transparent; border: none; }
+        .logo-img { max-height: 40px; border-radius: 8px; }
+        
+        .nav-menu { padding: 10px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; overflow-y: auto; }
+        .nav-item { 
+            display: flex; align-items: center; gap: 14px; padding: 10px 12px; 
+            border-radius: 10px; cursor: pointer; color: var(--ios-text); 
+            font-size: 15px; font-weight: 500; transition: 0.2s; border: none; background: transparent; width: 100%; text-align: left; 
+        }
+        .nav-item:hover { background: rgba(0,0,0,0.03); }
+        .nav-item.active { background: var(--ios-blue-dim); color: var(--ios-blue); font-weight: 600; }
+
+        /* --- MAIN CONTENT --- */
+        #main { flex: 1; overflow-y: auto; padding: 0; position: relative; scroll-behavior: smooth; }
+        .content-wrap { max-width: 900px; margin: 0 auto; padding: 20px; padding-bottom: 120px; }
+
+        /* --- CARDS & TYPO --- */
+        .card { 
+            background: var(--ios-surface); border: none; 
+            border-radius: var(--radius-card); padding: 20px; margin-bottom: 20px; 
+            box-shadow: var(--shadow-sm); 
+        }
+        h1 { margin: 0 0 15px 0; font-size: 28px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: #1c1c1e; letter-spacing: -0.02em; }
+        h2, h3, h4 { font-weight: 600; margin-bottom: 15px; color: #1c1c1e; }
+        
+        label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 500; color: var(--ios-text-sec); text-transform: uppercase; letter-spacing: 0.03em; margin-left: 4px; }
+        
+        /* iOS INPUT STYLE */
+        input, select, textarea { 
+            width: 100%; padding: 12px 14px; 
+            border: none; background: var(--ios-input-bg); 
+            border-radius: var(--radius-input); 
+            font-size: 16px; margin-bottom: 15px; font-family: inherit; color: var(--ios-text);
+            transition: 0.2s;
+        }
+        input:focus, select:focus, textarea:focus { background: #d1d1d6; }
+        
+        /* --- BUTTONS --- */
+        .btn { 
+            display: inline-flex; align-items: center; justify-content: center; 
+            padding: 10px 18px; border-radius: var(--radius-btn); 
+            font-size: 15px; font-weight: 600; cursor: pointer; border: none; gap: 6px; 
+            text-decoration: none !important; transition: 0.2s; user-select: none; 
+            -webkit-appearance: none;
+        }
+        .btn:active { transform: scale(0.97); opacity: 0.8; }
+        
+        /* Primary = iOS Blue Filled */
+        .btn-primary { background: var(--ios-blue); color: #fff; }
+        .btn-primary:hover { background: #006add; }
+        
+        /* Secondary = iOS Gray/Tonal */
+        .btn-secondary { background: rgba(118, 118, 128, 0.12); color: var(--ios-blue); }
+        .btn-secondary:hover { background: rgba(118, 118, 128, 0.2); }
+        
+        .btn-danger { background: rgba(255, 59, 48, 0.12); color: var(--ios-red); }
+        .btn-success { background: rgba(52, 199, 89, 0.15); color: var(--ios-green); }
+        .btn-full { width: 100%; }
+
+        /* --- BADGES & LISTS --- */
+        .cat-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: #fff; display: inline-block; min-width: 24px; text-align: center; }
+        .cat-A { background-color: var(--ios-orange); } 
+        .cat-B { background-color: var(--ios-blue); } 
+        .cat-C { background-color: #8E8E93; } 
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .grid-4-custom { display: grid; grid-template-columns: 1.5fr 1.5fr 0.5fr 1fr; gap: 10px; align-items: end; }
+        
+        .cust-row { display: flex; align-items: center; padding: 14px 10px; background: transparent; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; justify-content: space-between; }
+        .cust-row:last-child { border-bottom: none; }
+        .cust-row:hover { background: rgba(0,0,0,0.02); }
+        .cust-row.selected { background: var(--ios-blue-dim); }
+        
+        .check-circle { width: 22px; height: 22px; border: 2px solid #C7C7CC; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
+        .cust-row.selected .check-circle { background: var(--ios-blue); border-color: var(--ios-blue); }
+        .cust-row.selected .check-circle::after { content: '✓'; font-size: 14px; font-weight: 700; color: #fff; }
+        
+        /* EXPENSES */
+        .exp-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .exp-amount { font-weight: 700; color: var(--text-main); font-size: 16px; }
+        .exp-cat { font-size: 11px; background: #F2F2F7; padding: 3px 8px; border-radius: 8px; color: var(--ios-text-sec); font-weight: 500; margin-right: 6px; }
+
+        /* FLOAT BAR */
+        .float-bar { 
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            background: rgba(255,255,255,0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 10px 20px; border-radius: 50px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12); 
+            border: 1px solid rgba(255,255,255,0.2); 
+            display: flex; gap: 15px; align-items: center; z-index: 1000; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+        }
+        @keyframes slideUp { from { transform: translate(-50%, 150%); } to { transform: translate(-50%, 0); } }
+
+        /* REPORTS & TASKS */
+        .report-entry { padding: 15px; background: #F9F9FB; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--ios-blue); }
+        .rep-img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid rgba(0,0,0,0.1); }
+        
+        .task-mini-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .task-chk { margin-right: 12px; width: 20px; height: 20px; accent-color: var(--ios-blue); }
+        .task-date { font-size: 11px; background: #E5E5EA; color: #666; padding: 2px 6px; border-radius: 6px; margin-left: 8px; }
+        .task-date.overdue { background: rgba(255, 59, 48, 0.1); color: var(--ios-red); }
+
+        /* CALENDAR */
+        .cal-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; height: calc(100vh - 120px); min-height: 500px; }
+        .cal-pool, .cal-main { background: #fff; border-radius: var(--radius-card); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; border: 1px solid var(--border); }
+        .pool-list { background: #F9F9FB; padding: 10px; flex: 1; overflow-y: auto; }
+        .pool-item { padding: 8px 12px; margin-bottom: 6px; background: #fff; border-radius: 8px; font-size: 13px; cursor: grab; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.05); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--border); gap: 1px; flex: 1; overflow-y: auto; }
+        .cal-head { background: #F9F9FB; padding: 12px 4px; text-align: center; font-size: 11px; font-weight: 600; color: var(--ios-text-sec); text-transform: uppercase; }
+        .cal-day { background: #ffffff; min-height: 100px; padding: 6px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+        .cal-day.today { background: #F2F8FF; }
+        .cal-event { 
+            background: var(--ios-blue); color: #fff; padding: 4px 8px; border-radius: 6px; 
+            font-size: 11px; font-weight: 500; cursor: grab; white-space: nowrap; 
+            overflow: hidden; text-overflow: ellipsis; margin-top: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: none;
+        }
+        .cal-event.manual { background: #E0F0FF; color: var(--ios-blue); border: 1px solid rgba(0,122,255,0.2); }
+
+        .view-controls { display: flex; background: #E5E5EA; padding: 2px; border-radius: 8px; }
+        .view-btn { padding: 6px 12px; font-size: 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; color: var(--ios-text); font-weight: 500; }
+        .view-btn.active { background: #fff; color: #000; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+        /* STATS */
+        .stat-container { display: flex; align-items: flex-end; height: 100px; gap: 8px; margin-top: 25px; }
+        .stat-bar { flex: 1; background: var(--ios-blue); border-radius: 6px 6px 0 0; position: relative; min-height: 4px; opacity: 0.8; }
+        .stat-val { position: absolute; top: -20px; width: 100%; text-align: center; font-size: 11px; font-weight: 700; color: var(--ios-text); }
+        .stat-lbl { position: absolute; bottom: -24px; width: 100%; text-align: center; font-size: 10px; color: var(--ios-text-sec); font-weight: 500; }
+
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-box { background: #fff; padding: 25px; border-radius: 20px; width: 90%; max-width: 380px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        #map-container { height: 600px; width: 100%; border-radius: var(--radius-card); border: 1px solid var(--border); z-index: 1; overflow: hidden; }
+
+        /* MOBILE NAV */
+        #menu-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 100; background: #fff; color: #000; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); align-items: center; justify-content: center; }
+        
+        @media (max-width: 800px) {
+            #sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 85%; box-shadow: 50px 0 50px rgba(0,0,0,0.2); }
+            #sidebar.open { transform: translateX(0); }
+            #menu-toggle { display: flex; }
+            .cal-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; height: auto; }
+            .cal-pool { height: 150px; margin-bottom: 20px; }
+            .cal-main { height: 500px; }
+            .grid-2, .grid-3, .grid-4-custom { grid-template-columns: 1fr; }
+            .content-wrap { padding: 15px; padding-bottom: 100px; }
+            h1 { font-size: 24px; }
+        }
+        @media print {
+            #sidebar, #menu-toggle, .no-print, .btn, .nav-menu, .del-x, .float-bar { display: none !important; }
+            #main { padding: 0; margin: 0; width: 100%; height: auto; overflow: visible; }
+            body { background: #fff; height: auto; overflow: visible; font-family: "Times New Roman", serif; }
+            .card { box-shadow: none; border: none; margin: 0; padding: 0; border-bottom: 1px solid #ccc; margin-bottom: 20px; border-radius: 0; }
+            h1 { font-size: 18pt; border-bottom: 2px solid #000; margin-bottom: 20px; color: #000; }
+            .report-row { border-bottom: 1px solid #ccc; padding: 10px 0; page-break-inside: avoid; }
+            #rep-input-area, textarea { display: none; }
+        }
+    </style>
 </head>
 <body>
 
 <div id="loader">
     <div class="spinner"></div>
-    <div id="loader-text" style="margin-top:10px; font-weight:bold;">Lädt...</div>
+    <div id="loader-text" style="margin-top:15px; font-weight:600; color:#8E8E93;">Lädt...</div>
     <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" onclick="stopGeocoding=true">STOPP</button>
 </div>
 <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
@@ -670,7 +233,7 @@
 <div id="timeModal" class="modal-overlay">
     <div class="modal-box">
         <h2 style="text-align:center">Zeit wählen</h2>
-        <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
+        <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%; background:#F2F2F7; border-radius:12px;">
         <div class="grid-2" style="margin-top:20px;">
             <button class="btn btn-primary btn-full" onclick="confirmDrop()">Speichern</button>
             <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
@@ -683,9 +246,9 @@
         <h2 style="text-align:center">Termin</h2>
         <input type="hidden" id="evtId">
         <label>Titel / Art</label>
-        <div style="display:flex; gap:5px; margin-bottom:10px;">
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
             <input id="evtTitle" placeholder="Titel" style="margin:0;">
-            <select style="width:40px;" onchange="document.getElementById('evtTitle').value=this.value">
+            <select style="width:50px;" onchange="document.getElementById('evtTitle').value=this.value">
                 <option value="">...</option><option>Büro</option><option>Meeting</option><option>Werkstatt</option><option>Privat</option><option>Arzt</option><option>Urlaub</option>
             </select>
         </div>
@@ -705,7 +268,7 @@
 <div id="sidebar">
     <div class="logo-area">
         <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
-        <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
+        <div id="text-logo" style="display:none; font-weight:800; font-size:18px;">Raphaels CRM</div>
     </div>
     <div class="nav-menu">
         <button class="nav-item active" onclick="nav('home', this)">🏠 Dashboard</button>
@@ -722,7 +285,7 @@
 
 <script>
     const DB_KEY = 'raphael_crm_v122_revenue';
-    const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
+    const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007AFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='5' ry='5'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
     let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
     let currentCalDate = new Date();
@@ -866,9 +429,9 @@
         document.getElementById('content').innerHTML=`
         <h1>Dashboard</h1>
         <div class="grid-3">
-            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800;">${count}</div><div style="font-size:12px; color:var(--text-light);">Kunden</div></div>
-            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; color:var(--brand-dark);">${visited}</div><div style="font-size:12px; color:var(--text-light);">Heute</div></div>
-            <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben (Anzeigen)</div></div>
+            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; letter-spacing:-1px;">${count}</div><div style="font-size:13px; color:var(--text-light); font-weight:500;">Kunden</div></div>
+            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; letter-spacing:-1px; color:var(--brand);">${visited}</div><div style="font-size:13px; color:var(--text-light); font-weight:500;">Heute</div></div>
+            <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; letter-spacing:-1px; color:var(--ios-red);">${openTasksCount}</div><div style="font-size:13px; color:var(--text-light); font-weight:500;">Offene Aufgaben</div></div>
         </div>
         <div class="card"><h2>📈 Besuchstrend</h2><div class="stat-container">${bars}</div></div>
         <div class="grid-2">
@@ -901,12 +464,12 @@
                     if(!t.done) {
                         const isOverdue = t.dueDate && t.dueDate < todayStr;
                         html += `
-                        <div class="global-task-row">
-                            <input type="checkbox" style="margin-right:10px; width:20px; height:20px;" onclick="toggleTaskGlobal(${c.id}, ${index})">
+                        <div class="global-task-row" style="display:flex; padding:15px 0; border-bottom:1px solid var(--border);">
+                            <input type="checkbox" style="margin-right:15px; width:22px; height:22px; accent-color:var(--ios-blue);" onclick="toggleTaskGlobal(${c.id}, ${index})">
                             <div style="flex:1;">
-                                <div style="font-weight:bold; ${isOverdue ? 'color:#ef4444;' : ''}">${t.text}</div>
-                                <div style="font-size:12px; color:#666; cursor:pointer;" onclick="showDetail(${c.id})">
-                                    👤 ${c.name} ${t.dueDate ? '📅 ' + t.dueDate.split('-').reverse().join('.') : ''}
+                                <div style="font-weight:600; font-size:15px; ${isOverdue ? 'color:var(--ios-red);' : ''}">${t.text}</div>
+                                <div style="font-size:13px; color:var(--text-light); margin-top:2px; cursor:pointer;" onclick="showDetail(${c.id})">
+                                    👤 ${c.name} ${t.dueDate ? ' · 📅 ' + t.dueDate.split('-').reverse().join('.') : ''}
                                 </div>
                             </div>
                         </div>`;
@@ -915,7 +478,7 @@
                 });
             }
         });
-        if(count === 0) html += '<div style="padding:20px; text-align:center; color:#999;">Alles erledigt! 🎉</div>';
+        if(count === 0) html += '<div style="padding:40px; text-align:center; color:#999;">Alles erledigt! 🎉</div>';
         html += '</div>';
         document.getElementById('content').innerHTML = html;
     }
@@ -940,33 +503,33 @@
             const db=b.date.split('.').reverse().join('');
             return db.localeCompare(da);
         }).map(e=>`
-            <div class="card exp-row">
+            <div class="exp-row">
                 <div>
-                    <div style="font-size:12px; color:#666;">${e.date} <span class="exp-cat">${e.category}</span></div>
-                    <div style="font-weight:bold; margin-top:2px;">${e.note||'Keine Notiz'}</div>
-                    ${e.img?`<img src="${e.img}" class="exp-img" onclick="window.open(this.src)">`:''}
+                    <div style="font-size:13px; color:#8E8E93; margin-bottom:4px;">${e.date} <span class="exp-cat">${e.category}</span></div>
+                    <div style="font-weight:600; font-size:15px;">${e.note||'Keine Notiz'}</div>
+                    ${e.img?`<img src="${e.img}" class="exp-img" style="max-height:80px; margin-top:8px; border-radius:8px; border:1px solid #eee;" onclick="window.open(this.src)">`:''}
                 </div>
-                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
                     <div class="exp-amount">${parseFloat(e.amount).toFixed(2)} €</div>
-                    <div style="display:flex; gap:5px;">
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">✏️</button>
-                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">🗑️</button>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="editExpense(${e.id})">Bearbeiten</button>
+                        <button class="btn btn-danger" style="padding:6px 10px; font-size:12px;" onclick="delExpense(${e.id})">Löschen</button>
                     </div>
                 </div>
             </div>`).join('');
 
         document.getElementById('content').innerHTML=`
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h1>Spesen</h1>
-            <div class="card" style="padding:10px; margin:0; text-align:right;"><div style="font-size:10px; color:#666;">DIESER MONAT</div><div id="monthTotalDisplay" style="font-size:18px; font-weight:800; color:var(--brand-dark);">${total.toFixed(2)} €</div></div>
+            <div class="card" style="padding:15px; margin:0; text-align:right;"><div style="font-size:11px; color:#8E8E93; font-weight:600; text-transform:uppercase;">Dieser Monat</div><div id="monthTotalDisplay" style="font-size:20px; font-weight:800; color:var(--ios-blue);">${total.toFixed(2)} €</div></div>
         </div>
         <div class="card" id="expFormCard">
             <h3 id="expFormTitle">Neuer Eintrag</h3>
-            <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:15px;">
-                <button class="btn btn-secondary btn-full" onclick="document.getElementById('ocrInput').click()">📄 Beleg Scannen (AI)</button>
+            <div style="margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:20px;">
+                <button class="btn btn-secondary btn-full" onclick="document.getElementById('ocrInput').click()">📷 Beleg Scannen (AI)</button>
                 <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="processOCR(this)">
-                <img id="ocr-preview" style="display:none; max-height:100px; margin:10px auto; border:1px solid #ccc;">
-                <div id="ocrStatus" style="font-size:12px; color:#666; margin-top:5px; text-align:center;"></div>
+                <img id="ocr-preview" style="display:none; max-height:120px; margin:15px auto; border-radius:8px; border:1px solid #ccc;">
+                <div id="ocrStatus" style="font-size:13px; color:#8E8E93; margin-top:10px; text-align:center;"></div>
             </div>
             <div class="grid-2">
                 <input type="date" id="exp-date" value="${new Date().toISOString().split('T')[0]}">
@@ -977,14 +540,14 @@
                 <input type="text" id="exp-note" placeholder="Notiz (z.B. Ort)">
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📸 Beleg</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📎 Bild</button>
                 <input type="file" id="exp-img" style="display:none" accept="image/*">
                 <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Speichern</button>
                 <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Abbrechen</button>
             </div>
         </div>
-        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
-        <div>${list||'<div style="text-align:center; padding:20px; color:#999;">Keine Ausgaben</div>'}</div>`;
+        <div class="no-print" style="margin-bottom:20px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
+        <div class="card">${list||'<div style="text-align:center; padding:30px; color:#999;">Keine Ausgaben</div>'}</div>`;
         editingExpenseId = null;
         window.currentOcrImage = null;
     }
@@ -1196,9 +759,9 @@
         let headerHTML = '<h1>Kunden</h1>';
         if (viewState.filterRoute) {
             headerHTML = `
-                <div style="background:var(--event-blue); color:var(--event-blue-text); padding:10px; border-radius:var(--radius); margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-weight:bold;">Filter: Route "${viewState.filterRoute}"</div>
-                    <button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; height:auto;" onclick="filterRoute(null)">Alle anzeigen</button>
+                <div style="background:var(--ios-blue-dim); color:var(--ios-blue); padding:10px 15px; border-radius:12px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:600;">Filter: Route "${viewState.filterRoute}"</div>
+                    <button class="btn btn-secondary" style="font-size:12px; padding:6px 12px; height:auto; background:white;" onclick="filterRoute(null)">Alle anzeigen</button>
                 </div>
                 <h1>Kunden (Gefiltert)</h1>`;
         }
@@ -1207,22 +770,22 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             ${headerHTML}
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" onclick="toggleSelectMode()">${selectMode?'Abbrechen':'Auswahl'}</button>
+                <button class="btn btn-secondary" onclick="toggleSelectMode()">${selectMode?'Fertig':'Auswählen'}</button>
                 ${!selectMode?'<button class="btn btn-primary" onclick="showForm()">+ Neu</button>':''}
             </div>
         </div>
-        <div class="card">
-            <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <input id="search" placeholder="Suche (Name, Nr, Ort, Kontakt, Tel, ...)" value="${viewState.search}" onkeyup="viewState.search=this.value; renderTable()" style="margin:0; flex:1;">
-                <select id="sort" onchange="viewState.sort=this.value; renderTable()" style="margin:0; width:120px;">
-                    <option value="name" ${viewState.sort==='name'?'selected':''}>A-Z</option>
+        <div class="card" style="padding:0; overflow:hidden;">
+            <div style="padding:15px; background:#F9F9FB; border-bottom:1px solid var(--border); display:flex; gap:10px;">
+                <input id="search" placeholder="Suche" value="${viewState.search}" onkeyup="viewState.search=this.value; renderTable()" style="margin:0; flex:1; background:#e3e3e8;">
+                <select id="sort" onchange="viewState.sort=this.value; renderTable()" style="margin:0; width:130px; background:#e3e3e8;">
+                    <option value="name" ${viewState.sort==='name'?'selected':''}>Name</option>
                     <option value="route" ${viewState.sort==='route'?'selected':''}>Tour</option>
                     <option value="status" ${viewState.sort==='status'?'selected':''}>Fälligkeit</option>
                 </select>
             </div>
             <div id="tableContainer"></div>
         </div>
-        ${selectMode?`<div class="float-bar"><div style="font-weight:bold;">${selectedIds.size} gewählt</div><button class="btn btn-danger" onclick="deleteBatch()">Löschen</button><button class="btn btn-primary" onclick="addBatchToTour()">Zur Tour</button></div>`:''}`;
+        ${selectMode?`<div class="float-bar"><div style="font-weight:600; font-size:14px;">${selectedIds.size} ausgewählt</div><div style="height:20px; width:1px; background:#ccc;"></div><button class="btn btn-danger" onclick="deleteBatch()">Löschen</button><button class="btn btn-primary" onclick="addBatchToTour()">Zur Tour hinzufügen</button></div>`:''}`;
         renderTable();
     }
 
@@ -1260,87 +823,88 @@
             <div class="cust-row ${isSelected?'selected':''}" onclick="${clickAction}">
                 ${selectMode?`<div class="check-circle"></div>`:''}
                 <div style="flex:1;">
-                    <div style="font-weight:700;">
+                    <div style="font-weight:600; font-size:16px; margin-bottom:2px;">
                         ${c.name} 
                         <span class="cat-badge ${badgeClass}">${c.category}</span>
                     </div>
-                    <div style="font-size:12px; color:#64748b;">${c.address||'-'}</div>
+                    <div style="font-size:13px; color:#8E8E93;">${c.address||'-'}</div>
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
-                    <div style="font-size:11px; color:#999;">${c.route||''}</div>
-                    ${!selectMode?`<button class="btn btn-danger" style="padding:4px 8px; font-size:10px; z-index:10;" onclick="deleteCustomerDirect(event, ${c.id})">🗑️</button>`:''}
+                    <div style="font-size:12px; color:#999; font-weight:500;">${c.route||''}</div>
+                    ${!selectMode?`<button class="btn btn-secondary" style="padding:6px 10px; font-size:12px; z-index:10; background:#f2f2f7;" onclick="deleteCustomerDirect(event, ${c.id})">Löschen</button>`:''}
                 </div>
             </div>`;
-        }).join('') || '<div style="padding:20px; text-align:center;">Keine Ergebnisse</div>';
+        }).join('') || '<div style="padding:40px; text-align:center; color:#999;">Keine Ergebnisse</div>';
     }
     
     function showDetail(id) { 
         const c = db.customers.find(x => x.id === id); if(!c) return; 
         const inTour = db.tour.includes(id); 
         
-        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>${r.date}</b><div><span style="cursor:pointer; margin-right:10px; font-size:16px;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer; color:#ef4444; font-size:16px;" onclick="delRep(${id},${i})">🗑️</span></div></div><div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
+        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; margin-bottom:6px;"><b>${r.date}</b><div><span style="cursor:pointer; margin-right:15px; font-size:14px; color:var(--ios-blue);" onclick="editRep(${id},${i})">Bearbeiten</span><span style="cursor:pointer; color:var(--ios-red); font-size:14px;" onclick="delRep(${id},${i})">Löschen</span></div></div><div style="white-space:pre-wrap; font-size:14px; line-height:1.4;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
         const todayStr = new Date().toISOString().split('T')[0]; 
         const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} onclick="toggleTask(${id},${i})"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#ef4444;cursor:pointer;font-weight:bold;margin-left:5px;" onclick="delTask(${id},${i})">×</span></div>` }).join(''); 
     
         const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
         document.getElementById('content').innerHTML = `
-        <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
+        <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Alle Kunden</button></div>
         
-        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px; align-items:stretch;">
-            <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; height:100%; margin:0; border-top: 4px solid var(--brand);">
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; align-items:stretch;">
+            <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; height:100%; margin:0;">
                 <div>
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:15px; margin-bottom:20px;">
                         <div style="flex:1;">
-                            <h1 style="margin:0;">${c.name} <span class="cat-badge ${badgeClass}" style="font-size:14px; vertical-align:middle;">${c.category}</span></h1>
-                            <div style="color:var(--text-light); font-size:14px; margin-top:5px;">${c.address||'-'} | Tour: ${c.route||'-'}</div>
+                            <h1 style="margin:0;">${c.name} <span class="cat-badge ${badgeClass}" style="font-size:14px; vertical-align:middle; margin-left:5px;">${c.category}</span></h1>
+                            <div style="color:var(--text-light); font-size:15px; margin-top:6px;">${c.address||'-'}</div>
+                            <div style="color:var(--text-light); font-size:13px; margin-top:2px;">Tour: <b>${c.route||'-'}</b></div>
                         </div>
-                        <div class="no-print" style="display:flex; gap:5px;">
-                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'In Tour'}</button>
-                            <button class="btn btn-secondary" onclick="showForm(${id})">✏️</button>
+                        <div class="no-print" style="display:flex; gap:8px;">
+                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'Zur Tour'}</button>
+                            <button class="btn btn-secondary" onclick="showForm(${id})">Bearbeiten</button>
                         </div>
                     </div>
                 </div>
                 <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
                     <a href="tel:${c.phone}" class="btn btn-secondary btn-full">📞 Anrufen</a>
                     <a href="mailto:${c.email}" class="btn btn-secondary btn-full">✉️ E-Mail</a>
-                    <a href="https://maps.google.com/?q=$${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
+                    <a href="https://maps.google.com/?q=$${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Karte</a>
                 </div>
             </div>
 
-            <div class="card" style="height:100%; margin:0; overflow-y:auto; background:#fffbeb; border:1px solid #fcd34d;">
-                <h4 style="margin:0 0 10px 0;">Aufgaben</h4>
-                <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;">
-                    <input id="newT" placeholder="Aufgabe..." style="margin:0; background:white; font-size:12px;">
-                    <div style="display:flex; gap:5px;">
-                        <input type="date" id="newTDate" style="margin:0; background:white; font-size:12px; flex:1;">
-                        <button class="btn btn-secondary" onclick="addTask(${id})" style="padding:5px 10px;">+</button>
+            <div class="card" style="height:100%; margin:0; overflow-y:auto; background:#F2F8FF; border:none;">
+                <h4 style="margin:0 0 15px 0; color:var(--ios-blue);">Aufgaben</h4>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">
+                    <input id="newT" placeholder="Neue Aufgabe..." style="margin:0; background:white; font-size:13px;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="date" id="newTDate" style="margin:0; background:white; font-size:13px; flex:1;">
+                        <button class="btn btn-secondary" onclick="addTask(${id})" style="padding:5px 12px; background:white;">+</button>
                     </div>
                 </div>
-                <div>${taskHTML || '<div style="color:#999;font-size:12px;">Keine Aufgaben</div>'}</div>
+                <div>${taskHTML || '<div style="color:#999;font-size:13px; text-align:center; padding:10px;">Keine Aufgaben</div>'}</div>
             </div>
         </div>
 
-        <div class="card" style="margin-top:15px;">
+        <div class="card" style="margin-top:20px;">
             <div class="grid-4-custom">
-                <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f8fafc;"></div>
-                <div><label>Umsatz</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="Umsatz/Potenzial" onchange="saveDetail(${id})"></div>
-                <div><label>Intervall (Wo)</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
-                <div><label>Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
+                <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f2f2f7;"></div>
+                <div><label>Umsatz / Potenzial</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="..." onchange="saveDetail(${id})"></div>
+                <div><label>Intervall (W)</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
+                <div><label>Nächster Termin</label><div style="display:flex; gap:8px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; font-size:13px;"><button class="btn btn-primary" style="padding:10px;" onclick="saveDetail(${id})">💾</button></div></div>
             </div>
         </div>
 
         <div class="card">
-            <h2>Berichte</h2>
+            <h2>Besuchsberichte</h2>
             <div class="no-print">
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
-                    <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">📸 Foto <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
+                    <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:150px;">
+                    <label class="btn btn-secondary" style="cursor:pointer; padding:6px 12px; margin:0; flex:1; text-align:center; background:#f2f2f7;">📸 Foto hinzufügen <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
                 </div>
-                <textarea id="repTxt" rows="2" placeholder="Ergebnis..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
+                <textarea id="repTxt" rows="3" placeholder="Was wurde besprochen?" style="margin:0; width:100%; margin-bottom:15px;"></textarea>
                 <button class="btn btn-primary btn-full" onclick="addRep(${id})">Bericht Speichern</button>
             </div>
-            <div style="margin-top:20px; max-height:400px; overflow-y:auto;">${reports}</div>
+            <div style="margin-top:30px; max-height:500px; overflow-y:auto;">${reports}</div>
         </div>`; 
     }
     function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showDetail(id); }
@@ -1354,15 +918,19 @@
         const c=id?db.customers.find(x=>x.id===id):{name:'',nr:'',category:'C',status:'aktiv',address:'',contact:'',phone:'',email:'',route:'',products:''};
         document.getElementById('content').innerHTML=`
         <div style="max-width:600px; margin:0 auto;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>${id?'Bearbeiten':'Neu'}</h1></div>
-            <div class="card"><label>Name *</label><input id="f_name" value="${c.name}">
-                <div class="grid-2"><div><label>Kundennummer</label><input id="f_nr" value="${c.nr||''}" placeholder="Nr"></div><div><label>Tour</label><input id="f_route" value="${c.route||''}" placeholder="Tour"></div></div>
-                <div class="grid-2"><select id="f_cat"><option value="A" ${c.category==='A'?'selected':''}>A (Gold)</option><option value="B" ${c.category==='B'?'selected':''}>B (Blau)</option><option value="C" ${c.category==='C'?'selected':''}>C (Grau)</option></select><select id="f_stat"><option value="aktiv" ${c.status==='aktiv'?'selected':''}>Aktiv</option><option value="inaktiv" ${c.status==='inaktiv'?'selected':''}>Inaktiv</option></select></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h1>${id?'Kunde bearbeiten':'Neuer Kunde'}</h1></div>
+            <div class="card">
+                <label>Firmenname *</label><input id="f_name" value="${c.name}" style="font-weight:600;">
+                <div class="grid-2"><div><label>Kundennummer</label><input id="f_nr" value="${c.nr||''}"></div><div><label>Tour / Gebiet</label><input id="f_route" value="${c.route||''}"></div></div>
+                <div class="grid-2"><select id="f_cat"><option value="A" ${c.category==='A'?'selected':''}>Kategorie A (Gold)</option><option value="B" ${c.category==='B'?'selected':''}>Kategorie B (Blau)</option><option value="C" ${c.category==='C'?'selected':''}>Kategorie C (Grau)</option></select><select id="f_stat"><option value="aktiv" ${c.status==='aktiv'?'selected':''}>Status: Aktiv</option><option value="inaktiv" ${c.status==='inaktiv'?'selected':''}>Status: Inaktiv</option></select></div>
                 <label>Adresse</label><input id="f_adr" value="${c.address||''}" placeholder="Straße, PLZ, Ort">
-                <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
-                <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
-                <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
-                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
+                <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}"></div><div><label>Telefon</label><input id="f_tel" value="${c.phone||''}"></div></div>
+                <label>E-Mail</label><input id="f_mail" value="${c.email||''}">
+                <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}">
+                <div style="margin-top:20px;">
+                    <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>
+                    ${id?`<button class="btn btn-danger btn-full" style="margin-top:15px;" onclick="delData(${id})">Kunde löschen</button>`:''}
+                </div>
             </div>
         </div>`;
     }
@@ -1380,7 +948,7 @@
             contact:document.getElementById('f_con').value,
             phone:document.getElementById('f_tel').value,
             email:document.getElementById('f_mail').value,
-            products:document.getElementById('f_prod').value, // Used for Revenue now
+            products:document.getElementById('f_prod').value, 
             nextAppointment:id?db.customers.find(x=>x.id===id).nextAppointment:'',
             reports:id?db.customers.find(x=>x.id===id).reports:[],
             visitInterval:4, 
@@ -1390,11 +958,11 @@
         save();showDetail(d.id);
     }
 
-    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
+    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br><span style="font-size:13px;color:#888;">${c.address}</span></div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entfernen</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Startadresse</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Route Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ In Google Maps öffnen</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Liste leeren</button></div></div><div>${l||'<div style="text-align:center;padding:20px;color:#999;">Tour ist leer</div>'}${db.home?`<div class="card" style="background:#F2F8FF; border:1px dashed #007AFF; text-align:center; padding:15px; margin-top:10px; font-weight:600; color:#007AFF;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
     function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
-    function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen</h1><div class="grid-3">${r.map(x=>`<div class="card" onclick="filterRoute('${x}')" style="cursor:pointer;text-align:center;"><h2>${x}</h2><div style="color:#666">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
+    function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen Übersicht</h1><div class="grid-3">${r.map(x=>`<div class="card" onclick="filterRoute('${x}')" style="cursor:pointer;text-align:center;transition:0.2s;border:1px solid transparent;" onmouseover="this.style.borderColor='var(--ios-blue)'" onmouseout="this.style.borderColor='transparent'"><h2>${x}</h2><div style="color:#8E8E93">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
     
     function filterRoute(r){
         viewState.filterRoute = r; 
@@ -1459,7 +1027,7 @@
 
         let html = `<h1>Doppelte Einträge (${duplicates.length} Gruppen)</h1>`;
         duplicates.forEach(group => {
-            html += `<div class="card" style="border-left:4px solid #ef4444;">
+            html += `<div class="card" style="border-left:4px solid #FF3B30;">
                 <h3>📍 ${group[0].address}</h3>
                 ${group.map(c => `
                     <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding:10px 0;">
@@ -1486,12 +1054,12 @@
     }
 
     // --- CALENDAR LOGIC ---
-    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;"><label style="font-size:10px;font-weight:bold;color:#999;">POOL</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
+    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:700; font-size:18px; margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#F9F9FB;"><label style="font-size:10px;font-weight:700;color:#8E8E93;">POOL FILTER</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;background:white;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
-    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${i}</b>${getEvts(ds)}</div>`;}con.innerHTML=h+`</div>`;}
-    function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
+    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b style="color:#333;">${i}</b>${getEvts(ds)}</div>`;}con.innerHTML=h+`</div>`;}
+    function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:70px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:60px;padding:15px 10px;font-size:12px;color:#8E8E93;border-right:1px solid #f0f0f0;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
-    function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
+    function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f2f8ff'" onmouseout="this.style.background='#fff'" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small style="color:#8E8E93;">${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
     function renderPoolList(){const r=document.getElementById('poolFilter').value;document.getElementById('poolContainer').innerHTML=db.customers.filter(c=>c.status==='aktiv'&&(!r||c.route===r)).map(c=>`<div class="pool-item" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${c.name}</div>`).join('');}
     function changeCal(d){if(calView==='month')currentCalDate.setMonth(currentCalDate.getMonth()+d);else if(calView==='day')currentCalDate.setDate(currentCalDate.getDate()+d);else if(calView==='week')currentCalDate.setDate(currentCalDate.getDate()+(d*7));else currentCalDate.setFullYear(currentCalDate.getFullYear()+d);showCalendar();}
     function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
