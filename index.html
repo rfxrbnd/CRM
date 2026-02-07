@@ -13,8 +13,8 @@
     <style>
         /* --- DESIGN CORE --- */
         :root {
-            --brand: #fcd34d; 
-            --brand-dark: #d97706; 
+            --brand: #3b82f6; 
+            --brand-dark: #1d4ed8; 
             --bg-body: #f8fafc;
             --bg-sidebar: #ffffff;
             --surface: #ffffff;
@@ -24,7 +24,7 @@
             --radius: 10px;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             --stat-green: #22c55e;
-            --stat-yellow: #eab308;
+            --stat-yellow: #60a5fa;
             --stat-red: #ef4444;
             --event-blue: #dbeafe; 
             --event-blue-text: #1e40af;
@@ -44,7 +44,7 @@
         .nav-menu { padding: 20px; display: flex; flex-direction: column; gap: 5px; flex: 1; overflow-y: auto; }
         .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-light); font-size: 14px; font-weight: 500; transition: 0.1s; border: none; background: transparent; width: 100%; text-align: left; }
         .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background: #fffbeb; color: var(--text-main); font-weight: 700; border: 1px solid var(--brand); }
+        .nav-item.active { background: #f1f5f9; color: var(--text-main); font-weight: 700; border: 1px solid var(--brand); }
 
         #main { flex: 1; overflow-y: auto; padding: 0; position: relative; }
         .content-wrap { max-width: 1000px; margin: 0 auto; padding: 30px; padding-bottom: 100px; }
@@ -66,7 +66,7 @@
 
         /* --- VISUAL CATEGORY BADGES --- */
         .cat-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; color: #fff; display: inline-block; min-width: 24px; text-align: center; }
-        .cat-A { background-color: #f59e0b; color: #fff; } /* Gold */
+        .cat-A { background-color: #2563eb; color: #fff; } /* Blau */
         .cat-B { background-color: #3b82f6; color: #fff; } /* Blau */
         .cat-C { background-color: #94a3b8; color: #fff; } /* Grau */
 
@@ -76,10 +76,10 @@
         
         .cust-row { display: flex; align-items: center; padding: 14px; background: #fff; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.1s; justify-content: space-between; }
         .cust-row:hover { background: #f8fafc; }
-        .cust-row.selected { background: #fffbeb; border-color: var(--brand); }
+        .cust-row.selected { background: #f1f5f9; border-color: var(--brand); }
         .check-circle { width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
         .cust-row.selected .check-circle { background: var(--brand); border-color: var(--brand-dark); }
-        .cust-row.selected .check-circle::after { content: '✓'; font-size: 12px; font-weight: bold; color: #451a03; }
+        .cust-row.selected .check-circle::after { content: '✓'; font-size: 12px; font-weight: bold; color: #ffffff; }
         
         .exp-row { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; background: #fff; }
         .exp-amount { font-weight: 800; color: var(--text-main); }
@@ -107,8 +107,8 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #e2e8f0; gap: 1px; flex: 1; overflow-y: auto; }
         .cal-head { background: #f1f5f9; padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: #64748b; }
         .cal-day { background: #ffffff; min-height: 100px; padding: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
-        .cal-day.today { background: #fffbeb; }
-        .cal-event { background: var(--brand); color: #451a03; padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(0,0,0,0.05); margin-top: 2px; }
+        .cal-day.today { background: #eff6ff; }
+        .cal-event { background: var(--brand); color: #ffffff; padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(0,0,0,0.05); margin-top: 2px; }
         .cal-event.manual { background: var(--event-blue); color: var(--event-blue-text); border-color: #93c5fd; }
 
         .view-controls { display: flex; gap: 5px; }
