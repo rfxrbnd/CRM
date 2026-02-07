@@ -90,6 +90,7 @@
         @keyframes slideUp { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
 
         .report-entry { padding: 15px; background: #f9fafb; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; border-left: 3px solid #d1d5db; }
+        .report-entry:hover { border-color: #9ca3af; }
         .rep-img { max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid #ddd; }
         
         .task-mini-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
@@ -809,7 +810,8 @@
         const c = db.customers.find(x => x.id === id); if(!c) return; 
         const inTour = db.tour.includes(id); 
         
-        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>${r.date}</b><div><span style="cursor:pointer; margin-right:10px; font-size:16px;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer; color:#ef4444; font-size:16px;" onclick="delRep(${id},${i})">🗑️</span></div></div><div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
+        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="font-weight:600; font-size:13px;">${r.date}</div><div style="display:flex; gap:8px; color:#6b7280;"><span style="cursor:pointer;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer;" onclick="delRep(${id},${i})">🗑️</span></div></div>
+<div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
         const todayStr = new Date().toISOString().split('T')[0]; 
         const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} onclick="toggleTask(${id},${i})"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#ef4444;cursor:pointer;font-weight:bold;margin-left:5px;" onclick="delTask(${id},${i})">×</span></div>` }).join(''); 
     
