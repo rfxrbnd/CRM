@@ -324,6 +324,54 @@
 .cal-more{font-size:11px;color:#6b7280;margin-top:2px;cursor:pointer;user-select:none;}
 .cal-more:hover{color:#111827;}
 
+
+.cal-more {
+  margin-top: 4px;
+  font-size:
+
+/* ===== iOS Month Look ===== */
+
+/* Kopf (Mo/Di/...) wie iOS: sehr dezent */
+.cal-head{background:#fff !important;border:0 !important;color:#9ca3af !important;font-weight:600 !important;font-size:12px !important;padding:10px 0 !important;text-align:center !important;}
+
+/* Grid: keine „Gitterlinien“, viel Weißraum */
+.calendar-grid{background:#fff !important;gap:0 !important;border:0 !important;border-radius:14px !important;overflow:hidden !important;}
+.cal-day{background:#fff !important;border:0 !important;padding:10px 10px 8px 10px !important;overflow:hidden !important;}
+
+/* Nur Wochen-Trenner (wie iOS): ab der 2. Woche eine Linie oben */
+.calendar-grid > .cal-day:nth-child(n+15){border-top:1px solid #e5e7eb !important;}
+
+/* Tageszahl: größer, kräftiger, oben links */
+.day-num{font-size:16px !important;font-weight:700 !important;color:#111827 !important;margin:0 0 6px 0 !important;display:inline-flex !important;}
+
+/* Heute: roter gefüllter Kreis (hast du schon, hier nur „sicher“) */
+.cal-day.today .day-num{width:28px !important;height:28px !important;border-radius:999px !important;background:#ff3b30 !important;color:#fff !important;justify-content:center !important;align-items:center !important;}
+
+/* Leere Tage (Monatsanfang/-ende): sehr zurückgenommen */
+.cal-day.empty{opacity:.22 !important;}
+
+/* Events als iOS-Pills (hellgrau, nicht schwarz) */
+.cal-event{background:#e5e7eb !important;color:#111827 !important;border:0 !important;border-radius:999px !important;padding:2px 8px !important;font-size:12px !important;line-height:18px !important;margin:2px 0 !important;box-shadow:none !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;}
+.cal-event.manual{background:#d1d5db !important;color:#111827 !important;}
+
+/* „+X mehr“ wie iOS: sehr dezent */
+.cal-more{color:#9ca3af !important;font-size:12px !important;margin-top:2px !important;cursor:pointer !important;}
+.cal-more:hover{color:#6b7280 !important;}
+
+/* Wochenenden in Kopfzeile heller (wie iOS) */
+.cal-head.weekend{color:#c0c6cf !important;}
+
+/* Wochenenden-Zahlen heller – heute bleibt rot (weil today überschreibt) */
+.cal-day.weekend .day-num{color:#9ca3af !important;}
+
+/* Tage außerhalb des Monats: keine Zahl anzeigen (falls du mal other-month nutzt) */
+.cal-day.other-month .day-num,.cal-day.empty .day-num{display:none !important;}
+
+/* +X mehr exakt iOS: zentriert und „ruhig“ */
+.cal-more{display:block !important;text-align:center !important;color:#9ca3af !important;font-size:12px !important;margin-top:4px !important;}
+.cal-more:hover{color:#6b7280 !important;}
+
+        
         
     </style>
 </head>
@@ -1164,7 +1212,7 @@
     // --- CALENDAR LOGIC ---
     function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;"><label style="font-size:10px;font-weight:bold;color:#999;">POOL</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
-    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div class="cal-day empty"></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b class="day-num">${i}</b>${getEvtsMonth(ds,3)}</div>`;}const totalCells=off+d;const rest=(7-(totalCells%7))%7;for(let i=0;i<rest;i++)h+=`<div class="cal-day empty"></div>`;con.innerHTML=h+`</div>`;}
+    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach((x,i)=>h+=`<div class="cal-head ${i>=5?'weekend':''}">${x}</div>`);for(let i=0;i<off;i++)const wd=(new Date(ds).getDay()+6)%7;h+=`<div class="cal-day ${(new Date().toISOString().slice(0,10)===ds?'today ':'')+(wd>=5?'weekend':'')}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b class="day-num">${i}</b>${getEvtsMonth(ds,3)}</div>`;}const totalCells=off+d;const rest=(7-(totalCells%7))%7;for(let i=0;i<rest;i++)h+=`<div class="cal-day empty"></div>`;con.innerHTML=h+`</div>`;}
     function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
