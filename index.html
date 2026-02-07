@@ -822,7 +822,7 @@
         const c = db.customers.find(x => x.id === id); if(!c) return; 
         const inTour = db.tour.includes(id); 
 
-        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="font-weight:600; font-size:13px;">${r.date}</div><div class="no-print" style="display:flex; gap:8px; color:#6b7280;"><span style="cursor:pointer;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer;" onclick="delRep(${id},${i})">🗑️</span></div></div><div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151;">${r.text||''}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
+        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="font-weight:600; font-size:13px;">${r.date}</div><div class="no-print" style="display:flex; gap:8px;"><span style="cursor:pointer;font-size:12px;color:#6b7280" onclick="editRep(${id},${i})">bearbeiten</span><span style="cursor:pointer;font-size:12px;color:#6b7280" onclick="delRep(${id},${i})">löschen</span></div></div><div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151;">${r.text||''}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join('');
         const reportsHTML = reports || '<div style="color:#999; padding:10px;">Keine Berichte vorhanden</div>';
 
         const todayStr = new Date().toISOString().split('T')[0]; 
