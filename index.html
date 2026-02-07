@@ -748,6 +748,66 @@ select{
   background-position: right 10px center !important;
 }
 
+
+
+/* Missing utility/layout classes used by the JS templates */
+.grid-2{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 980px){
+  .grid-2{ grid-template-columns: 1fr; }
+}
+
+.btn-full{ width: 100%; justify-content: center; }
+
+.stat-container{
+  height: 160px;
+  display:flex;
+  align-items:flex-end;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.50);
+  overflow:hidden;
+}
+.stat-bar{
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  border-radius: 12px;
+  background: rgba(15,23,42,0.10);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+}
+.stat-val{
+  position:absolute;
+  top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.stat-lbl{
+  position:absolute;
+  bottom: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#map-container{
+  min-height: 420px;
+  border-radius: var(--radius);
+}
+
+@media print{
+  .no-print{ display:none !important; }
+  body{ overflow: visible !important; }
+  #app{ height:auto !important; }
+}
+
 </style>
 </head>
 <body>
@@ -850,7 +910,24 @@ function load(){
         if(raw) db=JSON.parse(raw);
     }catch(e){ console.warn(e); }
 }
+
+function normalizeDb(){
+    db = db && typeof db === "object" ? db : { customers: [], tour: [] };
+    db.customers = Array.isArray(db.customers) ? db.customers : [];
+    db.tour = Array.isArray(db.tour) ? db.tour : [];
+
+    for(const c of db.customers){
+        if(!c || typeof c !== "object") continue;
+        c.reports  = Array.isArray(c.reports)  ? c.reports  : [];
+        c.tasks    = Array.isArray(c.tasks)    ? c.tasks    : [];
+        c.expenses = Array.isArray(c.expenses) ? c.expenses : [];
+        c.category = c.category || "B";
+    }
+}
+
 load();
+normalizeDb();
+save();
 
 /* ===== UI helpers ===== */
 function setActiveNav(id){
@@ -899,9 +976,12 @@ function showHome(){
         let stats={};
         for(let i=5;i>=0;i--){
             const d=new Date();d.setMonth(d.getMonth()-i);
-            const k=d.toLocaleString('de',{month:'short'});
+            const k=d.toLocaleString('de-DE',{month:'short'});
             stats[k]=0;
-            db.customers.forEach(c=>c.reports.forEach(r=>{const[D,M,Y]=r.date.split('.');if(parseInt(M)==d.getMonth()+1&&parseInt(Y)==d.getFullYear()) stats[k]++;}));
+            db.customers.forEach(c => (c.reports || []).forEach(r => {
+                const [D,M,Y] = (r.date || '').split('.');
+                if(parseInt(M)==d.getMonth()+1 && parseInt(Y)==d.getFullYear()) stats[k]++;
+            }));
         }
         const maxV=Math.max(...Object.values(stats))||1;
         const bars=Object.keys(stats).map(k=>`<div class="stat-bar" style="height:${(stats[k]/maxV)*100}%"><span class="stat-val">${stats[k]}</span><span class="stat-lbl">${k}</span></div>`).join('');
