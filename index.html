@@ -843,7 +843,7 @@
                             <div style="color:var(--text-light); font-size:14px; margin-top:5px;">${c.address||'-'}</div>
                         </div>
                         <div class="no-print" style="display:flex; gap:5px;">
-                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'In Tour'}</button>
+                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'Tour'}</button>
                             <button class="btn btn-secondary" onclick="showForm(${id})">✏️</button>
                         </div>
                     </div>
@@ -856,15 +856,14 @@
             </div>
 
             <div class="card" style="height:100%; margin:0; overflow-y:auto;">
-                <h4 style="margin:0 0 10px 0;">Aufgaben</h4>
+                <h4 style="margin:0 0 10px 0;">ToDos</h4>
                 <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;">
-                    <input id="newT" placeholder="Aufgabe..." style="margin:0; background:white; font-size:12px;">
+                    <input id="newT" placeholder="..." style="margin:0; background:white; font-size:12px;">
                     <div style="display:flex; gap:5px;">
                         <input type="date" id="newTDate" style="margin:0; background:white; font-size:12px; flex:1;">
                         <button class="btn btn-secondary" onclick="addTask(${id})" style="padding:5px 10px;">+</button>
                     </div>
                 </div>
-                <div>${taskHTML || '<div style="color:#999;font-size:12px;padding:10px;">Keine Aufgaben</div>'}</div>
             </div>
         </div>
 
@@ -872,25 +871,25 @@
             <div class="grid-4-custom">
                 <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f8fafc;"></div>
                 <div><label>Umsatz</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="Umsatz/Potenzial" onchange="saveDetail(${id})"></div>
-                <div><label>Intervall (Wo)</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
-                <div><label>Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
+                <div><label>Intervall</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
+                <div><label>Nächster Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
             </div>
         </div>
 
         <div class="grid-2" style="margin-top:15px; align-items:start;">
             <div class="card">
-                <h2>Besuchsbericht</h2>
+                <h2>Besuchsbericht schreiben:</h2>
                 <div class="no-print">
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
                         <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">📸 Foto <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
                     </div>
-                    <textarea id="repTxt" rows="4" placeholder="Ergebnis..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
-                    <button class="btn btn-primary btn-full" onclick="addRep(${id})">Bericht Speichern</button>
+                    <textarea id="repTxt" rows="4" placeholder="..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
+                    <button class="btn btn-primary btn-full" onclick="addRep(${id})">Speichern</button>
                 </div>
             </div>
             <div class="card">
-                <h2>Besuchsberichte</h2>
+                <h2>Verlauf</h2>
                 <div style="margin-top:10px; max-height:520px; overflow-y:auto;">${reportsHTML}</div>
             </div>
         </div>`; 
