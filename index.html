@@ -896,23 +896,53 @@ select{
 const KEY="adboard.v3";
 const genId=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 
+/* === Storage abstraction (works even if localStorage is blocked) === */
+let _memStore = {};
+function storageAvailable(){
+  try{
+    const k="__t";
+    window.localStorage.setItem(k,"1");
+    window.localStorage.removeItem(k);
+    return true;
+  }catch(e){ return false; }
+}
+const HAS_LS = storageAvailable();
+function storeGet(key){
+  try{
+    return HAS_LS ? window.localStorage.getItem(key) : (_memStore[key] ?? null);
+  }catch(e){ return (_memStore[key] ?? null); }
+}
+function storeSet(key, val){
+  try{
+    if(HAS_LS) window.localStorage.setItem(key, val);
+    else _memStore[key] = String(val);
+  }catch(e){
+    _memStore[key] = String(val);
+  }
+}
+function storeRemove(key){
+  try{
+    if(HAS_LS) window.localStorage.removeItem(key);
+    else delete _memStore[key];
+  }catch(e){
+    delete _memStore[key];
+  }
+}
+
 let db={
     customers:[],
     tour:[]
 };
 
 function save(){
-    try{
-        localStorage.setItem(KEY, JSON.stringify(db));
-    }catch(e){
-        console.warn('Speichern fehlgeschlagen (localStorage):', e);
-    }
+  try{ storeSet(KEY, JSON.stringify(db)); }
+  catch(e){ console.warn('Speichern fehlgeschlagen:', e); }
 }
 function load(){
-    try{
-        const raw=localStorage.getItem(KEY);
-        if(raw) db=JSON.parse(raw);
-    }catch(e){ console.warn(e); }
+  try{
+    const raw = storeGet(KEY);
+    if(raw) db = JSON.parse(raw);
+  }catch(e){ console.warn('Laden fehlgeschlagen:', e); }
 }
 
 function normalizeDb(){
@@ -938,32 +968,8 @@ let _map = null;
 let _markersLayer = null;
 
 function ensureLeaflet(){
-  return new Promise((resolve, reject)=>{
-    if(window.L && typeof window.L.map === "function"){ _leafletReady = true; return resolve(); }
-    // Inject CSS
-    if(!document.getElementById("leaflet-css")){
-      const link=document.createElement("link");
-      link.id="leaflet-css";
-      link.rel="stylesheet";
-      link.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-    }
-    // Inject JS
-    if(document.getElementById("leaflet-js")){
-      // Wait until loaded
-      const t=setInterval(()=>{
-        if(window.L){ clearInterval(t); _leafletReady = true; resolve(); }
-      }, 50);
-      setTimeout(()=>{ clearInterval(t); reject(new Error("Leaflet load timeout")); }, 15000);
-      return;
-    }
-    const s=document.createElement("script");
-    s.id="leaflet-js";
-    s.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    s.onload=()=>{ _leafletReady = true; resolve(); };
-    s.onerror=()=>reject(new Error("Leaflet konnte nicht geladen werden (offline?)"));
-    document.head.appendChild(s);
-  });
+  // Leaflet removed for reliability. Kept as compatibility no-op.
+  return Promise.resolve();
 }
 
 function getCustomerCoords(c){
@@ -1695,48 +1701,61 @@ function generateReportPDF(mode){
 
 /* Map / Geocode (placeholder) */
 async function initMap(){
-  const el=document.getElementById('map-container');
-  if(!el) return;
+  const cont = document.getElementById('map-container');
+  if(!cont) return;
 
-  try{
-    await ensureLeaflet();
-  }catch(e){
-    el.innerHTML = `<div class="card"><h2>Karte</h2><p class="muted">${escapeHtml(e.message)}</p>
-      <p class="small">Tipp: Für die Karte wird Leaflet von einem CDN geladen. Ohne Internet funktioniert das nicht.</p></div>`;
+  const opts = db.customers.map(c=>{
+    const cc=getCustomerCoords(c);
+    const label = `${c.name}${cc?` (${cc.lat.toFixed(5)}, ${cc.lon.toFixed(5)})`:''}`;
+    return `<option value="${c.id}">${escapeHtml(label)}</option>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div class="card">
+      <h2>Karte</h2>
+      <p class="muted">Zuverlässiger Modus ohne externe Kartenbibliothek. Wähle einen Kunden, um ihn auf OpenStreetMap zu sehen.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <select id="mapCustomerSelect" class="input" style="flex:1; min-width:260px;">
+          ${opts || `<option value="">Keine Kunden</option>`}
+        </select>
+        <button class="btn btn-secondary" onclick="openSelectedOnOSM()">In OSM öffnen</button>
+      </div>
+      <div style="margin-top:12px; border:1px solid var(--border); border-radius: var(--radius); overflow:hidden;">
+        <iframe id="osmFrame" title="OSM" style="width:100%; height:520px; border:0;" loading="lazy"></iframe>
+      </div>
+      <p class="small" style="margin-top:10px;">Tipp: Wenn keine Koordinaten vorhanden sind, nutze „📍 Positionen laden“ (Geocoding) oder trage Lat/Lon im Kunden ein.</p>
+    </div>
+  `;
+
+  const sel = document.getElementById('mapCustomerSelect');
+  if(sel && sel.value){
+    renderOSMForCustomer(sel.value);
+    sel.addEventListener('change', ()=>renderOSMForCustomer(sel.value));
+  }
+}
+
+function renderOSMForCustomer(id){
+  const c=db.customers.find(x=>x.id===id);
+  const frame=document.getElementById('osmFrame');
+  if(!c || !frame) return;
+
+  const cc=getCustomerCoords(c);
+  if(!cc){
+    frame.src = "about:blank";
     return;
   }
+  const z=16;
+  const bbox = `${cc.lon-0.01}%2C${cc.lat-0.005}%2C${cc.lon+0.01}%2C${cc.lat+0.005}`;
+  frame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${cc.lat}%2C${cc.lon}`;
+}
 
-  el.innerHTML = `<div id="leafletMap" style="width:100%; height:520px; border-radius: var(--radius); border:1px solid var(--border);"></div>`;
-  const mapEl = document.getElementById("leafletMap");
-
-  // Center: first customer coords, otherwise Germany
-  let center = {lat:51.1657, lon:10.4515}, zoom=6;
-  for(const c of db.customers){
-    const cc=getCustomerCoords(c);
-    if(cc){ center=cc; zoom=10; break; }
-  }
-
-  _map = L.map(mapEl).setView([center.lat, center.lon], zoom);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(_map);
-
-  _markersLayer = L.layerGroup().addTo(_map);
-
-  const bounds = [];
-  db.customers.forEach(c=>{
-    const cc=getCustomerCoords(c);
-    if(!cc) return;
-    bounds.push([cc.lat, cc.lon]);
-    const marker=L.marker([cc.lat, cc.lon]).addTo(_markersLayer);
-    marker.bindPopup(`<b>${escapeHtml(c.name)}</b><br>${escapeHtml(c.address||"")}`);
-    marker.on("click", ()=> showCustomer(c.id));
-  });
-
-  if(bounds.length){
-    _map.fitBounds(bounds, { padding:[20,20] });
-  }
+function openSelectedOnOSM(){
+  const sel=document.getElementById('mapCustomerSelect');
+  if(!sel || !sel.value) return;
+  const c=db.customers.find(x=>x.id===sel.value);
+  const cc=getCustomerCoords(c);
+  if(!cc){ showFloat("Karte","Keine Koordinaten vorhanden.", false); return; }
+  window.open(`https://www.openstreetmap.org/?mlat=${cc.lat}&mlon=${cc.lon}#map=17/${cc.lat}/${cc.lon}`,'_blank');
 }
 async function batchGeocode(){
   const missing = db.customers.filter(c=>!getCustomerCoords(c) && (c.address||"").trim().length>0);
@@ -1752,7 +1771,6 @@ async function batchGeocode(){
   for(let i=0;i<missing.length;i++){
     const c = missing[i];
     try{
-      // Nominatim rate limit: be nice
       document.getElementById('float-desc').textContent = `Suche: ${c.name} (${i+1}/${missing.length})`;
       const res = await geocodeAddress(c.address);
       if(res && isFinite(res.lat) && isFinite(res.lon)){
@@ -1765,6 +1783,7 @@ async function batchGeocode(){
     }catch(e){
       fail++;
     }
+    // Nominatim rate limit
     await sleep(1100);
   }
 
