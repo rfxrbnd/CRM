@@ -226,6 +226,20 @@
 .nav-item:hover {
   background: transparent;
 }
+
+/* iOS-like Sidebar */
+.nav-menu{padding:8px;}
+.nav-item{background:transparent;border:0;border-radius:12px;padding:12px 12px;margin:2px 0;font-size:14px;line-height:20px;color:var(--text-main);transition:background .12s ease,color .12s ease;}
+.nav-item:hover{background:#f3f4f6;}
+.nav-item.active{background:#eef2f7;font-weight:600;}
+.nav-item:focus{outline:none;}
+.nav-item:focus-visible{box-shadow:0 0 0 3px rgba(17,24,39,.10);}
+
+.nav-arrow{color:#9ca3af;font-size:14px;opacity:.45;transition:opacity .12s ease;}
+.nav-item:hover .nav-arrow,.nav-item.active .nav-arrow{opacity:.75;color:#6b7280;}
+
+.nav-sep{height:1px;background:#e5e7eb;margin:10px 8px;}
+
         
     </style>
 </head>
@@ -281,11 +295,17 @@
 
   <div class="nav-menu">
     <button class="nav-item active" onclick="nav('home', this)"><span>Dashboard</span><span class="nav-arrow">›</span></button>
+<div class="nav-sep"></div>
     <button class="nav-item" onclick="nav('customers', this)"><span>Kunden</span><span class="nav-arrow">›</span></button>
+<div class="nav-sep"></div>
     <button class="nav-item" onclick="nav('expenses', this)"><span>Spesen</span><span class="nav-arrow">›</span></button>
+<div class="nav-sep"></div>
     <button class="nav-item" onclick="nav('map', this)"><span>Karte</span><span class="nav-arrow">›</span></button>
+<div class="nav-sep"></div>
     <button class="nav-item" onclick="nav('calendar', this)"><span>Kalender</span><span class="nav-arrow">›</span></button>
+<div class="nav-sep"></div>
     <button class="nav-item" onclick="nav('tour', this)"><span>Tour</span><span class="nav-arrow">›</span></button>
+<div class="nav-sep"></div>
     <button class="nav-item" onclick="nav('routes', this)"><span>Routen</span><span class="nav-arrow">›</span></button>
   </div>
 </div>
