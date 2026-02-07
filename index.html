@@ -412,16 +412,15 @@
         const bars=Object.keys(stats).map(k=>`<div class="stat-bar" style="height:${(stats[k]/maxV)*100}%"><span class="stat-val">${stats[k]}</span><span class="stat-lbl">${k}</span></div>`).join('');
         
         document.getElementById('content').innerHTML=`
-        <h1>Dashboard</h1>
+        <h1>Mein Dashboard</h1>
         <div class="grid-3">
             <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800;">${count}</div><div style="font-size:12px; color:var(--text-light);">Kunden</div></div>
-            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; color:var(--brand-dark);">${visited}</div><div style="font-size:12px; color:var(--text-light);">Heute</div></div>
-            <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben (Anzeigen)</div></div>
+            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; color:var(--brand-dark);">${visited}</div><div style="font-size:12px; color:var(--text-light);">Besuche (Heute)</div></div>
+            <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben</div></div>
         </div>
-        <div class="card"><h2>📈 Besuchstrend</h2><div class="stat-container">${bars}</div></div>
+        <div class="card"><h2>📈 Übersicht</h2><div class="stat-container">${bars}</div></div>
         <div class="grid-2">
-            <div class="card"><h2>Schnellzugriff</h2>
-                <button class="btn btn-primary btn-full" onclick="showForm()">+ Neuer Kunde</button>
+            <div class="card"><h2>Sicherung</h2>
                 <div style="display:flex; gap:10px; margin-top:10px;">
                     <button class="btn btn-secondary btn-full" onclick="downloadBackup()">💾 Backup Speichern</button>
                     <button class="btn btn-secondary btn-full" onclick="document.getElementById('bakIn').click()">📂 Backup Laden</button>
@@ -430,9 +429,9 @@
                 <input type="file" id="csvIn" style="display:none" onchange="importCSV(this)">
                 <input type="file" id="bakIn" style="display:none" onchange="importBackup(this)">
             </div>
-            <div class="card"><h2>Berichte</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">📄 Tagesbericht drucken</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">📄 Wochenbericht drucken</button></div></div>
+            <div class="card"><h2>Berichte drucken</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">📄 Tagesbericht</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">📄 Wochenbericht</button></div></div>
         </div>
-        <div class="card"><h2>Einstellungen</h2>
+        <div class="card"><h2>Sonstiges</h2>
             <button class="btn btn-secondary btn-full" onclick="showDuplicates()">⚠️ Duplikate finden</button>
             <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
         </div>`;
@@ -761,7 +760,7 @@
         </div>
         <div class="card">
             <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <input id="search" placeholder="Suche (Name, Nr, Ort, Kontakt, Tel, ...)" value="${viewState.search}" onkeyup="viewState.search=this.value; renderTable()" style="margin:0; flex:1;">
+                <input id="search" placeholder="🔍 Suchen" value="${viewState.search}" onkeyup="viewState.search=this.value; renderTable()" style="margin:0; flex:1;">
                 <select id="sort" onchange="viewState.sort=this.value; renderTable()" style="margin:0; width:120px;">
                     <option value="name" ${viewState.sort==='name'?'selected':''}>A-Z</option>
                     <option value="route" ${viewState.sort==='route'?'selected':''}>Tour</option>
@@ -945,7 +944,7 @@
         save();showDetail(d.id);
     }
 
-    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
+    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Zuhause</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
     function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
