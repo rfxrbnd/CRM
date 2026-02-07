@@ -21,11 +21,11 @@
             --text-main: #0f172a;
             --text-light: #64748b;
             --border: #e2e8f0;
-            --radius: 10px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            --stat-green: #22c55e;
-            --stat-yellow: #eab308;
-            --stat-red: #ef4444;
+            --radius: 14px;
+            --shadow: 0 8px 24px rgba(0,0,0,0.06);
+            --stat-green: #34c759;
+            --stat-yellow: #ffcc00;
+            --stat-red: #ff3b30;
             --event-blue: #dbeafe; 
             --event-blue-text: #1e40af;
         }
@@ -44,7 +44,7 @@
         .nav-menu { padding: 20px; display: flex; flex-direction: column; gap: 5px; flex: 1; overflow-y: auto; }
         .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-light); font-size: 14px; font-weight: 500; transition: 0.1s; border: none; background: transparent; width: 100%; text-align: left; }
         .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background: #fffbeb; color: var(--text-main); font-weight: 700; border: 1px solid var(--brand); }
+        .nav-item.active { background: rgba(252, 211, 77, 0.18); color: var(--text-main); font-weight: 700; border: none; }
 
         #main { flex: 1; overflow-y: auto; padding: 0; position: relative; }
         .content-wrap { max-width: 1000px; margin: 0 auto; padding: 30px; padding-bottom: 100px; }
@@ -143,13 +143,65 @@
             .report-row { border-bottom: 1px solid #ccc; padding: 10px 0; page-break-inside: avoid; }
             #rep-input-area, textarea { display: none; }
         }
+    
+        /* --- APPLE-LIKE POLISH --- */
+        h1, h2, h3 { letter-spacing: -0.02em; }
+        label { letter-spacing: 0.06em; }
+
+        input, select, textarea { padding: 14px; font-weight: 500; }
+
+        .card, .float-bar {
+            backdrop-filter: saturate(180%) blur(8px);
+            -webkit-backdrop-filter: saturate(180%) blur(8px);
+        }
+
+        .btn, .nav-item, .cust-row, .pool-item, .cal-event, .view-btn {
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: scale(0.97); }
+
+        .cust-row:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+        .pool-item:active, .cal-event:active { transform: scale(0.98); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(17,17,17,0.92);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-2px);
+        }
+
+        .modal-box {
+            animation: popIn 0.25s cubic-bezier(.2,.8,.2,1);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.96); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
     </style>
 </head>
 <body>
 
 <div id="loader">
     <div class="spinner"></div>
-    <div id="loader-text" style="margin-top:10px; font-weight:bold;">Lädt...</div>
+    <div id="loader-text" style="margin-top:10px; font-weight:bold;">Wird vorbereitet …</div>
     <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" onclick="stopGeocoding=true">STOPP</button>
 </div>
 <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
@@ -159,7 +211,7 @@
         <h2 style="text-align:center">Zeit wählen</h2>
         <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
         <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-primary btn-full" onclick="confirmDrop()">Speichern</button>
+            <button class="btn btn-primary btn-full" onclick="confirmDrop()">Fertig</button>
             <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
         </div>
     </div>
@@ -182,7 +234,7 @@
         </div>
         <div style="margin-top:10px;"><label>Bis</label><input type="time" id="evtEnd" value="10:00" style="margin:0;"></div>
         <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-success btn-full" onclick="saveManualEvent()">Speichern</button>
+            <button class="btn btn-success btn-full" onclick="saveManualEvent()">Fertig</button>
             <button class="btn btn-danger btn-full" onclick="delManualEvent()" id="btnDelEvt" style="display:none;">Löschen</button>
             <button class="btn btn-secondary btn-full" onclick="document.getElementById('eventModal').style.display='none'">Abbrechen</button>
         </div>
@@ -207,6 +259,8 @@
 
 <div id="main"><div id="content" class="content-wrap"></div></div>
 
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
 <script>
     const DB_KEY = 'raphael_crm_v122_revenue';
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
@@ -222,6 +276,29 @@
     let editingExpenseId = null;
     window.currentOcrImage = null; 
     let stopGeocoding = false;
+    // --- APPLE-LIKE FEEL (micro-interactions + feedback) ---
+    function showToast(msg = "Fertig") {
+        const el = document.getElementById('toast');
+        if(!el) return;
+        el.textContent = msg;
+        el.classList.add('show');
+        clearTimeout(window.__toastTimer);
+        window.__toastTimer = setTimeout(() => el.classList.remove('show'), 1400);
+    }
+    function haptic(type = 'light') {
+        // Small vibration on supported devices only (won't do anything on iOS Safari, safe no-op elsewhere)
+        const pattern = type === 'success' ? [10, 20, 10] : [10];
+        navigator.vibrate?.(pattern);
+    }
+    function initAppleFeel() {
+        // "Magnetic" press feeling for buttons
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('mousedown', () => btn.style.transform = 'scale(0.96)');
+            btn.addEventListener('mouseup', () => btn.style.transform = '');
+            btn.addEventListener('mouseleave', () => btn.style.transform = '');
+        });
+    }
+
 
     window.onload = () => {
         try {
@@ -256,6 +333,7 @@
             console.error(e);
             alert("Fehler beim Starten: " + e.message + "\nBitte Backup prüfen.");
         } finally {
+            initAppleFeel();
             document.getElementById('loader').style.display='none';
         }
     };
@@ -373,7 +451,7 @@
         </div>
         <div class="card"><h2>Einstellungen</h2>
             <button class="btn btn-secondary btn-full" onclick="showDuplicates()">⚠️ Duplikate finden</button>
-            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
+            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save(); updateLogoUI(); showToast('Logo aktualisiert'); haptic('success'); }">Logo entfernen</button>
         </div>`;
     }
 
@@ -406,7 +484,7 @@
         html += '</div>';
         document.getElementById('content').innerHTML = html;
     }
-    function toggleTaskGlobal(cid, tid) { const c = db.customers.find(x => x.id === cid); if(c && c.tasks[tid]) { c.tasks[tid].done = true; save(); showAllTasks(); } }
+    function toggleTaskGlobal(cid, tid) { const c = db.customers.find(x => x.id === cid); if(c && c.tasks[tid]) { c.tasks[tid].done = true; save(); showToast('Fertig'); haptic('success'); showAllTasks(); } }
 
     // --- EXPENSES + MAX OCR ---
     function showExpenses(){
@@ -587,7 +665,8 @@
                 db.expenses.unshift({id:Date.now(),date:dateStr,amount:amount,category:cat,note:note,img:imgData});
             }
             save(); 
-            showExpenses(); 
+            showExpenses();
+            showToast(editingExpenseId ? 'Aktualisiert' : 'Gespeichert'); haptic('success');
         };
         if(file){
             const r=new FileReader();
@@ -605,7 +684,7 @@
         } else { saveExp(null); }
     }
     
-    function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();showExpenses();}}
+    function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id); save(); showExpenses(); showToast('Gelöscht');
     function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showExpenses()">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
 
     function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">📍 Positionen laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
@@ -830,10 +909,10 @@
             <div style="margin-top:20px; max-height:400px; overflow-y:auto;">${reports}</div>
         </div>`; 
     }
-    function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showDetail(id); }
-    function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showDetail(id); }
-    function delTask(id, idx) { db.customers.find(x=>x.id===id).tasks.splice(idx,1); save(); showDetail(id); }
-    function addRep(id) { const t=document.getElementById('repTxt').value; const dInput=document.getElementById('repDate').value; const f=document.getElementById('repImg').files[0]; if(!t && !f) return; let dateStr = new Date().toLocaleDateString('de-DE'); if(dInput) { const [y,m,d] = dInput.split('-'); dateStr = `${d}.${m}.${y}`; } const sR=(img)=>{ db.customers.find(x=>x.id===id).reports.unshift({date:dateStr, text:t, img:img}); save(); showDetail(id); }; if(f){ const r=new FileReader(); r.onload=e=>{ const i=new Image(); i.onload=()=>{ const c=document.createElement('canvas'); const x=c.getContext('2d'); const s=600/i.width; c.width=600; c.height=i.height*s; x.drawImage(i,0,0,c.width,c.height); sR(c.toDataURL('image/jpeg',0.6)); }; i.src=e.target.result; }; r.readAsDataURL(f); } else sR(null); }
+    function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showToast('Erledigt'); haptic('light'); showDetail(id); }
+    function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showToast(t.done ? 'Fertig' : 'Wieder offen'); haptic('light'); showDetail(id); }
+    function delTask(id, idx) { db.customers.find(x=>x.id===id).tasks.splice(idx,1); save(); showToast('Entfernt'); haptic('light'); showDetail(id); }
+    function addRep(id) { const t=document.getElementById('repTxt').value; const dInput=document.getElementById('repDate').value; const f=document.getElementById('repImg').files[0]; if(!t && !f) return; let dateStr = new Date().toLocaleDateString('de-DE'); if(dInput) { const [y,m,d] = dInput.split('-'); dateStr = `${d}.${m}.${y}`; } const sR=(img)=>{ db.customers.find(x=>x.id===id).reports.unshift({date:dateStr, text:t, img:img}); save(); showToast('Gespeichert'); haptic('success'); showDetail(id); }; if(f){ const r=new FileReader(); r.onload=e=>{ const i=new Image(); i.onload=()=>{ const c=document.createElement('canvas'); const x=c.getContext('2d'); const s=600/i.width; c.width=600; c.height=i.height*s; x.drawImage(i,0,0,c.width,c.height); sR(c.toDataURL('image/jpeg',0.6)); }; i.src=e.target.result; }; r.readAsDataURL(f); } else sR(null); }
     function editRep(cid, rid) { const c=db.customers.find(x=>x.id===cid); const r=c.reports[rid]; const newTxt = prompt("Text bearbeiten:", r.text); if(newTxt !== null) { const newDate = prompt("Datum (TT.MM.JJJJ):", r.date); if(newDate) { r.text = newTxt; r.date = newDate; save(); showDetail(cid); } } }
     function togTour(id){if(db.tour.includes(id))db.tour=db.tour.filter(x=>x!==id);else db.tour.push(id);save();showDetail(id);}
     
@@ -874,7 +953,7 @@
             tasks:id?db.customers.find(x=>x.id===id).tasks:[]
         };
         if(id)db.customers[db.customers.findIndex(x=>x.id===id)]=d;else db.customers.push(d);
-        save();showDetail(d.id);
+        save(); showToast('Gespeichert'); haptic('success'); showDetail(d.id);
     }
 
     function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
