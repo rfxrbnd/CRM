@@ -862,18 +862,48 @@
             </div>
         </div>
 
-        <div class="card">
-            <h2>Besuchsberichte</h2>
-            <div class="no-print">
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
-                    <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">📸 Foto <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
-                </div>
-                <textarea id="repTxt" rows="2" placeholder="..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
-                <button class="btn btn-primary btn-full" onclick="addRep(${id})">Speichern</button>
-            </div>
-            <div style="margin-top:20px; max-height:400px; overflow-y:auto;">${reports}</div>
-        </div>`; 
+<div class="grid-2" style="margin-top:15px; align-items:start;">
+
+  <!-- LINKS: Bericht schreiben -->
+  <div class="card">
+    <h2>Besuchsbericht</h2>
+
+    <div class="no-print">
+      <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <input type="date"
+               id="repDate"
+               value="${new Date().toISOString().split('T')[0]}"
+               style="margin:0; width:140px;">
+
+        <label class="btn btn-secondary"
+               style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">
+          📸 Foto
+          <input type="file" id="repImg" accept="image/*" style="display:none;">
+        </label>
+      </div>
+
+      <textarea id="repTxt"
+                rows="4"
+                placeholder="..."
+                style="margin:0; width:100%; margin-bottom:10px;"></textarea>
+
+      <button class="btn btn-primary btn-full"
+              onclick="addRep(${id})">
+        Speichern
+      </button>
+    </div>
+  </div>
+
+  <!-- RECHTS: vorhandene Berichte -->
+  <div class="card">
+    <h2>Besuchsberichte</h2>
+    <div style="margin-top:10px; max-height:520px; overflow-y:auto;">
+      ${reports || '<div style="color:#999; padding:10px;">Keine Berichte vorhanden</div>'}
+    </div>
+  </div>
+
+</div>
+
     }
     function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showDetail(id); }
     function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showDetail(id); }
