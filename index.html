@@ -811,6 +811,8 @@
         const inTour = db.tour.includes(id); 
         
         const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="font-weight:600; font-size:13px;">${r.date}</div><div style="display:flex; gap:8px; color:#6b7280;"><span style="cursor:pointer;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer;" onclick="delRep(${id},${i})">🗑️</span></div></div>
+        const reportsHTML = reports || '<div style="color:#999; padding:10px;">Keine Berichte vorhanden</div>';
+
 <div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
         const todayStr = new Date().toISOString().split('T')[0]; 
         const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} onclick="toggleTask(${id},${i})"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#ef4444;cursor:pointer;font-weight:bold;margin-left:5px;" onclick="delTask(${id},${i})">×</span></div>` }).join(''); 
@@ -878,7 +880,7 @@
 
   <div class="card">
     <h2>Besuchsberichte</h2>
-<div style="margin-top:10px; max-height:520px; overflow-y:auto;">${reports || "<div style='color:#999; padding:10px;'>Keine Berichte vorhanden</div>"}</div>
+<div style="margin-top:10px; max-height:520px; overflow-y:auto;">${reportsHTML}</div>
   </div>
 
 </div>
