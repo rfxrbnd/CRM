@@ -251,6 +251,20 @@
   display: none;
 }
 
+/* Kein Rahmen / keine Hervorhebung beim ausgewählten Punkt */
+.nav-item.active {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Auch Fokus-Rahmen entfernen (Klick / Tastatur) */
+.nav-item:focus,
+.nav-item:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
         
     </style>
 </head>
