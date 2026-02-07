@@ -143,6 +143,54 @@
             .report-row { border-bottom: 1px solid #ccc; padding: 10px 0; page-break-inside: avoid; }
             #rep-input-area, textarea { display: none; }
         }
+
+    /* --- FORCE MONOCHROME OVERRIDES --- */
+
+/* Kategorie-Badges (A/B/C) -> alle gleich grau */
+.cat-badge { background: #111827 !important; color: #fff !important; }
+.cat-A, .cat-B, .cat-C { background-color: #111827 !important; color:#fff !important; }
+
+/* Kalender-Events: alle neutral */
+.cal-event {
+  background: #111827 !important;
+  color: #fff !important;
+  border-color: rgba(0,0,0,0.15) !important;
+}
+.cal-event.manual {
+  background: #e5e7eb !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Buttons: Success/Danger nicht mehr grün/rot */
+.btn-success {
+  background: #111827 !important;
+  color: #fff !important;
+  border-color: #111827 !important;
+}
+.btn-danger {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Optional: aktive Navigation nicht gelblich */
+.nav-item.active {
+  background: #f3f4f6 !important;
+  color: var(--text-main) !important;
+  font-weight: 700;
+  border: 1px solid #d1d5db !important;
+}
+
+/* Optional: Highlight-Flächen (z.B. selected) neutral */
+.cust-row.selected {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+.float-bar {
+  border-color: #d1d5db !important;
+}
+        
     </style>
 </head>
 <body>
