@@ -807,6 +807,7 @@
     }
     
     function showDetail(id) { 
+        document.getElementById('content').innerHTML = `
         const c = db.customers.find(x => x.id === id); if(!c) return; 
         const inTour = db.tour.includes(id); 
         
@@ -885,6 +886,7 @@
 
 </div>
 
+`;
     }
     function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showDetail(id); }
     function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showDetail(id); }
