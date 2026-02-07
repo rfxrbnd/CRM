@@ -13,20 +13,29 @@
     <style>
         /* --- DESIGN CORE --- */
         :root {
-            --brand: #fcd34d; 
-            --brand-dark: #d97706; 
-            --bg-body: #f8fafc;
-            --bg-sidebar: #ffffff;
-            --surface: #ffffff;
+            --accent: #007aff;
+            --accent-dark: #0057c2;
+            --brand-yellow: #fcd34d;
+            --brand-yellow-dark: #d97706;
+
+            /* legacy tokens used across UI */
+            --brand: var(--accent);
+            --brand-dark: var(--accent-dark);
+
+            --bg-body: #f2f2f7;
+            --bg-sidebar: rgba(255,255,255,0.78);
+            --surface: rgba(255,255,255,0.82);
             --text-main: #0f172a;
-            --text-light: #64748b;
-            --border: #e2e8f0;
+            --text-light: #6b7280;
+            --border: rgba(15, 23, 42, 0.10);
             --radius: 14px;
-            --shadow: 0 8px 24px rgba(0,0,0,0.06);
+            --shadow: 0 10px 30px rgba(0,0,0,0.08);
+
             --stat-green: #34c759;
             --stat-yellow: #ffcc00;
             --stat-red: #ff3b30;
-            --event-blue: #dbeafe; 
+
+            --event-blue: #dbeafe;
             --event-blue-text: #1e40af;
         }
 
@@ -195,6 +204,140 @@
             to { transform: scale(1); opacity: 1; }
         }
 
+/* --- iOS / macOS Settings + Reminders polish --- */
+body {
+    background:
+        radial-gradient(1200px 800px at 20% 0%, rgba(0,122,255,0.08), transparent 55%),
+        radial-gradient(900px 600px at 90% 15%, rgba(255,204,0,0.08), transparent 60%),
+        var(--bg-body);
+}
+
+/* Sidebar like macOS translucent */
+#sidebar {
+    background: var(--bg-sidebar);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    border-right: 1px solid var(--border);
+}
+.logo-area {
+    background: transparent;
+}
+
+.nav-menu { padding: 14px; gap: 6px; }
+.nav-item {
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+.nav-item:hover {
+    background: rgba(15,23,42,0.05);
+}
+.nav-item.active {
+    background: rgba(0,122,255,0.12);
+    border: 1px solid rgba(0,122,255,0.20);
+    color: var(--text-main);
+}
+
+/* Cards: grouped, glassy */
+.card {
+    background: var(--surface);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border: 1px solid var(--border);
+}
+
+/* Inputs like iOS */
+input, select, textarea {
+    border-radius: 12px;
+    border: 1px solid rgba(15,23,42,0.12);
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: rgba(0,122,255,0.55);
+    box-shadow: 0 0 0 4px rgba(0,122,255,0.18);
+}
+
+/* Buttons: iOS primary blue */
+.btn {
+    border-radius: 12px;
+}
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.10);
+}
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-secondary {
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(15,23,42,0.12);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.95); }
+
+/* Make destructive feel like iOS */
+.btn-danger {
+    background: rgba(255,59,48,0.08);
+    border-color: rgba(255,59,48,0.18);
+    color: #b91c1c;
+}
+
+/* List rows (Settings style) */
+.cust-row, .exp-row, .global-task-row, .exp-row.card {
+    border-radius: 14px;
+}
+.cust-row {
+    margin: 8px 0;
+    border: 1px solid rgba(15,23,42,0.10);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+.cust-row:hover { background: rgba(255,255,255,0.92); }
+
+/* Segmented controls (calendar view buttons) */
+.view-controls {
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(15,23,42,0.12);
+    border-radius: 12px;
+    padding: 3px;
+    gap: 0;
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+.view-btn {
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-weight: 700;
+    color: rgba(15,23,42,0.70);
+}
+.view-btn.active {
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    color: var(--text-main);
+}
+
+/* Floating bar as iOS action sheet pill */
+.float-bar {
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    border: 1px solid rgba(15,23,42,0.12);
+}
+
+/* Softer loader */
+#loader {
+    background: rgba(242,242,247,0.92);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
     </style>
 </head>
 <body>
@@ -212,7 +355,7 @@
         <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
         <div class="grid-2" style="margin-top:20px;">
             <button class="btn btn-primary btn-full" onclick="confirmDrop()">Fertig</button>
-            <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
+            <button class="btn btn-secondary btn-full" onclick="closeModal()">Nicht jetzt</button>
         </div>
     </div>
 </div>
@@ -236,7 +379,7 @@
         <div class="grid-2" style="margin-top:20px;">
             <button class="btn btn-success btn-full" onclick="saveManualEvent()">Fertig</button>
             <button class="btn btn-danger btn-full" onclick="delManualEvent()" id="btnDelEvt" style="display:none;">Löschen</button>
-            <button class="btn btn-secondary btn-full" onclick="document.getElementById('eventModal').style.display='none'">Abbrechen</button>
+            <button class="btn btn-secondary btn-full" onclick="document.getElementById('eventModal').style.display='none'">Nicht jetzt</button>
         </div>
     </div>
 </div>
@@ -544,8 +687,8 @@
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📸 Beleg</button>
                 <input type="file" id="exp-img" style="display:none" accept="image/*">
-                <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Speichern</button>
-                <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Abbrechen</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Fertig</button>
+                <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Nicht jetzt</button>
             </div>
         </div>
         <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
@@ -928,7 +1071,7 @@
                 <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
                 <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
                 <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
-                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
+                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Fertig</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
             </div>
         </div>`;
     }
@@ -956,7 +1099,7 @@
         save(); showToast('Gespeichert'); haptic('success'); showDetail(d.id);
     }
 
-    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
+    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Fertig</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
     function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
