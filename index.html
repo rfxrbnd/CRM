@@ -1,1470 +1,380 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AD Board v123 - Layout Fix</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-
-    <style>
-        /* --- DESIGN CORE --- */
-        :root {
-            --brand: #fcd34d; 
-            --brand-dark: #d97706; 
-            --bg-body: #f8fafc;
-            --bg-sidebar: #ffffff;
-            --surface: #ffffff;
-            --text-main: #0f172a;
-            --text-light: #64748b;
-            --border: #e2e8f0;
-            --radius: 10px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            --stat-green: #22c55e;
-            --stat-yellow: #eab308;
-            --stat-red: #ef4444;
-            --event-blue: #dbeafe; 
-            --event-blue-text: #1e40af;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg-body); color: var(--text-main); overflow: hidden; }
-
-        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.98); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--text-main); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        #sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 50; flex-shrink: 0; transition: transform 0.3s ease; }
-        .logo-area { padding: 20px; text-align: center; border-bottom: 1px solid var(--border); background: #fff; }
-        .logo-img { max-width: 100%; max-height: 60px; object-fit: contain; }
-        
-        .nav-menu { padding: 20px; display: flex; flex-direction: column; gap: 5px; flex: 1; overflow-y: auto; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-light); font-size: 14px; font-weight: 500; transition: 0.1s; border: none; background: transparent; width: 100%; text-align: left; }
-        .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background: #fffbeb; color: var(--text-main); font-weight: 700; border: 1px solid var(--brand); }
-
-        #main { flex: 1; overflow-y: auto; padding: 0; position: relative; }
-        .content-wrap { max-width: 1000px; margin: 0 auto; padding: 30px; padding-bottom: 100px; }
-
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
-        h1 { margin: 0 0 20px 0; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-        label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 700; color: var(--text-light); text-transform: uppercase; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; margin-bottom: 15px; font-family: inherit; background: #fff; }
-        
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); gap: 6px; text-decoration: none !important; transition: 0.1s; user-select: none; }
-        .btn:active { transform: scale(0.98); }
-        .btn-primary { background: #ffffff; color: var(--text-main); border-color: var(--border); }
-        .btn-primary:hover { background: #f8fafc; border-color: #94a3b8; }
-        .btn-secondary { background: #ffffff; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-secondary:hover { background: #f8fafc; }
-        .btn-danger { background: #fff; color: #991b1b; border-color: #fee2e2; }
-        .btn-success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-        .btn-full { width: 100%; }
-
-        /* --- VISUAL CATEGORY BADGES --- */
-        .cat-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; color: #fff; display: inline-block; min-width: 24px; text-align: center; }
-        .cat-A { background-color: #f59e0b; color: #fff; } /* Gold */
-        .cat-B { background-color: #3b82f6; color: #fff; } /* Blau */
-        .cat-C { background-color: #94a3b8; color: #fff; } /* Grau */
-
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .grid-4-custom { display: grid; grid-template-columns: 1.5fr 1.5fr 0.5fr 1fr; gap: 10px; align-items: end; }
-        
-        .cust-row { display: flex; align-items: center; padding: 14px; background: #fff; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.1s; justify-content: space-between; }
-        .cust-row:hover { background: #f8fafc; }
-        .cust-row.selected { background: #fffbeb; border-color: var(--brand); }
-        .check-circle { width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
-        .cust-row.selected .check-circle { background: var(--brand); border-color: var(--brand-dark); }
-        .cust-row.selected .check-circle::after { content: '✓'; font-size: 12px; font-weight: bold; color: #451a03; }
-        
-        .exp-row { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; background: #fff; }
-        .exp-amount { font-weight: 800; color: var(--text-main); }
-        .exp-cat { font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; margin-right: 5px; }
-        .exp-img { max-height: 100px; border: 1px solid #eee; border-radius: 4px; margin-top: 5px; cursor: pointer; }
-
-        .float-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #fff; padding: 15px 25px; border-radius: 50px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); border: 1px solid var(--border); display: flex; gap: 15px; align-items: center; z-index: 1000; animation: slideUp 0.3s; }
-        @keyframes slideUp { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
-
-        .report-entry { padding: 15px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--brand); }
-        .rep-img { max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid #ddd; }
-        
-        .task-mini-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
-        .task-chk { margin-right: 8px; cursor: pointer; }
-        .task-done { text-decoration: line-through; color: #999; }
-        .task-date { font-size: 10px; background: #eee; padding: 1px 4px; border-radius: 4px; margin-left: 5px; white-space: nowrap; }
-        .task-date.overdue { background: #fee2e2; color: #b91c1c; }
-        .global-task-row { padding: 15px; border-bottom: 1px solid #eee; background: #fff; display: flex; align-items: flex-start; }
-
-        .cal-layout { display: grid; grid-template-columns: 250px 1fr; gap: 20px; height: calc(100vh - 120px); min-height: 500px; }
-        .cal-pool { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; }
-        .cal-main { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .pool-list { flex: 1; overflow-y: auto; padding: 10px; background: #f8fafc; }
-        .pool-item { padding: 8px 10px; margin-bottom: 5px; background: #fff; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: grab; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #e2e8f0; gap: 1px; flex: 1; overflow-y: auto; }
-        .cal-head { background: #f1f5f9; padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: #64748b; }
-        .cal-day { background: #ffffff; min-height: 100px; padding: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
-        .cal-day.today { background: #fffbeb; }
-        .cal-event { background: var(--brand); color: #451a03; padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(0,0,0,0.05); margin-top: 2px; }
-        .cal-event.manual { background: var(--event-blue); color: var(--event-blue-text); border-color: #93c5fd; }
-
-        .view-controls { display: flex; gap: 5px; }
-        .view-btn { padding: 6px 12px; font-size: 12px; border: 1px solid var(--border); background: #fff; border-radius: 6px; cursor: pointer; }
-        .view-btn.active { background: #fff; border-color: var(--text-main); font-weight: 700; color: var(--text-main); }
-
-        .stat-container { display: flex; align-items: flex-end; height: 80px; gap: 5px; margin-top: 15px; }
-        .stat-bar { flex: 1; background: var(--brand); border-radius: 4px 4px 0 0; position: relative; min-height: 2px; }
-        .stat-val { position: absolute; top: -16px; width: 100%; text-align: center; font-size: 10px; font-weight: bold; }
-        .stat-lbl { position: absolute; bottom: -18px; width: 100%; text-align: center; font-size: 9px; color: #666; }
-
-        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-box { background: #fff; padding: 30px; border-radius: var(--radius); width: 90%; max-width: 350px; }
-        #map-container { height: 600px; width: 100%; border-radius: var(--radius); border: 1px solid var(--border); z-index: 1; }
-
-        #menu-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 100; background: #fff; color: #000; border: 1px solid #ddd; width: 45px; height: 45px; border-radius: 50%; font-size: 24px; box-shadow: var(--shadow); }
-        @media (max-width: 800px) {
-            #sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 80%; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
-            #sidebar.open { transform: translateX(0); }
-            #menu-toggle { display: block; }
-            .cal-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; height: auto; }
-            .cal-pool { height: 150px; margin-bottom: 20px; }
-            .cal-main { height: 500px; }
-            .grid-2, .grid-3, .grid-4-custom { grid-template-columns: 1fr; }
-        }
-        @media print {
-            #sidebar, #menu-toggle, .no-print, .btn, .nav-menu, .del-x, .float-bar { display: none !important; }
-            #main { padding: 0; margin: 0; width: 100%; height: auto; overflow: visible; }
-            body { background: #fff; height: auto; overflow: visible; font-family: sans-serif; }
-            .card { box-shadow: none; border: none; margin: 0; padding: 0; border-bottom: 1px solid #eee; margin-bottom: 20px; }
-            h1 { font-size: 18pt; border-bottom: 2px solid #000; margin-bottom: 20px; }
-            .report-row { border-bottom: 1px solid #ccc; padding: 10px 0; page-break-inside: avoid; }
-            #rep-input-area, textarea { display: none; }
-        }
-    
-/* --- Apple-like topbar + segmented control + command palette --- */
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CRM – macOS HIG Style</title>
+<style>
+/* macOS-inspired styling (HIG-aligned) */
 :root{
-  --topbar-h: 74px;
-  --focus: rgba(10, 132, 255, .9);
-  --glass: rgba(255,255,255,.68);
-  --glass-dark: rgba(20,20,22,.55);
-  --glass-border: rgba(60,60,67,.18);
+  --accent: #0a84ff;
+  --accent-fill: color-mix(in srgb, var(--accent) 18%, transparent);
+  --text: #1d1d1f;
+  --sub: #6e6e73;
+
+  --bg: #f5f5f7;
+  --window: rgba(255,255,255,0.72);
+  --sidebar: rgba(246,246,247,0.85);
+  --separator: rgba(0,0,0,0.10);
+  --hairline: rgba(0,0,0,0.06);
+
+  --radius-lg: 14px;
+  --radius-md: 10px;
+
+  --blur: saturate(180%) blur(20px);
+  --shadow: 0 18px 45px rgba(0,0,0,0.12);
+
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  color-scheme: light dark;
 }
+
 @media (prefers-color-scheme: dark){
-  :root{ --glass: var(--glass-dark); --glass-border: rgba(84,84,88,.35); }
+  :root{
+    --text: #f5f5f7;
+    --sub: #a1a1a6;
+
+    --bg: #000;
+    --window: rgba(28,28,30,0.72);
+    --sidebar: rgba(44,44,46,0.75);
+    --separator: rgba(255,255,255,0.14);
+    --hairline: rgba(255,255,255,0.10);
+
+    --shadow: 0 22px 55px rgba(0,0,0,0.55);
+  }
 }
-body{ padding-top: var(--topbar-h); }
-.topbar{
-  position: fixed; inset: 0 0 auto 0; height: var(--topbar-h);
-  z-index: 50;
-  background: var(--glass);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  backdrop-filter: saturate(180%) blur(18px);
-  border-bottom: 1px solid var(--glass-border);
-}
-.topbar-inner{
-  max-width: 1400px; margin: 0 auto; height: 100%;
-  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center;
-  gap: 14px; padding: 14px 18px;
-}
-.title-stack{ display:flex; flex-direction:column; gap:2px; min-width: 180px; }
-.eyebrow{ font-size: 11px; letter-spacing:.2px; color: var(--text-light); font-weight: 700; }
-.large-title{ font-size: 22px; font-weight: 800; line-height: 1.1; }
-.icon-btn{
-  width: 38px; height: 38px; border-radius: 12px;
-  border: 1px solid var(--glass-border);
-  background: rgba(120,120,128,.12);
-  display: grid; place-items: center;
-  cursor: pointer;
-  transition: transform .12s ease, background .12s ease;
-}
-.icon-btn svg{ width: 18px; height: 18px; }
-.icon-btn:active{ transform: scale(.98); }
-.icon-btn:hover{ background: rgba(120,120,128,.18); }
-.segmented{
-  justify-self: center;
-  display: inline-flex;
-  border: 1px solid var(--glass-border);
-  background: rgba(120,120,128,.12);
-  border-radius: 14px;
-  padding: 3px;
-  gap: 3px;
-}
-.seg-item{
-  border: 0;
-  background: transparent;
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background: radial-gradient(1200px 700px at 20% 0%, rgba(10,132,255,0.10), transparent 55%),
+              radial-gradient(1000px 600px at 100% 10%, rgba(255,45,85,0.06), transparent 55%),
+              var(--bg);
   color: var(--text);
+}
+
+.window{
+  min-height: 100vh;
+  display:flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 22px;
+}
+
+.shell{
+  width: min(1180px, 100%);
+  display:grid;
+  grid-template-columns: 280px 1fr;
+  border-radius: var(--radius-lg);
+  overflow:hidden;
+  background: var(--window);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--hairline);
+}
+
+/* Sidebar */
+.sidebar{
+  background: var(--sidebar);
+  backdrop-filter: var(--blur);
+  border-right: 1px solid var(--separator);
+  padding: 14px 12px 14px 12px;
+}
+
+.sidebar .appname{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 10px 14px 10px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 10px;
+}
+.badge{
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display:grid; place-items:center;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
   font-weight: 700;
+}
+.sidebar h1{
   font-size: 13px;
-  padding: 9px 12px;
-  border-radius: 11px;
-  cursor: pointer;
-  transition: background .12s ease, transform .12s ease;
-}
-.seg-item:hover{ background: rgba(120,120,128,.14); }
-.seg-item.is-active{
-  background: rgba(255,255,255,.85);
-  color: #0A0A0A;
-  box-shadow: 0 1px 0 rgba(0,0,0,.06);
-}
-@media (prefers-color-scheme: dark){
-  .seg-item.is-active{ background: rgba(44,44,46,.92); color: #F5F5F7; box-shadow: none; }
-}
-.top-actions{ display:flex; gap:10px; justify-self: end; }
-
-.menu-fab{ /* keep for mobile; visually consistent */
-  position: fixed; bottom: 16px; right: 16px; z-index: 60;
-  width: 52px; height: 52px; border-radius: 18px;
-  border: 1px solid var(--glass-border);
-  background: var(--glass);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  backdrop-filter: saturate(180%) blur(18px);
-  box-shadow: 0 14px 40px rgba(0,0,0,.16);
-  display:none;
-}
-@media (max-width: 768px){
-  .topbar-inner{ grid-template-columns: auto 1fr auto; }
-  .segmented{ display:none; }
-  .menu-fab{ display:grid; place-items:center; }
+  letter-spacing: .2px;
+  margin:0;
+  font-weight: 600;
 }
 
-/* Sidebar nav refinements */
-.nav-item{ display:flex; align-items:center; gap:10px; }
-.nav-ico{ width:18px; height:18px; display:inline-grid; place-items:center; color: var(--text); opacity:.9; }
-.nav-ico svg{ width:18px; height:18px; }
-.nav-label{ flex:1; text-align:left; }
-
-/* Focus & keyboard affordances */
-:where(button, [role="button"], input, select, textarea, a):focus-visible{
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(10,132,255,.22), 0 0 0 1px rgba(10,132,255,.65);
+.nav{
+  margin-top: 10px;
+}
+.nav .section{
+  margin: 12px 0 6px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--sub);
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+.nav a{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration:none;
+  user-select:none;
+}
+.nav a:hover{
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.nav a.active{
+  background: var(--accent-fill);
+  color: var(--accent);
+}
+.icon{
+  width: 16px; height: 16px;
+  display:inline-block;
 }
 
-/* Command palette */
-.cmdk{ position: fixed; inset: 0; z-index: 100; display:none; }
-.cmdk.is-open{ display:block; }
-.cmdk-backdrop{ position:absolute; inset:0; background: rgba(0,0,0,.28); }
-@media (prefers-color-scheme: dark){ .cmdk-backdrop{ background: rgba(0,0,0,.45); } }
-.cmdk-panel{
-  position: relative;
-  max-width: 720px;
-  margin: 110px auto 0 auto;
-  border-radius: 20px;
-  border: 1px solid var(--glass-border);
-  background: var(--glass);
-  -webkit-backdrop-filter: saturate(180%) blur(22px);
-  backdrop-filter: saturate(180%) blur(22px);
-  box-shadow: 0 30px 90px rgba(0,0,0,.22);
+/* Main area */
+.main{
+  display:flex;
+  flex-direction:column;
+  min-width: 0;
+}
+
+.toolbar{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--separator);
+  background: color-mix(in srgb, var(--window) 86%, transparent);
+  backdrop-filter: var(--blur);
+}
+
+.titleblock{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width: 0;
+}
+.titleblock .title{
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
-.cmdk-header{ display:flex; align-items:center; gap:10px; padding: 14px 14px 10px 14px; border-bottom:1px solid var(--glass-border); }
-.cmdk-pill{
-  font-size: 12px; font-weight: 800;
-  padding: 6px 10px; border-radius: 999px;
-  background: rgba(120,120,128,.16); border: 1px solid var(--glass-border);
-}
-.cmdk-input{
-  width: 100%; border:0; outline:0;
-  background: transparent;
-  font-size: 16px; font-weight: 700;
-  color: var(--text);
-  padding: 10px 8px;
-}
-.cmdk-list{ max-height: 360px; overflow:auto; padding: 6px; }
-.cmdk-item{
-  display:flex; align-items:center; justify-content:space-between;
-  padding: 12px 12px;
-  border-radius: 14px;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-.cmdk-item:hover{ background: rgba(120,120,128,.14); }
-.cmdk-item.is-active{
-  background: rgba(10,132,255,.12);
-  border-color: rgba(10,132,255,.35);
-}
-.cmdk-left{ display:flex; flex-direction:column; gap:2px; }
-.cmdk-title{ font-weight: 800; font-size: 14px; }
-.cmdk-sub{ font-size: 12px; color: var(--text-light); font-weight: 700; }
-.cmdk-kbd{ display:flex; gap:6px; }
-.kbd{
-  font-size: 12px; font-weight: 800;
-  padding: 4px 8px; border-radius: 10px;
-  background: rgba(120,120,128,.16);
-  border: 1px solid var(--glass-border);
-  color: var(--text);
-}
-.cmdk-footer{
-  display:flex; gap:10px; justify-content:flex-end;
-  padding: 10px 14px 14px 14px;
-  border-top: 1px solid var(--glass-border);
-  color: var(--text-light);
+.titleblock .subtitle{
   font-size: 12px;
-  font-weight: 700;
+  color: var(--sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Context menu */
-.context-menu{
-  position: fixed;
-  min-width: 220px;
-  border-radius: 14px;
-  border: 1px solid var(--glass-border);
-  background: var(--glass);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  backdrop-filter: saturate(180%) blur(18px);
-  box-shadow: 0 18px 60px rgba(0,0,0,.2);
-  padding: 6px;
-  display:none;
+.spacer{ flex:1; }
+
+.search{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--window) 72%, transparent);
+  min-width: 260px;
 }
-.context-menu.is-open{ display:block; }
-.ctx-item{
-  padding: 10px 10px;
-  border-radius: 12px;
-  cursor:pointer;
-  font-weight: 750;
+.search input{
+  border:0;
+  outline:none;
+  background: transparent;
+  color: var(--text);
+  width: 100%;
   font-size: 13px;
 }
-.ctx-item:hover{ background: rgba(120,120,128,.14); }
-.ctx-sep{ height:1px; background: var(--glass-border); margin:6px 6px; }
+.search kbd{
+  font-size: 11px;
+  color: var(--sub);
+  border: 1px solid var(--hairline);
+  border-bottom-color: color-mix(in srgb, var(--hairline) 60%, transparent);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
 
+.content{
+  padding: 16px;
+  min-width: 0;
+}
+
+/* Table/List (macOS-like) */
+.table{
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  overflow:hidden;
+  background: color-mix(in srgb, var(--window) 78%, transparent);
+}
+.table .thead{
+  display:grid;
+  grid-template-columns: 1.2fr .8fr .8fr .6fr;
+  gap: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--sub);
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--window) 90%, transparent);
+}
+.row{
+  display:grid;
+  grid-template-columns: 1.2fr .8fr .8fr .6fr;
+  padding: 11px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--hairline);
+}
+.row:last-child{ border-bottom: 0; }
+.row:hover{
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.cell.sub{ color: var(--sub); }
+.pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--window) 80%, transparent);
+  font-size: 12px;
+}
+.pill.blue{
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* Focus */
+:focus-visible{
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* Responsive */
+@media (max-width: 900px){
+  .shell{ grid-template-columns: 1fr; }
+  .sidebar{ display:none; }
+  .search{ min-width: 0; width: 42vw; }
+  .table .thead, .row{ grid-template-columns: 1.2fr .8fr .7fr; }
+  .table .thead div:nth-child(4), .row div:nth-child(4){ display:none; }
+}
 </style>
 </head>
 <body>
+<div class="window">
+  <div class="shell" role="application" aria-label="CRM">
+    <aside class="sidebar" aria-label="Navigation">
+      <div class="appname">
+        <div class="badge" aria-hidden="true">C</div>
+        <h1>CRM</h1>
+      </div>
 
+      <div class="nav">
+        <div class="section">Bereiche</div>
 
-<div id="topbar" class="topbar" role="banner">
-  <div class="topbar-inner">
-    <button class="icon-btn" id="sidebar-toggle" aria-label="Seitenleiste ein-/ausblenden" title="Seitenleiste (⌥⌘S)">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-    </button>
+        <a class="active" href="#">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5z"/></svg>
+          </span>
+          Übersicht
+        </a>
 
-    <div class="title-stack" aria-label="Titel">
-      <div class="eyebrow" id="topbar-eyebrow">Raphaels CRM</div>
-      <div class="large-title" id="topbar-title">Dashboard</div>
-    </div>
+        <a href="#">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          Kontakte
+        </a>
 
-    <div class="segmented" role="tablist" aria-label="Bereiche">
-      <button class="seg-item is-active" role="tab" aria-selected="true" data-view="home">Dashboard</button>
-      <button class="seg-item" role="tab" aria-selected="false" data-view="customers">Kunden</button>
-      <button class="seg-item" role="tab" aria-selected="false" data-view="map">Karte</button>
-      <button class="seg-item" role="tab" aria-selected="false" data-view="calendar">Kalender</button>
-      <button class="seg-item" role="tab" aria-selected="false" data-view="tour">Tour</button>
-    </div>
+        <a href="#">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 13V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6"/><path d="M4 13h16l-1 8H5l-1-8z"/></svg>
+          </span>
+          Deals
+        </a>
 
-    <div class="top-actions">
-      <button class="icon-btn" id="cmdk-btn" aria-label="Befehle" title="Befehle (⌘K)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 18.5H6.8a3.3 3.3 0 1 1 0-6.6h3.7m3-5.4h3.7a3.3 3.3 0 1 1 0 6.6h-3.7M8.2 12h7.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="icon-btn" id="search-focus" aria-label="Suche" title="Suche (⌘F)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 18.5a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm6.2-1.8 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </button>
-    </div>
+        <a href="#">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3h8v4"/><path d="M5 7h14a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9a2 2 0 0 1 2-2z"/><path d="M9 13h6"/></svg>
+          </span>
+          Aktivitäten
+        </a>
+
+        <div class="section">System</div>
+        <a href="#">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a7.8 7.8 0 0 0 .1-2l2-1.5-2-3.5-2.4 1a7.7 7.7 0 0 0-1.7-1l-.3-2.6h-4l-.3 2.6a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0 .1 2l-2 1.5 2 3.5 2.4-1a7.7 7.7 0 0 0 1.7 1l.3 2.6h4l.3-2.6a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5z"/></svg>
+          </span>
+          Einstellungen
+        </a>
+      </div>
+    </aside>
+
+    <main class="main" aria-label="Inhalt">
+      <header class="toolbar">
+        <div class="titleblock">
+          <div class="title">Übersicht</div>
+          <div class="subtitle">Leads, Umsatz und Aufgaben auf einen Blick</div>
+        </div>
+        <div class="spacer"></div>
+
+        <label class="search" aria-label="Suchen">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          </span>
+          <input type="search" placeholder="Suchen" />
+          <kbd aria-hidden="true">⌘F</kbd>
+        </label>
+      </header>
+
+      <div class="content">
+        <div class="table" role="table" aria-label="Pipeline">
+          <div class="thead" role="row">
+            <div role="columnheader">Name</div>
+            <div role="columnheader">Status</div>
+            <div role="columnheader">Owner</div>
+            <div role="columnheader">Wert</div>
+          </div>
+
+          <div class="row" role="row" tabindex="0">
+            <div class="cell" role="cell">Acme GmbH – Einführung</div>
+            <div class="cell" role="cell"><span class="pill blue">Aktiv</span></div>
+            <div class="cell sub" role="cell">Max</div>
+            <div class="cell" role="cell">€ 24k</div>
+          </div>
+
+          <div class="row" role="row" tabindex="0">
+            <div class="cell" role="cell">Nordwind AG – Renewal</div>
+            <div class="cell" role="cell"><span class="pill">Offen</span></div>
+            <div class="cell sub" role="cell">Lea</div>
+            <div class="cell" role="cell">€ 9k</div>
+          </div>
+
+          <div class="row" role="row" tabindex="0">
+            <div class="cell" role="cell">Stadtwerke – Demo</div>
+            <div class="cell" role="cell"><span class="pill">In Prüfung</span></div>
+            <div class="cell sub" role="cell">Jonas</div>
+            <div class="cell" role="cell">€ 14k</div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 </div>
-
-<div id="cmdk" class="cmdk" aria-hidden="true">
-  <div class="cmdk-backdrop"></div>
-  <div class="cmdk-panel" role="dialog" aria-modal="true" aria-label="Befehle">
-    <div class="cmdk-header">
-      <div class="cmdk-pill">⌘K</div>
-      <input id="cmdk-input" class="cmdk-input" type="text" placeholder="Befehl oder Suche…" autocomplete="off" />
-    </div>
-    <div id="cmdk-list" class="cmdk-list" role="listbox" aria-label="Vorschläge"></div>
-    <div class="cmdk-footer">
-      <span>↑↓ navigieren</span><span>↵ ausführen</span><span>esc schließen</span>
-    </div>
-  </div>
-</div>
-
-<div id="contextMenu" class="context-menu" aria-hidden="true"></div>
-
-
-<div id="loader">
-    <div class="spinner"></div>
-    <div id="loader-text" style="margin-top:10px; font-weight:bold;">Lädt...</div>
-    <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" onclick="stopGeocoding=true">STOPP</button>
-</div>
-<button id="menu-toggle" class="menu-fab" onclick="toggleSidebar()" aria-label="Menü">☰</button>
-
-<div id="timeModal" class="modal-overlay">
-    <div class="modal-box">
-        <h2 style="text-align:center">Zeit wählen</h2>
-        <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
-        <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-primary btn-full" onclick="confirmDrop()">Speichern</button>
-            <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
-        </div>
-    </div>
-</div>
-
-<div id="eventModal" class="modal-overlay">
-    <div class="modal-box">
-        <h2 style="text-align:center">Termin</h2>
-        <input type="hidden" id="evtId">
-        <label>Titel / Art</label>
-        <div style="display:flex; gap:5px; margin-bottom:10px;">
-            <input id="evtTitle" placeholder="Titel" style="margin:0;">
-            <select style="width:40px;" onchange="document.getElementById('evtTitle').value=this.value">
-                <option value="">...</option><option>Büro</option><option>Meeting</option><option>Werkstatt</option><option>Privat</option><option>Arzt</option><option>Urlaub</option>
-            </select>
-        </div>
-        <div class="grid-2">
-            <div><label>Datum</label><input type="date" id="evtDate" style="margin:0;"></div>
-            <div><label>Von</label><input type="time" id="evtStart" value="09:00" style="margin:0;"></div>
-        </div>
-        <div style="margin-top:10px;"><label>Bis</label><input type="time" id="evtEnd" value="10:00" style="margin:0;"></div>
-        <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-success btn-full" onclick="saveManualEvent()">Speichern</button>
-            <button class="btn btn-danger btn-full" onclick="delManualEvent()" id="btnDelEvt" style="display:none;">Löschen</button>
-            <button class="btn btn-secondary btn-full" onclick="document.getElementById('eventModal').style.display='none'">Abbrechen</button>
-        </div>
-    </div>
-</div>
-
-<div id="sidebar">
-    <div class="logo-area">
-        <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
-        <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
-    </div>
-    <div class="nav-menu">
-        <button class="nav-item active" onclick="nav('home', this)">🏠 Dashboard</button>
-        <button class="nav-item" onclick="nav('customers', this)">👥 Kunden</button>
-        <button class="nav-item" onclick="nav('expenses', this)">💶 Spesen</button>
-        <button class="nav-item" onclick="nav('map', this)">🗺️ Karte</button>
-        <button class="nav-item" onclick="nav('calendar', this)">📅 Kalender</button>
-        <button class="nav-item" onclick="nav('tour', this)">🚗 Tour</button>
-        <button class="nav-item" onclick="nav('routes', this)">📂 Routen</button>
-    </div>
-</div>
-
-<div id="main"><div id="content" class="content-wrap"></div></div>
-
-<script>
-    const DB_KEY = 'raphael_crm_v122_revenue';
-    const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
-    
-    let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
-    let currentCalDate = new Date();
-    let calView = 'month'; 
-    let dragId = null, dragTargetDate = null;
-    let selectMode = false;
-    let selectedIds = new Set();
-    let viewState = { sort: 'name', search: '', filterRoute: null };
-    let mapInstance = null; 
-    let editingExpenseId = null;
-    window.currentOcrImage = null; 
-    let stopGeocoding = false;
-
-    window.onload = () => {
-        try {
-            const current = JSON.parse(localStorage.getItem(DB_KEY));
-            if (current) db = current;
-            else {
-                const legacy = JSON.parse(localStorage.getItem('raphael_crm_v121_visualcat')) || JSON.parse(localStorage.getItem('raphael_crm_v120_fixedcal'));
-                if(legacy) { db = legacy; save(); }
-            }
-
-            if(!db.expenses) db.expenses = [];
-            if(!db.events) db.events = [];
-            if(!db.customers) db.customers = [];
-            
-            if(!db.meta_revenue_migrated) {
-                db.customers.forEach(c => {
-                    c.products = ""; 
-                });
-                db.meta_revenue_migrated = true;
-                save();
-            }
-
-            db.customers.forEach(c => {
-                if(!c.reports) c.reports = [];
-                if(!c.tasks) c.tasks = [];
-                if(!c.nextAppointment) c.nextAppointment = "";
-                if(!c.visitInterval) c.visitInterval = 4;
-            });
-            updateLogoUI();
-            showHome();
-        } catch(e) {
-            console.error(e);
-            alert("Fehler beim Starten: " + e.message + "\nBitte Backup prüfen.");
-        } finally {
-            document.getElementById('loader').style.display='none';
-        }
-    };
-
-    function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
-    function updateLogoUI() {
-        const img = document.getElementById('sidebar-logo');
-        const txt = document.getElementById('text-logo');
-        if(db.logo) { img.src = db.logo; img.style.display = 'inline-block'; txt.style.display = 'none'; } 
-        else { img.src = DEFAULT_LOGO; img.style.display = 'inline-block'; txt.style.display = 'none'; }
-    }
-
-    function nav(page, el) {
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-        if(el) el.classList.add('active');
-        if(window.innerWidth <= 768) toggleSidebar();
-        selectMode = false; selectedIds.clear();
-        viewState.filterRoute = null; 
-        if(mapInstance) { mapInstance.remove(); mapInstance = null; }
-        if(page === 'home') showHome();
-        else if(page === 'map') showMap();
-        else if(page === 'calendar') showCalendar();
-        else if(page === 'customers') showCustomers();
-        else if(page === 'tour') showTour();
-        else if(page === 'routes') showRoutes();
-        else if(page === 'expenses') showExpenses();
-    }
-    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
-
-    // --- CSV IMPORT ---
-    function importCSV(input) {
-        const f = input.files[0];
-        if(!f) return;
-        const r = new FileReader();
-        r.readAsText(f, 'UTF-8');
-        r.onload = e => {
-            const text = e.target.result;
-            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
-            if(lines.length < 2) return alert("Datei leer oder ungültig");
-            const firstLine = lines[0];
-            const sep = firstLine.includes(';') ? ';' : ','; 
-            const headers = firstLine.split(sep).map(h => h.replace(/"/g, '').trim().toLowerCase());
-            const iName = headers.findIndex(h => h === 'name');
-            const iStr = headers.findIndex(h => h.includes('straße') || h.includes('str'));
-            const iPlz = headers.findIndex(h => h === 'plz');
-            const iOrt = headers.findIndex(h => h === 'ort');
-            const iTel = headers.findIndex(h => h.includes('tel'));
-            const iNr = headers.findIndex(h => h === 'nr' || h.includes('kundennummer'));
-            const iTour = headers.findIndex(h => h === 'tour');
-            if (iName === -1) return alert("Fehler: Spalte 'Name' nicht gefunden.");
-            let count = 0;
-            for (let i = 1; i < lines.length; i++) {
-                const row = lines[i].split(sep).map(s => s.replace(/^"|"$/g, '').trim());
-                const name = row[iName];
-                let addressParts = [];
-                if(iStr > -1 && row[iStr]) addressParts.push(row[iStr]);
-                if(iPlz > -1 && row[iPlz] && iOrt > -1 && row[iOrt]) {
-                    addressParts.push(row[iPlz] + " " + row[iOrt]);
-                } else {
-                    if(iPlz > -1 && row[iPlz]) addressParts.push(row[iPlz]);
-                    if(iOrt > -1 && row[iOrt]) addressParts.push(row[iOrt]);
-                }
-                const fullAddress = addressParts.join(', ');
-                if (name && !db.customers.some(x => x.name === name)) {
-                    db.customers.push({
-                        id: Date.now() + i, name: name, address: fullAddress, 
-                        phone: iTel > -1 ? row[iTel] : "", nr: iNr > -1 ? row[iNr] : "",
-                        route: iTour > -1 ? row[iTour] : "", category: 'C', status: 'aktiv', 
-                        products: '', reports: [], nextAppointment: '', visitInterval: 4, tasks: []
-                    });
-                    count++;
-                }
-            }
-            save(); alert(count + " Kunden importiert!"); showHome();
-        };
-    }
-
-    // --- DASHBOARD ---
-    function showHome(){
-        const today=new Date().toLocaleDateString('de-DE');
-        const count=db.customers.length;
-        const visited=db.customers.filter(c=>c.reports&&c.reports.some(r=>r.date===today)).length;
-        const openTasksCount = db.customers.reduce((sum, c) => sum + (c.tasks ? c.tasks.filter(t => !t.done).length : 0), 0);
-
-        let stats={};
-        for(let i=5;i>=0;i--){
-            const d=new Date();d.setMonth(d.getMonth()-i);
-            const k=d.toLocaleString('de',{month:'short'});
-            stats[k]=0;
-            db.customers.forEach(c=>c.reports.forEach(r=>{const[D,M,Y]=r.date.split('.');if(parseInt(M)==d.getMonth()+1&&parseInt(Y)==d.getFullYear()) stats[k]++;}));
-        }
-        const maxV=Math.max(...Object.values(stats))||1;
-        const bars=Object.keys(stats).map(k=>`<div class="stat-bar" style="height:${(stats[k]/maxV)*100}%"><span class="stat-val">${stats[k]}</span><span class="stat-lbl">${k}</span></div>`).join('');
-        
-        document.getElementById('content').innerHTML=`
-        <h1>Dashboard</h1>
-        <div class="grid-3">
-            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800;">${count}</div><div style="font-size:12px; color:var(--text-light);">Kunden</div></div>
-            <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; color:var(--brand-dark);">${visited}</div><div style="font-size:12px; color:var(--text-light);">Heute</div></div>
-            <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben (Anzeigen)</div></div>
-        </div>
-        <div class="card"><h2>📈 Besuchstrend</h2><div class="stat-container">${bars}</div></div>
-        <div class="grid-2">
-            <div class="card"><h2>Schnellzugriff</h2>
-                <button class="btn btn-primary btn-full" onclick="showForm()">+ Neuer Kunde</button>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn btn-secondary btn-full" onclick="downloadBackup()">💾 Backup Speichern</button>
-                    <button class="btn btn-secondary btn-full" onclick="document.getElementById('bakIn').click()">📂 Backup Laden</button>
-                </div>
-                <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('csvIn').click()">CSV Import</button>
-                <input type="file" id="csvIn" style="display:none" onchange="importCSV(this)">
-                <input type="file" id="bakIn" style="display:none" onchange="importBackup(this)">
-            </div>
-            <div class="card"><h2>Berichte</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">📄 Tagesbericht drucken</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">📄 Wochenbericht drucken</button></div></div>
-        </div>
-        <div class="card"><h2>Einstellungen</h2>
-            <button class="btn btn-secondary btn-full" onclick="showDuplicates()">⚠️ Duplikate finden</button>
-            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
-        </div>`;
-    }
-
-    // --- GLOBAL TASKS ---
-    function showAllTasks() {
-        const todayStr = new Date().toISOString().split('T')[0];
-        let html = '<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div><h1>Offene Aufgaben</h1><div class="card">';
-        let count = 0;
-        db.customers.forEach(c => {
-            if(c.tasks && c.tasks.length > 0) {
-                c.tasks.forEach((t, index) => {
-                    if(!t.done) {
-                        const isOverdue = t.dueDate && t.dueDate < todayStr;
-                        html += `
-                        <div class="global-task-row">
-                            <input type="checkbox" style="margin-right:10px; width:20px; height:20px;" onclick="toggleTaskGlobal(${c.id}, ${index})">
-                            <div style="flex:1;">
-                                <div style="font-weight:bold; ${isOverdue ? 'color:#ef4444;' : ''}">${t.text}</div>
-                                <div style="font-size:12px; color:#666; cursor:pointer;" onclick="showDetail(${c.id})">
-                                    👤 ${c.name} ${t.dueDate ? '📅 ' + t.dueDate.split('-').reverse().join('.') : ''}
-                                </div>
-                            </div>
-                        </div>`;
-                        count++;
-                    }
-                });
-            }
-        });
-        if(count === 0) html += '<div style="padding:20px; text-align:center; color:#999;">Alles erledigt! 🎉</div>';
-        html += '</div>';
-        document.getElementById('content').innerHTML = html;
-    }
-    function toggleTaskGlobal(cid, tid) { const c = db.customers.find(x => x.id === cid); if(c && c.tasks[tid]) { c.tasks[tid].done = true; save(); showAllTasks(); } }
-
-    // --- EXPENSES + MAX OCR ---
-    function showExpenses(){
-        if(!db.expenses)db.expenses=[];
-        const currentMonth=new Date().getMonth();
-        const currentYear=new Date().getFullYear();
-        const total=db.expenses.reduce((sum,e)=>{
-            if(!e.date)return sum;
-            const parts=e.date.split('.');
-            if(parts.length!==3)return sum;
-            if(parseInt(parts[1])-1===currentMonth&&parseInt(parts[2])===currentYear) return sum+(parseFloat(e.amount)||0);
-            return sum;
-        },0);
-        
-        const list=db.expenses.sort((a,b)=>{
-            if(!a.date||!b.date)return 0;
-            const da=a.date.split('.').reverse().join('');
-            const db=b.date.split('.').reverse().join('');
-            return db.localeCompare(da);
-        }).map(e=>`
-            <div class="card exp-row">
-                <div>
-                    <div style="font-size:12px; color:#666;">${e.date} <span class="exp-cat">${e.category}</span></div>
-                    <div style="font-weight:bold; margin-top:2px;">${e.note||'Keine Notiz'}</div>
-                    ${e.img?`<img src="${e.img}" class="exp-img" onclick="window.open(this.src)">`:''}
-                </div>
-                <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
-                    <div class="exp-amount">${parseFloat(e.amount).toFixed(2)} €</div>
-                    <div style="display:flex; gap:5px;">
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">✏️</button>
-                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">🗑️</button>
-                    </div>
-                </div>
-            </div>`).join('');
-
-        document.getElementById('content').innerHTML=`
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h1>Spesen</h1>
-            <div class="card" style="padding:10px; margin:0; text-align:right;"><div style="font-size:10px; color:#666;">DIESER MONAT</div><div id="monthTotalDisplay" style="font-size:18px; font-weight:800; color:var(--brand-dark);">${total.toFixed(2)} €</div></div>
-        </div>
-        <div class="card" id="expFormCard">
-            <h3 id="expFormTitle">Neuer Eintrag</h3>
-            <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:15px;">
-                <button class="btn btn-secondary btn-full" onclick="document.getElementById('ocrInput').click()">📄 Beleg Scannen (AI)</button>
-                <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="processOCR(this)">
-                <img id="ocr-preview" style="display:none; max-height:100px; margin:10px auto; border:1px solid #ccc;">
-                <div id="ocrStatus" style="font-size:12px; color:#666; margin-top:5px; text-align:center;"></div>
-            </div>
-            <div class="grid-2">
-                <input type="date" id="exp-date" value="${new Date().toISOString().split('T')[0]}">
-                <input type="number" id="exp-amount" placeholder="Betrag (€)">
-            </div>
-            <div class="grid-2">
-                <select id="exp-cat"><option>Sonstiges</option><option>Parken</option><option>Tanken</option><option>Verpflegung</option><option>Hotel</option></select>
-                <input type="text" id="exp-note" placeholder="Notiz (z.B. Ort)">
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📸 Beleg</button>
-                <input type="file" id="exp-img" style="display:none" accept="image/*">
-                <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Speichern</button>
-                <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Abbrechen</button>
-            </div>
-        </div>
-        <div class="no-print" style="margin-bottom:15px; text-align:right;"><button class="btn btn-secondary" onclick="printExpenses()">🖨️ Abrechnung drucken</button></div>
-        <div>${list||'<div style="text-align:center; padding:20px; color:#999;">Keine Ausgaben</div>'}</div>`;
-        editingExpenseId = null;
-        window.currentOcrImage = null;
-    }
-
-    async function processOCR(input) {
-        const file = input.files[0];
-        if(!file) return;
-        const status = document.getElementById('ocrStatus');
-        status.innerText = "Bild wird verarbeitet...";
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('ocr-preview').src = e.target.result;
-            document.getElementById('ocr-preview').style.display = 'block';
-            window.currentOcrImage = e.target.result; 
-        };
-        reader.readAsDataURL(file);
-        
-        try {
-            const worker = await Tesseract.createWorker('deu');
-            status.innerText = "Lese Zahlen & Text...";
-            const ret = await worker.recognize(file);
-            const text = ret.data.text;
-            const lines = ret.data.lines.map(l => l.text.trim()).filter(l => l.length > 2);
-            
-            if(lines.length > 0) document.getElementById('exp-note').value = lines[0];
-
-            const dateMatch = text.match(/(\d{2})[\.\/-](\d{2})[\.\/-](\d{2,4})/);
-            if(dateMatch) {
-                let y = dateMatch[3];
-                if(y.length === 2) y = "20" + y;
-                document.getElementById('exp-date').value = `${y}-${dateMatch[2]}-${dateMatch[1]}`;
-            }
-
-            let maxVal = 0.0;
-            const currentYear = new Date().getFullYear();
-            
-            lines.forEach(l => {
-                const numbers = l.match(/[0-9]+[,.][0-9]{2}\b/g);
-                if(numbers) {
-                    numbers.forEach(numStr => {
-                        let cleanStr = numStr.replace(/\./g, 'X').replace(/,/g, '.').replace(/X/g, ''); 
-                        if(numStr.includes(';')) { cleanStr = numStr.replace(/\./g, '').replace(',', '.'); }
-                        
-                        const val = parseFloat(cleanStr);
-                        if(!isNaN(val)) {
-                            if(val >= currentYear -1 && val <= currentYear + 1) {} 
-                            else { if(val > maxVal) maxVal = val; }
-                        }
-                    });
-                }
-            });
-            
-            if(maxVal > 0) document.getElementById('exp-amount').value = maxVal.toFixed(2);
-
-            const t = text.toLowerCase();
-            const cat = document.getElementById('exp-cat');
-            if(t.includes('tank') || t.includes('liter') || t.includes('diesel') || t.includes('super') || t.includes('shell') || t.includes('aral')) cat.value = 'Tanken';
-            else if(t.includes('park') || t.includes('ticket')) cat.value = 'Parken';
-            else if(t.includes('hotel') || t.includes('zimmer')) cat.value = 'Hotel';
-            else if(t.includes('burger') || t.includes('mcdonald') || t.includes('essen') || t.includes('trinken')) cat.value = 'Verpflegung';
-            
-            status.innerText = "Scan fertig!";
-            await worker.terminate();
-        } catch(e) {
-            status.innerText = "Fehler: " + e.message;
-        }
-    }
-
-    function editExpense(id) {
-        const e = db.expenses.find(x => x.id === id);
-        if(!e) return;
-        document.getElementById('exp-date').value = e.date.split('.').reverse().join('-');
-        document.getElementById('exp-amount').value = e.amount;
-        document.getElementById('exp-cat').value = e.category;
-        document.getElementById('exp-note').value = e.note;
-        document.getElementById('expFormTitle').innerText = "Eintrag bearbeiten";
-        document.getElementById('btnSaveExp').innerText = "Update";
-        document.getElementById('btnCancelExp').style.display = 'block';
-        document.getElementById('expFormCard').scrollIntoView({behavior: 'smooth'});
-        editingExpenseId = id;
-    }
-
-    function resetExpForm() {
-        document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('exp-amount').value = '';
-        document.getElementById('exp-note').value = '';
-        document.getElementById('expFormTitle').innerText = "Neuer Eintrag";
-        document.getElementById('btnSaveExp').innerText = "Speichern";
-        document.getElementById('btnCancelExp').style.display = 'none';
-        document.getElementById('ocr-preview').style.display = 'none';
-        editingExpenseId = null;
-        window.currentOcrImage = null;
-    }
-
-    function addExpense(){
-        const dateIn=document.getElementById('exp-date').value;
-        const amount=document.getElementById('exp-amount').value;
-        const cat=document.getElementById('exp-cat').value;
-        const note=document.getElementById('exp-note').value;
-        const file=document.getElementById('exp-img').files[0];
-        if(!dateIn||!amount)return alert("Datum und Betrag fehlen");
-        const [y,m,d]=dateIn.split('-');
-        const dateStr=`${d}.${m}.${y}`;
-        const saveExp=(imgData)=>{
-            if(editingExpenseId) {
-                const e = db.expenses.find(x => x.id === editingExpenseId);
-                e.date = dateStr; e.amount = amount; e.category = cat; e.note = note;
-                if(imgData) e.img = imgData; 
-                editingExpenseId = null;
-            } else {
-                if(!db.expenses)db.expenses=[];
-                db.expenses.unshift({id:Date.now(),date:dateStr,amount:amount,category:cat,note:note,img:imgData});
-            }
-            save(); 
-            showExpenses(); 
-        };
-        if(file){
-            const r=new FileReader();
-            r.onload=e=>{
-                const img=new Image();
-                img.onload=()=>{
-                    const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d');
-                    const scale=600/img.width; cvs.width=600; cvs.height=img.height*scale;
-                    ctx.drawImage(img,0,0,cvs.width,cvs.height);
-                    saveExp(cvs.toDataURL('image/jpeg',0.5));
-                }; img.src=e.target.result;
-            }; r.readAsDataURL(file);
-        } else if (window.currentOcrImage) {
-            saveExp(window.currentOcrImage);
-        } else { saveExp(null); }
-    }
-    
-    function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();showExpenses();}}
-    function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showExpenses()">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
-
-    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">📍 Positionen laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
-    async function batchGeocode(){
-        const missing=db.customers.filter(c=>!c.lat&&c.address.length>5);
-        if(missing.length===0)return alert("Alle Adressen haben bereits Koordinaten.");
-        if(!confirm(`${missing.length} Kunden ohne Koordinaten. Laden?`))return;
-        document.getElementById('loader').style.display='flex';
-        document.getElementById('stopGeoBtn').style.display='block';
-        stopGeocoding=false;
-        
-        for(let i=0;i<missing.length;i++){
-            if(stopGeocoding) break;
-            const c=missing[i];
-            document.getElementById('loader-text').innerText = `Lade ${i+1} von ${missing.length}...`;
-            try{
-                const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(c.address)}`);
-                const d=await r.json();
-                if(d&&d[0]){c.lat=d[0].lat;c.lon=d[0].lon;}
-            }catch(e){}
-            if(i%10===0) save(); 
-            await new Promise(r=>setTimeout(r,1100));
-        }
-        save();
-        document.getElementById('loader').style.display='none';
-        document.getElementById('stopGeoBtn').style.display='none';
-        showMap();
-    }
-    function getStatus(c){if(!c.reports||c.reports.length===0)return'red';const lastRep=c.reports[0].date;const[d,m,y]=lastRep.split('.');const lastDate=new Date(y,m-1,d);const diffDays=(new Date()-lastDate)/(1000*60*60*24);const intervalDays=(c.visitInterval||4)*7;if(diffDays>intervalDays)return'red';if(diffDays>intervalDays-7)return'yellow';return'green';}
-    function toggleSelectMode(){selectMode=!selectMode;selectedIds.clear();showCustomers();}
-    function toggleSelection(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);showCustomers();}
-    function addBatchToTour(){if(selectedIds.size===0)return alert("Bitte Kunden auswählen.");selectedIds.forEach(id=>{if(!db.tour.includes(id))db.tour.push(id);});save();selectMode=false;selectedIds.clear();showTour();}
-    function deleteCustomerDirect(e, id) { e.stopPropagation(); if(confirm("Kunden löschen?")) { db.customers = db.customers.filter(x => x.id !== id); db.tour = db.tour.filter(x => x !== id); save(); renderTable(); } }
-    function deleteBatch() { if(selectedIds.size === 0) return alert("Keine Kunden ausgewählt."); if(!confirm(`${selectedIds.size} Kunden löschen?`)) return; db.customers = db.customers.filter(c => !selectedIds.has(c.id)); db.tour = db.tour.filter(id => !selectedIds.has(id)); save(); selectMode = false; selectedIds.clear(); showCustomers(); }
-    
-    // --- REPORTS (SORTED) ---
-    function generateReportPDF(range){
-        const today=new Date();
-        const dateStr=today.toLocaleDateString('de-DE');
-        let reportData=[];
-        
-        db.customers.forEach(c=>{
-            (c.reports||[]).forEach(r=>{
-                const parts=r.date.split('.');
-                if(parts.length===3){
-                    const repDate=new Date(parts[2],parts[1]-1,parts[0]);
-                    let include=false;
-                    if(range==='day'&&r.date===dateStr) include=true;
-                    if(range==='week'){
-                        const diff=(today-repDate)/(1000*60*60*24);
-                        if(diff<=7&&diff>=0) include=true;
-                    }
-                    if(include) reportData.push({...r, customerName:c.name, rawDate: repDate});
-                }
-            });
-        });
-
-        if(reportData.length===0) return alert("Keine Berichte gefunden.");
-
-        reportData.sort((a,b) => a.rawDate - b.rawDate);
-
-        let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showHome()">Zurück</button></div><h1>${range==='day'?'Tagesbericht':'Wochenbericht'}</h1>`;
-        
-        reportData.forEach(r=>{
-            html+=`<div class="card" style="page-break-inside:avoid;"><div style="font-weight:bold;font-size:16px;">${r.customerName}</div><div style="font-size:12px;color:#666;">Datum: ${r.date}</div><div style="white-space:pre-wrap;margin-top:10px;">${r.text}</div>${r.img?`<img src="${r.img}" style="max-width:300px;display:block;margin-top:10px;border:1px solid #eee;">`:''}</div>`;
-        });
-        
-        document.getElementById('content').innerHTML=html;
-    }
-
-    function uploadLogo(input) { const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d'); const s=100/img.height; cvs.height=100; cvs.width=img.width*s; ctx.drawImage(img,0,0,cvs.width,cvs.height); db.logo=cvs.toDataURL('image/png'); save(); updateLogoUI(); }; img.src=e.target.result; }; r.readAsDataURL(f); }
-    
-    // --- CUSTOMERS & SEARCH ---
-    function showCustomers(){
-        let headerHTML = '<h1>Kunden</h1>';
-        if (viewState.filterRoute) {
-            headerHTML = `
-                <div style="background:var(--event-blue); color:var(--event-blue-text); padding:10px; border-radius:var(--radius); margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-weight:bold;">Filter: Route "${viewState.filterRoute}"</div>
-                    <button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; height:auto;" onclick="filterRoute(null)">Alle anzeigen</button>
-                </div>
-                <h1>Kunden (Gefiltert)</h1>`;
-        }
-
-        document.getElementById('content').innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            ${headerHTML}
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" onclick="toggleSelectMode()">${selectMode?'Abbrechen':'Auswahl'}</button>
-                ${!selectMode?'<button class="btn btn-primary" onclick="showForm()">+ Neu</button>':''}
-            </div>
-        </div>
-        <div class="card">
-            <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <input id="search" placeholder="Suche (Name, Nr, Ort, Kontakt, Tel, ...)" value="${viewState.search}" onkeyup="viewState.search=this.value; renderTable()" style="margin:0; flex:1;">
-                <select id="sort" onchange="viewState.sort=this.value; renderTable()" style="margin:0; width:120px;">
-                    <option value="name" ${viewState.sort==='name'?'selected':''}>A-Z</option>
-                    <option value="route" ${viewState.sort==='route'?'selected':''}>Tour</option>
-                    <option value="status" ${viewState.sort==='status'?'selected':''}>Fälligkeit</option>
-                </select>
-            </div>
-            <div id="tableContainer"></div>
-        </div>
-        ${selectMode?`<div class="float-bar"><div style="font-weight:bold;">${selectedIds.size} gewählt</div><button class="btn btn-danger" onclick="deleteBatch()">Löschen</button><button class="btn btn-primary" onclick="addBatchToTour()">Zur Tour</button></div>`:''}`;
-        renderTable();
-    }
-
-    function renderTable(){
-        const s = viewState.search.toLowerCase();
-        let list = db.customers;
-
-        if (viewState.filterRoute) {
-            list = list.filter(c => c.route === viewState.filterRoute);
-        }
-
-        if (s) {
-            list = list.filter(c => 
-                (c.name||'').toLowerCase().includes(s) || 
-                (c.nr||'').toLowerCase().includes(s) || 
-                (c.route||'').toLowerCase().includes(s) ||
-                (c.address||'').toLowerCase().includes(s) ||
-                (c.contact||'').toLowerCase().includes(s) || 
-                (c.phone||'').toLowerCase().includes(s) ||
-                (c.email||'').toLowerCase().includes(s) ||
-                (c.products||'').toLowerCase().includes(s)
-            );
-        }
-
-        if(viewState.sort==='route') list.sort((a,b)=>(a.route||'z').localeCompare(b.route||'z'));
-        else if(viewState.sort==='status') list.sort((a,b)=>(getStatus(a)==='red'?-1:1));
-        else list.sort((a,b)=>a.name.localeCompare(b.name));
-
-        document.getElementById('tableContainer').innerHTML = list.map(c => {
-            const isSelected = selectedIds.has(c.id);
-            const clickAction = selectMode ? `toggleSelection(${c.id})` : `showDetail(${c.id})`;
-            const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
-            
-            return `
-            <div class="cust-row ${isSelected?'selected':''}" onclick="${clickAction}">
-                ${selectMode?`<div class="check-circle"></div>`:''}
-                <div style="flex:1;">
-                    <div style="font-weight:700;">
-                        ${c.name} 
-                        <span class="cat-badge ${badgeClass}">${c.category}</span>
-                    </div>
-                    <div style="font-size:12px; color:#64748b;">${c.address||'-'}</div>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
-                    <div style="font-size:11px; color:#999;">${c.route||''}</div>
-                    ${!selectMode?`<button class="btn btn-danger" style="padding:4px 8px; font-size:10px; z-index:10;" onclick="deleteCustomerDirect(event, ${c.id})">🗑️</button>`:''}
-                </div>
-            </div>`;
-        }).join('') || '<div style="padding:20px; text-align:center;">Keine Ergebnisse</div>';
-    }
-    
-    function showDetail(id) { 
-        const c = db.customers.find(x => x.id === id); if(!c) return; 
-        const inTour = db.tour.includes(id); 
-        
-        const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>${r.date}</b><div><span style="cursor:pointer; margin-right:10px; font-size:16px;" onclick="editRep(${id},${i})">✏️</span><span style="cursor:pointer; color:#ef4444; font-size:16px;" onclick="delRep(${id},${i})">🗑️</span></div></div><div style="white-space:pre-wrap;">${r.text}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join(''); 
-        const todayStr = new Date().toISOString().split('T')[0]; 
-        const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} onclick="toggleTask(${id},${i})"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#ef4444;cursor:pointer;font-weight:bold;margin-left:5px;" onclick="delTask(${id},${i})">×</span></div>` }).join(''); 
-    
-        const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
-
-        document.getElementById('content').innerHTML = `
-        <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
-        
-        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px; align-items:stretch;">
-            <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; height:100%; margin:0; border-top: 4px solid var(--brand);">
-                <div>
-                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:15px; margin-bottom:20px;">
-                        <div style="flex:1;">
-                            <h1 style="margin:0;">${c.name} <span class="cat-badge ${badgeClass}" style="font-size:14px; vertical-align:middle;">${c.category}</span></h1>
-                            <div style="color:var(--text-light); font-size:14px; margin-top:5px;">${c.address||'-'} | Tour: ${c.route||'-'}</div>
-                        </div>
-                        <div class="no-print" style="display:flex; gap:5px;">
-                            <button class="btn ${inTour?'btn-secondary':'btn-primary'}" onclick="togTour(${id})">${inTour?'Aus Tour':'In Tour'}</button>
-                            <button class="btn btn-secondary" onclick="showForm(${id})">✏️</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
-                    <a href="tel:${c.phone}" class="btn btn-secondary btn-full">📞 Anrufen</a>
-                    <a href="mailto:${c.email}" class="btn btn-secondary btn-full">✉️ E-Mail</a>
-                    <a href="https://maps.google.com/?q=$${encodeURIComponent(c.address)}" target="_blank" class="btn btn-secondary btn-full">📍 Maps</a>
-                </div>
-            </div>
-
-            <div class="card" style="height:100%; margin:0; overflow-y:auto; background:#fffbeb; border:1px solid #fcd34d;">
-                <h4 style="margin:0 0 10px 0;">Aufgaben</h4>
-                <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;">
-                    <input id="newT" placeholder="Aufgabe..." style="margin:0; background:white; font-size:12px;">
-                    <div style="display:flex; gap:5px;">
-                        <input type="date" id="newTDate" style="margin:0; background:white; font-size:12px; flex:1;">
-                        <button class="btn btn-secondary" onclick="addTask(${id})" style="padding:5px 10px;">+</button>
-                    </div>
-                </div>
-                <div>${taskHTML || '<div style="color:#999;font-size:12px;">Keine Aufgaben</div>'}</div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:15px;">
-            <div class="grid-4-custom">
-                <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f8fafc;"></div>
-                <div><label>Umsatz</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="Umsatz/Potenzial" onchange="saveDetail(${id})"></div>
-                <div><label>Intervall (Wo)</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
-                <div><label>Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Berichte</h2>
-            <div class="no-print">
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
-                    <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">📸 Foto <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
-                </div>
-                <textarea id="repTxt" rows="2" placeholder="Ergebnis..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
-                <button class="btn btn-primary btn-full" onclick="addRep(${id})">Bericht Speichern</button>
-            </div>
-            <div style="margin-top:20px; max-height:400px; overflow-y:auto;">${reports}</div>
-        </div>`; 
-    }
-    function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showDetail(id); }
-    function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showDetail(id); }
-    function delTask(id, idx) { db.customers.find(x=>x.id===id).tasks.splice(idx,1); save(); showDetail(id); }
-    function addRep(id) { const t=document.getElementById('repTxt').value; const dInput=document.getElementById('repDate').value; const f=document.getElementById('repImg').files[0]; if(!t && !f) return; let dateStr = new Date().toLocaleDateString('de-DE'); if(dInput) { const [y,m,d] = dInput.split('-'); dateStr = `${d}.${m}.${y}`; } const sR=(img)=>{ db.customers.find(x=>x.id===id).reports.unshift({date:dateStr, text:t, img:img}); save(); showDetail(id); }; if(f){ const r=new FileReader(); r.onload=e=>{ const i=new Image(); i.onload=()=>{ const c=document.createElement('canvas'); const x=c.getContext('2d'); const s=600/i.width; c.width=600; c.height=i.height*s; x.drawImage(i,0,0,c.width,c.height); sR(c.toDataURL('image/jpeg',0.6)); }; i.src=e.target.result; }; r.readAsDataURL(f); } else sR(null); }
-    function editRep(cid, rid) { const c=db.customers.find(x=>x.id===cid); const r=c.reports[rid]; const newTxt = prompt("Text bearbeiten:", r.text); if(newTxt !== null) { const newDate = prompt("Datum (TT.MM.JJJJ):", r.date); if(newDate) { r.text = newTxt; r.date = newDate; save(); showDetail(cid); } } }
-    function togTour(id){if(db.tour.includes(id))db.tour=db.tour.filter(x=>x!==id);else db.tour.push(id);save();showDetail(id);}
-    
-    function showForm(id=null){
-        const c=id?db.customers.find(x=>x.id===id):{name:'',nr:'',category:'C',status:'aktiv',address:'',contact:'',phone:'',email:'',route:'',products:''};
-        document.getElementById('content').innerHTML=`
-        <div style="max-width:600px; margin:0 auto;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>${id?'Bearbeiten':'Neu'}</h1></div>
-            <div class="card"><label>Name *</label><input id="f_name" value="${c.name}">
-                <div class="grid-2"><div><label>Kundennummer</label><input id="f_nr" value="${c.nr||''}" placeholder="Nr"></div><div><label>Tour</label><input id="f_route" value="${c.route||''}" placeholder="Tour"></div></div>
-                <div class="grid-2"><select id="f_cat"><option value="A" ${c.category==='A'?'selected':''}>A (Gold)</option><option value="B" ${c.category==='B'?'selected':''}>B (Blau)</option><option value="C" ${c.category==='C'?'selected':''}>C (Grau)</option></select><select id="f_stat"><option value="aktiv" ${c.status==='aktiv'?'selected':''}>Aktiv</option><option value="inaktiv" ${c.status==='inaktiv'?'selected':''}>Inaktiv</option></select></div>
-                <label>Adresse</label><input id="f_adr" value="${c.address||''}" placeholder="Straße, PLZ, Ort">
-                <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
-                <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
-                <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
-                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
-            </div>
-        </div>`;
-    }
-    
-    function saveData(id){
-        const n=document.getElementById('f_name').value;
-        if(!n)return alert("Name fehlt");
-        const d={
-            id:id||Date.now(),name:n,
-            nr:document.getElementById('f_nr').value,
-            route:document.getElementById('f_route').value,
-            category:document.getElementById('f_cat').value,
-            status:document.getElementById('f_stat').value,
-            address:document.getElementById('f_adr').value,
-            contact:document.getElementById('f_con').value,
-            phone:document.getElementById('f_tel').value,
-            email:document.getElementById('f_mail').value,
-            products:document.getElementById('f_prod').value, // Used for Revenue now
-            nextAppointment:id?db.customers.find(x=>x.id===id).nextAppointment:'',
-            reports:id?db.customers.find(x=>x.id===id).reports:[],
-            visitInterval:4, 
-            tasks:id?db.customers.find(x=>x.id===id).tasks:[]
-        };
-        if(id)db.customers[db.customers.findIndex(x=>x.id===id)]=d;else db.customers.push(d);
-        save();showDetail(d.id);
-    }
-
-    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Start</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">⚡ Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">🗺️ Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
-    async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
-    function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
-    function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
-    function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen</h1><div class="grid-3">${r.map(x=>`<div class="card" onclick="filterRoute('${x}')" style="cursor:pointer;text-align:center;"><h2>${x}</h2><div style="color:#666">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
-    
-    function filterRoute(r){
-        viewState.filterRoute = r; 
-        viewState.search = "";       
-        showCustomers();             
-    }
-
-    function importBackup(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{db=JSON.parse(e.target.result);save();alert("Backup OK");showHome();}catch(e){alert("Fehler");}};r.readAsText(f);}
-    
-    async function downloadBackup() {
-        const now = new Date();
-        const ts = now.getFullYear() + '-' +
-                   String(now.getMonth()+1).padStart(2,'0') + '-' +
-                   String(now.getDate()).padStart(2,'0') + '_' +
-                   String(now.getHours()).padStart(2,'0') + '-' +
-                   String(now.getMinutes()).padStart(2,'0') + '-' +
-                   String(now.getSeconds()).padStart(2,'0');
-        const filename = `crm_backup_${ts}.json`;
-        const jsonStr = JSON.stringify(db, null, 2);
-
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName: filename,
-                    types: [{ description: 'JSON Database', accept: {'application/json': ['.json']} }],
-                });
-                const writable = await handle.createWritable();
-                await writable.write(jsonStr);
-                await writable.close();
-                alert("Backup erfolgreich gespeichert!");
-                return;
-            } catch (err) {
-                if (err.name !== 'AbortError') console.error(err);
-                return; 
-            }
-        }
-
-        const blob = new Blob([jsonStr], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-
-    // --- DUPLIKATE ---
-    function showDuplicates() {
-        const groups = {};
-        db.customers.forEach(c => {
-            const key = (c.address || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!key) return; 
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(c);
-        });
-
-        const duplicates = Object.values(groups).filter(g => g.length > 1);
-
-        if (duplicates.length === 0) return alert("Keine doppelten Adressen gefunden.");
-
-        let html = `<h1>Doppelte Einträge (${duplicates.length} Gruppen)</h1>`;
-        duplicates.forEach(group => {
-            html += `<div class="card" style="border-left:4px solid #ef4444;">
-                <h3>📍 ${group[0].address}</h3>
-                ${group.map(c => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding:10px 0;">
-                        <div>
-                            <b>${c.name}</b> <span style="font-size:10px; color:#666;">(ID: ${c.id})</span><br>
-                            Tour: ${c.route || '-'} | Status: ${c.status}
-                        </div>
-                        <button class="btn btn-danger" style="font-size:12px;" onclick="deleteDuplicate(${c.id})">Löschen</button>
-                    </div>
-                `).join('')}
-            </div>`;
-        });
-        html = `<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div>` + html;
-        document.getElementById('content').innerHTML = html;
-    }
-
-    function deleteDuplicate(id) {
-        if(confirm("Diesen Eintrag wirklich löschen?")) {
-            db.customers = db.customers.filter(c => c.id !== id);
-            db.tour = db.tour.filter(x => x !== id);
-            save();
-            showDuplicates(); 
-        }
-    }
-
-    // --- CALENDAR LOGIC ---
-    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;"><label style="font-size:10px;font-weight:bold;color:#999;">POOL</label><select id="poolFilter" onchange="renderPoolList()" style="width:100%;margin-top:5px;"><option value="">Alle</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].map(r=>`<option>${r}</option>`).join('')}</select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
-    function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
-    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${i}</b>${getEvts(ds)}</div>`;}con.innerHTML=h+`</div>`;}
-    function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
-    function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
-    function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
-    function renderPoolList(){const r=document.getElementById('poolFilter').value;document.getElementById('poolContainer').innerHTML=db.customers.filter(c=>c.status==='aktiv'&&(!r||c.route===r)).map(c=>`<div class="pool-item" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${c.name}</div>`).join('');}
-    function changeCal(d){if(calView==='month')currentCalDate.setMonth(currentCalDate.getMonth()+d);else if(calView==='day')currentCalDate.setDate(currentCalDate.getDate()+d);else if(calView==='week')currentCalDate.setDate(currentCalDate.getDate()+(d*7));else currentCalDate.setFullYear(currentCalDate.getFullYear()+d);showCalendar();}
-    function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
-    function dropTime(ev,ds,t){ev.preventDefault();db.customers.find(x=>x.id===dragId).nextAppointment=ds+'T'+t;save();showCalendar();}
-    function confirmDrop(){db.customers.find(x=>x.id===dragId).nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
-    function closeModal(){document.getElementById('timeModal').style.display='none';}
-    function delAppt(id){if(confirm("Termin löschen?")){db.customers.find(x=>x.id===id).nextAppointment="";save();showCalendar();}}
-    function saveDetail(id){
-        const c=db.customers.find(x=>x.id===id);
-        c.nextAppointment=document.getElementById('nextAppt').value;
-        c.visitInterval=parseInt(document.getElementById('visitInt').value)||4;
-        
-        // Speichert das neue Umsatzfeld
-        const rev = document.getElementById('det-revenue');
-        if(rev) c.products = rev.value;
-        
-        save();
-    }
-    function getEvts(ds, t) { let html = db.customers.filter(c => { if(!c.nextAppointment || !c.nextAppointment.startsWith(ds)) return false; if(!t) return true; return c.nextAppointment.includes(t); }).map(c => `<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${c.nextAppointment.split('T')[1]} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`).join(''); if(db.events) { html += db.events.filter(e => { if(!e.start.startsWith(ds)) return false; if(!t) return true; const slotHour = parseInt(t.split(':')[0]); const startHour = parseInt(e.start.split('T')[1].split(':')[0]); const startMin = parseInt(e.start.split('T')[1].split(':')[1]); let endHour = startHour + 1; let endMin = startMin; if(e.end) { endHour = parseInt(e.end.split('T')[1].split(':')[0]); endMin = parseInt(e.end.split('T')[1].split(':')[1]); } const evtStartMins = startHour * 60 + startMin; const evtEndMins = endHour * 60 + endMin; const slotStartMins = slotHour * 60; const slotEndMins = (slotHour + 1) * 60; return evtStartMins < slotEndMins && evtEndMins > slotStartMins; }).map(e => { const s = e.start.split('T')[1]; const end = e.end ? e.end.split('T')[1] : ''; return `<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`; }).join(''); } return html; }
-</script>
-
-<script>
-(function(){
-  const viewMeta = {
-    home: { title: "Dashboard", kbd:["⇧","⌘","1"] },
-    customers: { title: "Kunden", kbd:["⇧","⌘","2"] },
-    expenses: { title: "Spesen", kbd:["⇧","⌘","3"] },
-    map: { title: "Karte", kbd:["⇧","⌘","4"] },
-    calendar: { title: "Kalender", kbd:["⇧","⌘","5"] },
-    tour: { title: "Tour", kbd:["⇧","⌘","6"] },
-    routes: { title: "Routen", kbd:["⇧","⌘","7"] }
-  };
-
-  const topbarTitle = document.getElementById("topbar-title");
-  const seg = document.querySelector(".segmented");
-  const segBtns = seg ? Array.from(seg.querySelectorAll(".seg-item")) : [];
-  const sidebarToggle = document.getElementById("sidebar-toggle");
-  const cmdkBtn = document.getElementById("cmdk-btn");
-  const cmdk = document.getElementById("cmdk");
-  const cmdkInput = document.getElementById("cmdk-input");
-  const cmdkList = document.getElementById("cmdk-list");
-  const ctx = document.getElementById("contextMenu");
-
-  // --- Sticky toolbar actions ---
-  sidebarToggle?.addEventListener("click", () => window.toggleSidebar?.());
-
-  // Segmented control -> nav
-  segBtns.forEach(btn => {
-    btn.addEventListener("click", () => window.nav?.(btn.dataset.view, document.querySelector(`.nav-item[data-view="${btn.dataset.view}"]`)));
-  });
-
-  // --- Topbar label sync ---
-  function setActiveView(page){
-    const meta = viewMeta[page] || { title: page };
-    if(topbarTitle) topbarTitle.textContent = meta.title;
-
-    segBtns.forEach(b => {
-      const on = b.dataset.view === page;
-      b.classList.toggle("is-active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
-    });
-
-    document.querySelectorAll(".nav-item[data-view]").forEach(b=>{
-      const on = b.dataset.view === page;
-      if(on) b.setAttribute("aria-current","page");
-      else b.removeAttribute("aria-current");
-    });
-  }
-
-  // Wrap existing nav() (if present)
-  if(typeof window.nav === "function"){
-    const _nav = window.nav;
-    window.nav = function(page, el){
-      const r = _nav(page, el);
-      setActiveView(page);
-      return r;
-    };
-  }else{
-    window.nav = function(page){ setActiveView(page); };
-  }
-
-  // Initialize title from active nav button
-  const initial = document.querySelector('.nav-item.active[data-view]')?.dataset.view || "home";
-  setActiveView(initial);
-
-  // --- Command Palette (Cmd+K) ---
-  const actions = [
-    { id:"home", title:"Dashboard", subtitle:"Übersicht", run:()=>window.nav?.("home") },
-    { id:"customers", title:"Kunden", subtitle:"Kontakte & Accounts", run:()=>window.nav?.("customers") },
-    { id:"expenses", title:"Spesen", subtitle:"Belege & Ausgaben", run:()=>window.nav?.("expenses") },
-    { id:"map", title:"Karte", subtitle:"Geo & Planung", run:()=>window.nav?.("map") },
-    { id:"calendar", title:"Kalender", subtitle:"Termine", run:()=>window.nav?.("calendar") },
-    { id:"tour", title:"Tour", subtitle:"Routen & Stops", run:()=>window.nav?.("tour") },
-    { id:"routes", title:"Routen", subtitle:"Ordner", run:()=>window.nav?.("routes") },
-  ];
-
-  if(typeof window.openEvent === "function"){
-    actions.unshift({ id:"new-event", title:"Neuer Termin", subtitle:"Termin anlegen", run:()=>window.openEvent() });
-  }
-
-  let filtered = actions.slice();
-  let idx = 0;
-
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
-  }
-
-  function renderList(){
-    if(!cmdkList) return;
-    cmdkList.innerHTML = "";
-    filtered.forEach((a,i)=>{
-      const el = document.createElement("div");
-      el.className = "cmdk-item" + (i===idx ? " is-active":"");
-      el.setAttribute("role","option");
-      el.tabIndex = -1;
-      el.innerHTML = `
-        <div class="cmdk-left">
-          <div class="cmdk-title">${escapeHtml(a.title)}</div>
-          <div class="cmdk-sub">${escapeHtml(a.subtitle || "")}</div>
-        </div>
-        <div class="cmdk-kbd">${
-          (viewMeta[a.id]?.kbd || []).map(k=>`<span class="kbd">${k}</span>`).join("")
-        }</div>
-      `;
-      el.addEventListener("mouseenter", ()=>{ idx=i; renderList(); });
-      el.addEventListener("click", ()=>{ a.run(); closeCmdk(); });
-      cmdkList.appendChild(el);
-    });
-  }
-
-  function filterActions(q){
-    const s = q.trim().toLowerCase();
-    if(!s){ filtered = actions.slice(); idx = 0; renderList(); return; }
-    filtered = actions.filter(a=>{
-      const hay = (a.title+" "+(a.subtitle||"")).toLowerCase();
-      return hay.includes(s);
-    });
-    idx = 0;
-    renderList();
-  }
-
-  function openCmdk(){
-    if(!cmdk) return;
-    cmdk.classList.add("is-open");
-    cmdk.setAttribute("aria-hidden","false");
-    cmdkInput.value = "";
-    filterActions("");
-    setTimeout(()=>cmdkInput.focus(), 0);
-  }
-  function closeCmdk(){
-    if(!cmdk) return;
-    if(!cmdk.classList.contains("is-open")) return;
-    cmdk.classList.remove("is-open");
-    cmdk.setAttribute("aria-hidden","true");
-  }
-
-  cmdkBtn?.addEventListener("click", openCmdk);
-  document.querySelector("#cmdk .cmdk-backdrop")?.addEventListener("click", closeCmdk);
-
-  cmdkInput?.addEventListener("input", (e)=>filterActions(e.target.value));
-  cmdkInput?.addEventListener("keydown", (e)=>{
-    if(e.key === "ArrowDown"){ e.preventDefault(); idx = Math.min(idx+1, filtered.length-1); renderList(); }
-    if(e.key === "ArrowUp"){ e.preventDefault(); idx = Math.max(idx-1, 0); renderList(); }
-    if(e.key === "Enter"){ e.preventDefault(); filtered[idx]?.run?.(); closeCmdk(); }
-    if(e.key === "Escape"){ e.preventDefault(); closeCmdk(); }
-  });
-
-  // --- Context menu ---
-  function closeContextMenu(){
-    if(!ctx) return;
-    ctx.classList.remove("is-open");
-    ctx.setAttribute("aria-hidden","true");
-  }
-  function openContextMenu(x,y,items){
-    if(!ctx) return;
-    ctx.innerHTML = "";
-    items.forEach(it=>{
-      if(it === "sep"){
-        const sep = document.createElement("div"); sep.className="ctx-sep"; ctx.appendChild(sep); return;
-      }
-      const el = document.createElement("div");
-      el.className="ctx-item";
-      el.textContent = it.label;
-      el.addEventListener("click", ()=>{ closeContextMenu(); it.run?.(); });
-      ctx.appendChild(el);
-    });
-    ctx.style.left = Math.min(x, window.innerWidth - 240) + "px";
-    ctx.style.top  = Math.min(y, window.innerHeight - 160) + "px";
-    ctx.classList.add("is-open");
-    ctx.setAttribute("aria-hidden","false");
-  }
-
-  document.addEventListener("click", closeContextMenu);
-  document.addEventListener("scroll", closeContextMenu, true);
-
-  document.addEventListener("contextmenu", (e)=>{
-    const navBtn = e.target.closest?.('.nav-item[data-view]');
-    const card = e.target.closest?.('.card');
-    if(navBtn){
-      e.preventDefault();
-      const view = navBtn.dataset.view;
-      openContextMenu(e.clientX, e.clientY, [
-        { label: "Öffnen", run: ()=> window.nav?.(view, navBtn) },
-        "sep",
-        { label: "Befehle öffnen", run: ()=> openCmdk() }
-      ]);
-      return;
-    }
-    if(card){
-      e.preventDefault();
-      openContextMenu(e.clientX, e.clientY, [
-        { label: "Karte kopieren (Text)", run: ()=> copyText(card.innerText.trim()) },
-        { label: "Zum Anfang scrollen", run: ()=> card.scrollIntoView({behavior:"smooth", block:"start"}) }
-      ]);
-    }
-  });
-
-  async function copyText(t){
-    try{ await navigator.clipboard.writeText(t); flashTopbar(); }
-    catch(err){ console.warn("copy failed", err); }
-  }
-  function flashTopbar(){
-    const tb = document.getElementById("topbar");
-    if(!tb) return;
-    tb.animate([{transform:"translateY(0)"},{transform:"translateY(-1px)"},{transform:"translateY(0)"}],{duration:180});
-  }
-
-  // Global keybindings
-  document.addEventListener("keydown", (e) => {
-    const k = e.key.toLowerCase();
-    if(e.metaKey && e.altKey && k === "s"){ e.preventDefault(); window.toggleSidebar?.(); }
-    if(e.metaKey && k === "k"){ e.preventDefault(); openCmdk(); }
-    if(e.metaKey && k === "f"){
-      const inApp = document.querySelector('[data-role="search"], input[type="search"], #search, #filter, .search-input');
-      if(inApp){ e.preventDefault(); inApp.focus(); inApp.select?.(); }
-    }
-    if(e.metaKey && e.shiftKey){
-      const map = { "1":"home","2":"customers","3":"expenses","4":"map","5":"calendar","6":"tour","7":"routes" };
-      if(map[e.key]){ e.preventDefault(); window.nav?.(map[e.key]); }
-    }
-    if(e.key === "Escape"){ closeCmdk(); closeContextMenu(); }
-  });
-
-  // Search button: focus search input if present, else open cmdk
-  document.getElementById("search-focus")?.addEventListener("click", ()=>{
-    const inApp = document.querySelector('[data-role="search"], input[type="search"], #search, #filter, .search-input');
-    if(inApp){ inApp.focus(); inApp.select?.(); }
-    else openCmdk();
-  });
-
-})();
-</script>
-
 </body>
 </html>
