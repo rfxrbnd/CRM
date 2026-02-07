@@ -220,7 +220,7 @@
         <h2 style="text-align:center">Zeit wählen</h2>
         <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
         <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-primary btn-full" onclick="confirmDrop()">Speichern</button>
+            <button class="btn btn-primary btn-full" onclick="confirmDrop()">Sichern</button>
             <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
         </div>
     </div>
@@ -243,7 +243,7 @@
         </div>
         <div style="margin-top:10px;"><label>Bis</label><input type="time" id="evtEnd" value="10:00" style="margin:0;"></div>
         <div class="grid-2" style="margin-top:20px;">
-            <button class="btn btn-success btn-full" onclick="saveManualEvent()">Speichern</button>
+            <button class="btn btn-success btn-full" onclick="saveManualEvent()">Sichern</button>
             <button class="btn btn-danger btn-full" onclick="delManualEvent()" id="btnDelEvt" style="display:none;">Löschen</button>
             <button class="btn btn-secondary btn-full" onclick="document.getElementById('eventModal').style.display='none'">Abbrechen</button>
         </div>
@@ -422,8 +422,8 @@
         <div class="grid-2">
             <div class="card"><h2>Sicherung</h2>
                 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn btn-secondary btn-full" onclick="downloadBackup()">💾 Backup Speichern</button>
-                    <button class="btn btn-secondary btn-full" onclick="document.getElementById('bakIn').click()">📂 Backup Laden</button>
+                    <button class="btn btn-secondary btn-full" onclick="downloadBackup()">Backup Sichern</button>
+                    <button class="btn btn-secondary btn-full" onclick="document.getElementById('bakIn').click()">Backup Laden</button>
                 </div>
                 <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('csvIn').click()">CSV Import</button>
                 <input type="file" id="csvIn" style="display:none" onchange="importCSV(this)">
@@ -432,8 +432,8 @@
             <div class="card"><h2>Berichte drucken</h2><div style="display:flex; gap:10px; flex-direction:column;"><button class="btn btn-secondary btn-full" onclick="generateReportPDF('day')">📄 Tagesbericht</button><button class="btn btn-secondary btn-full" onclick="generateReportPDF('week')">📄 Wochenbericht</button></div></div>
         </div>
         <div class="card"><h2>Sonstiges</h2>
-            <button class="btn btn-secondary btn-full" onclick="showDuplicates()">⚠️ Duplikate finden</button>
-            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">🖼️ Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
+            <button class="btn btn-secondary btn-full" onclick="showDuplicates()">Duplikate finden</button>
+            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
         </div>`;
     }
 
@@ -526,7 +526,7 @@
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('exp-img').click()">📸 Beleg</button>
                 <input type="file" id="exp-img" style="display:none" accept="image/*">
-                <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Speichern</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="addExpense()" id="btnSaveExp">Sichern</button>
                 <button class="btn btn-secondary" onclick="resetExpForm()" id="btnCancelExp" style="display:none;">Abbrechen</button>
             </div>
         </div>
@@ -620,7 +620,7 @@
         document.getElementById('exp-amount').value = '';
         document.getElementById('exp-note').value = '';
         document.getElementById('expFormTitle').innerText = "Neuer Eintrag";
-        document.getElementById('btnSaveExp').innerText = "Speichern";
+        document.getElementById('btnSaveExp').innerText = "Sichern";
         document.getElementById('btnCancelExp').style.display = 'none';
         document.getElementById('ocr-preview').style.display = 'none';
         editingExpenseId = null;
@@ -882,10 +882,10 @@
                 <div class="no-print">
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
-                        <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">📸 Foto <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
+                        <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">Foto auswählen <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
                     </div>
                     <textarea id="repTxt" rows="4" placeholder="..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
-                    <button class="btn btn-primary btn-full" onclick="addRep(${id})">Speichern</button>
+                    <button class="btn btn-primary btn-full" onclick="addRep(${id})">Sichern</button>
                 </div>
             </div>
             <div class="card">
@@ -916,7 +916,7 @@
                 <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
                 <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
                 <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
-                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Speichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
+                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Sichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
             </div>
         </div>`;
     }
@@ -944,7 +944,7 @@
         save();showDetail(d.id);
     }
 
-    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Zuhause</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Speichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
+    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Zuhause</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Sichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">🏁 Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
     function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
