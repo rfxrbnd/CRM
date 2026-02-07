@@ -256,13 +256,13 @@
         <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
     </div>
     <div class="nav-menu">
-        <button class="nav-item active" onclick="nav('home', this)">◻︎ Dashboard</button>
-        <button class="nav-item" onclick="nav('customers', this)">≡ Kunden</button>
-        <button class="nav-item" onclick="nav('expenses', this)">✓ Spesen</button>
-        <button class="nav-item" onclick="nav('map', this)">◦ Karte</button>
-        <button class="nav-item" onclick="nav('calendar', this)">• Kalender</button>
-        <button class="nav-item" onclick="nav('tour', this)">▸ Tour</button>
-        <button class="nav-item" onclick="nav('routes', this)">— Routen</button>
+        <button class="nav-item active" onclick="nav('home', this)">Dashboard    ></button>
+        <button class="nav-item" onclick="nav('customers', this)">Kunden         ></button>
+        <button class="nav-item" onclick="nav('expenses', this)">Spesen          ></button>
+        <button class="nav-item" onclick="nav('map', this)">Karte                ></button>
+        <button class="nav-item" onclick="nav('calendar', this)">Kalender        ></button>
+        <button class="nav-item" onclick="nav('tour', this)">Tour                ></button>
+        <button class="nav-item" onclick="nav('routes', this)">Routen            ></button>
     </div>
 </div>
 
@@ -418,7 +418,7 @@
             <div class="card" style="text-align:center;"><div style="font-size:32px; font-weight:800; color:var(--brand-dark);">${visited}</div><div style="font-size:12px; color:var(--text-light);">Besuche (Heute)</div></div>
             <div class="card" style="text-align:center; cursor:pointer;" onclick="showAllTasks()"><div style="font-size:32px; font-weight:800; color:var(--stat-red);">${openTasksCount}</div><div style="font-size:12px; color:var(--text-light);">Offene Aufgaben</div></div>
         </div>
-        <div class="card"><h2>📈 Übersicht</h2><div class="stat-container">${bars}</div></div>
+        <div class="card"><h2>Übersicht (Besuche)</h2><div class="stat-container">${bars}</div></div>
         <div class="grid-2">
             <div class="card"><h2>Sicherung</h2>
                 <div style="display:flex; gap:10px; margin-top:10px;">
@@ -855,7 +855,7 @@
             </div>
 
             <div class="card" style="height:100%; margin:0; overflow-y:auto;">
-                <h4 style="margin:0 0 10px 0;">ToDo</h4>
+                <h4 style="margin:0 0 10px 0;">Aufgaben</h4>
                 <div style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;">
                     <input id="newT" placeholder="..." style="margin:0; background:white; font-size:12px;">
                     <div style="display:flex; gap:5px;">
@@ -878,11 +878,11 @@
 
         <div class="grid-2" style="margin-top:15px; align-items:start;">
             <div class="card">
-                <h2>Besuchsbericht schreiben:</h2>
+                <h2>Schreiben</h2>
                 <div class="no-print">
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
-                        <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">Foto auswählen <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
+                        <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">Foto Laden <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
                     </div>
                     <textarea id="repTxt" rows="4" placeholder="..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
                     <button class="btn btn-primary btn-full" onclick="addRep(${id})">Sichern</button>
