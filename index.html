@@ -902,7 +902,11 @@ let db={
 };
 
 function save(){
-    localStorage.setItem(KEY, JSON.stringify(db));
+    try{
+        localStorage.setItem(KEY, JSON.stringify(db));
+    }catch(e){
+        console.warn('Speichern fehlgeschlagen (localStorage):', e);
+    }
 }
 function load(){
     try{
@@ -927,7 +931,6 @@ function normalizeDb(){
 
 load();
 normalizeDb();
-save();
 
 /* === Leaflet + Geocode helpers === */
 let _leafletReady = false;
