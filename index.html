@@ -476,8 +476,8 @@ input:focus, select:focus, textarea:focus {
             console.error(e);
             alert("Fehler beim Starten: " + e.message + "\nBitte Backup prüfen.");
         } finally {
-            initAppleFeel();
             document.getElementById('loader').style.display='none';
+            try { initAppleFeel(); } catch(e) { console.warn('initAppleFeel failed:', e); }
         }
     };
 
