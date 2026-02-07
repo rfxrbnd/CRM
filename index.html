@@ -37,16 +37,86 @@
         .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--text-main); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        #sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 50; flex-shrink: 0; transition: transform 0.3s ease; }
+        #sidebar{ width: 300px; padding: 10px 10px 14px; background: rgba(246,246,248,.78); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-right: 1px solid var(--border); display:flex; flex-direction:column; gap:10px; z-index:50; flex-shrink:0; transition: transform 0.3s ease; }
+@media (prefers-color-scheme: dark){ #sidebar{ background: rgba(22,22,24,.72);} }
         .logo-area { padding: 20px; text-align: center; border-bottom: 1px solid var(--border); background: #fff; }
         .logo-img { max-width: 100%; max-height: 60px; object-fit: contain; }
         
         .nav-menu { padding: 20px; display: flex; flex-direction: column; gap: 5px; flex: 1; overflow-y: auto; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-light); font-size: 14px; font-weight: 500; transition: 0.1s; border: none; background: transparent; width: 100%; text-align: left; }
-        .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background: #fffbeb; color: var(--text-main); font-weight: 700; border: 1px solid var(--brand); }
+        .nav-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  color: var(--text-main);
+  font-size:13px;
+  font-weight:500;
+  transition: background 0.12s ease;
+  border:none;
+  background: transparent;
+  width:100%;
+  text-align:left;
+}
+.nav-item:hover{ background: rgba(120,120,128,.12); }
+.nav-item.active{ background: rgba(120,120,128,.20); font-weight:600; }
 
-        #main { flex: 1; overflow-y: auto; padding: 0; position: relative; }
+.nav-ico{
+  width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center;
+  color: rgba(60,60,67,.78);
+  flex: 0 0 18px;
+}
+@media (prefers-color-scheme: dark){
+  .nav-ico{ color: rgba(235,235,245,.72); }
+}
+.nav-ico svg{ width:18px; height:18px; }
+
+.settings-header{ display:flex; flex-direction:column; gap:10px; padding:4px 6px 0; }
+.settings-title{ font-size:12px; font-weight:700; color: var(--text-light); margin-top:4px; }
+.settings-logo{ display:flex; align-items:center; gap:10px; }
+.settings-logo .logo-img{ width:22px; height:22px; border-radius:6px; background: rgba(120,120,128,.16); border: 1px solid rgba(0,0,0,.06); }
+@media (prefers-color-scheme: dark){
+  .settings-logo .logo-img{ border-color: rgba(255,255,255,.10); }
+}
+
+.settings-search .search-field{
+  width:100%;
+  padding:7px 10px;
+  border-radius:10px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.70);
+  color: var(--text-main);
+  font-size:13px;
+  outline:none;
+}
+.settings-search .search-field:focus{
+  box-shadow: 0 0 0 3px rgba(120,120,128,.22);
+}
+@media (prefers-color-scheme: dark){
+  .settings-search .search-field{
+    border-color: rgba(255,255,255,.10);
+    background: rgba(255,255,255,.08);
+  }
+  .settings-search .search-field:focus{
+    box-shadow: 0 0 0 3px rgba(120,120,128,.28);
+  }
+}
+
+.nav-sections{ overflow:auto; padding: 0 4px 6px; }
+.nav-section{ margin-top:8px; }
+.nav-section-label{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.02em;
+  color: rgba(60,60,67,.62);
+  padding: 10px 10px 6px;
+}
+@media (prefers-color-scheme: dark){
+  .nav-section-label{ color: rgba(235,235,245,.50); }
+}
+
+#main { flex: 1; overflow-y: auto; padding: 0; position: relative; }
         .content-wrap { max-width: 1000px; margin: 0 auto; padding: 30px; padding-bottom: 100px; }
 
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -60,14 +130,14 @@
         .btn-primary:hover { background: #f8fafc; border-color: #94a3b8; }
         .btn-secondary { background: #ffffff; border: 1px solid var(--border); color: var(--text-main); }
         .btn-secondary:hover { background: #f8fafc; }
-        .btn-danger { background: #fff; color: #991b1b; border-color: #fee2e2; }
+        .btn-danger { background: #fff; color: var(--text-main); border-color: var(--border); }
         .btn-success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
         .btn-full { width: 100%; }
 
         /* --- VISUAL CATEGORY BADGES --- */
         .cat-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; color: #fff; display: inline-block; min-width: 24px; text-align: center; }
         .cat-A { background-color: #f59e0b; color: #fff; } /* Gold */
-        .cat-B { background-color: #3b82f6; color: #fff; } /* Blau */
+        .cat-B { background-color: #8e8e93; color: #fff; } /* Neutral */
         .cat-C { background-color: #94a3b8; color: #fff; } /* Grau */
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -76,10 +146,10 @@
         
         .cust-row { display: flex; align-items: center; padding: 14px; background: #fff; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.1s; justify-content: space-between; }
         .cust-row:hover { background: #f8fafc; }
-        .cust-row.selected { background: #fffbeb; border-color: var(--brand); }
+        .cust-row.selected { background: rgba(120,120,128,.16); border-color: rgba(0,0,0,0.06); }
         .check-circle { width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
-        .cust-row.selected .check-circle { background: var(--brand); border-color: var(--brand-dark); }
-        .cust-row.selected .check-circle::after { content: '✓'; font-size: 12px; font-weight: bold; color: #451a03; }
+        .cust-row.selected .check-circle { background: rgba(120,120,128,.28); border-color: rgba(120,120,128,.28); }
+        .cust-row.selected .check-circle::after { content: '✓'; font-size: 12px; font-weight: bold; color: #fff; }
         
         .exp-row { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; background: #fff; }
         .exp-amount { font-weight: 800; color: var(--text-main); }
@@ -96,7 +166,7 @@
         .task-chk { margin-right: 8px; cursor: pointer; }
         .task-done { text-decoration: line-through; color: #999; }
         .task-date { font-size: 10px; background: #eee; padding: 1px 4px; border-radius: 4px; margin-left: 5px; white-space: nowrap; }
-        .task-date.overdue { background: #fee2e2; color: #b91c1c; }
+        .task-date.overdue { background: rgba(120,120,128,.20); color: var(--text-main); }
         .global-task-row { padding: 15px; border-bottom: 1px solid #eee; background: #fff; display: flex; align-items: flex-start; }
 
         .cal-layout { display: grid; grid-template-columns: 250px 1fr; gap: 20px; height: calc(100vh - 120px); min-height: 500px; }
@@ -107,9 +177,9 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #e2e8f0; gap: 1px; flex: 1; overflow-y: auto; }
         .cal-head { background: #f1f5f9; padding: 10px; text-align: center; font-size: 11px; font-weight: 700; color: #64748b; }
         .cal-day { background: #ffffff; min-height: 100px; padding: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
-        .cal-day.today { background: #fffbeb; }
+        .cal-day.today { background: rgba(120,120,128,.10); }
         .cal-event { background: var(--brand); color: #451a03; padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(0,0,0,0.05); margin-top: 2px; }
-        .cal-event.manual { background: var(--event-blue); color: var(--event-blue-text); border-color: #93c5fd; }
+        .cal-event.manual { background: rgba(120,120,128,.20); color: var(--text-main); border-color: rgba(0,0,0,0.06); }
 
         .view-controls { display: flex; gap: 5px; }
         .view-btn { padding: 6px 12px; font-size: 12px; border: 1px solid var(--border); background: #fff; border-radius: 6px; cursor: pointer; }
@@ -126,7 +196,8 @@
 
         #menu-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 100; background: #fff; color: #000; border: 1px solid #ddd; width: 45px; height: 45px; border-radius: 50%; font-size: 24px; box-shadow: var(--shadow); }
         @media (max-width: 800px) {
-            #sidebar { position: fixed; height: 100%; transform: translateX(-100%); width: 80%; box-shadow: 10px 0 30px rgba(0,0,0,0.2); }
+            #sidebar{ width: 300px; padding: 10px 10px 14px; background: rgba(246,246,248,.78); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-right: 1px solid var(--border); display:flex; flex-direction:column; gap:10px; z-index:50; flex-shrink:0; transition: transform 0.3s ease; }
+@media (prefers-color-scheme: dark){ #sidebar{ background: rgba(22,22,24,.72);} }
             #sidebar.open { transform: translateX(0); }
             #menu-toggle { display: block; }
             .cal-layout { grid-template-columns: 1fr; display: flex; flex-direction: column; height: auto; }
@@ -406,19 +477,80 @@ tbody tr:hover td{
     </div>
 </div>
 
-<div id="sidebar">
-    <div class="logo-area">
-        <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
-        <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
+<div id="sidebar" class="settings-sidebar">
+    <div class="settings-header">
+        <div class="logo-area settings-logo">
+            <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
+            <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
+            <div class="settings-title">Raphaels CRM</div>
+        </div>
+
+        <div class="settings-search">
+            <input type="search" class="search-field" placeholder="Suchen" aria-label="Suchen">
+        </div>
     </div>
-    <div class="nav-menu">
-        <button class="nav-item active" onclick="nav('home', this)">🏠 Dashboard</button>
-        <button class="nav-item" onclick="nav('customers', this)">👥 Kunden</button>
-        <button class="nav-item" onclick="nav('expenses', this)">💶 Spesen</button>
-        <button class="nav-item" onclick="nav('map', this)">🗺️ Karte</button>
-        <button class="nav-item" onclick="nav('calendar', this)">📅 Kalender</button>
-        <button class="nav-item" onclick="nav('tour', this)">🚗 Tour</button>
-        <button class="nav-item" onclick="nav('routes', this)">📂 Routen</button>
+
+    <div class="nav-sections">
+        <div class="nav-section">
+            <div class="nav-section-label">Allgemein</div>
+
+            <button class="nav-item active" onclick="nav('home', this)">
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="nav-text">Dashboard</span>
+            </button>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-label">Vertrieb</div>
+
+            <button class="nav-item" onclick="nav('customers', this)">
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.8"/><path d="M22 21v-2a3 3 0 0 0-2.2-2.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.8 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <span class="nav-text">Kunden</span>
+            </button>
+
+            <button class="nav-item" onclick="nav('expenses', this)">
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 7.5c0-2-2.2-3.5-5-3.5S7 5.5 7 7.5 9.2 11 12 11s5 1.5 5 3.5S14.8 18 12 18s-5-1.5-5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <span class="nav-text">Spesen</span>
+            </button>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-label">Planung</div>
+
+            <button class="nav-item" onclick="nav('map', this)">
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 3v15" stroke="currentColor" stroke-width="1.8"/><path d="M15 6v15" stroke="currentColor" stroke-width="1.8"/></svg>
+                </span>
+                <span class="nav-text">Karte</span>
+            </button>
+
+            <button class="nav-item" onclick="nav('calendar', this)">
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M8 2v3M16 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M5 5h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="nav-text">Kalender</span>
+            </button>
+
+            <button class="nav-item" onclick="nav('tour', this)">
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M7 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" stroke="currentColor" stroke-width="1.8"/><path d="M18 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" stroke="currentColor" stroke-width="1.8"/><path d="M5 12l1-6h12l1 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <span class="nav-text">Tour</span>
+            </button>
+
+            <button class="nav-item" onclick="nav('routes', this)">
+                <span class="nav-ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="nav-text">Routen</span>
+            </button>
+        </div>
     </div>
 </div>
 
