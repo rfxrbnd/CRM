@@ -689,7 +689,7 @@
     function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();showExpenses();}}
     function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showExpenses()">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
 
-    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">📍 Positionen laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
+    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">Positionen Laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
     async function batchGeocode(){
         const missing=db.customers.filter(c=>!c.lat&&c.address.length>5);
         if(missing.length===0)return alert("Alle Adressen haben bereits Koordinaten.");
@@ -869,9 +869,9 @@
                     </div>
                 </div>
                 <div class="grid-3 no-print" style="margin-top:auto; padding-top:20px;">
-                    <a href="tel:${c.phone}" class="btn btn-secondary btn-full">Anrufen ></a>
-                    <a href="mailto:${c.email}" class="btn btn-secondary btn-full">E-Mail ></a>
-                    <a href="https://maps.google.com/?q=${encodeURIComponent(c.address||'')}" target="_blank" class="btn btn-secondary btn-full">Maps></a>
+                    <a href="tel:${c.phone}" class="btn btn-secondary btn-full">Anrufen</a>
+                    <a href="mailto:${c.email}" class="btn btn-secondary btn-full">E-Mail</a>
+                    <a href="https://maps.google.com/?q=${encodeURIComponent(c.address||'')}" target="_blank" class="btn btn-secondary btn-full">Maps</a>
                 </div>
             </div>
 
@@ -899,7 +899,7 @@
 
         <div class="grid-2" style="margin-top:15px; align-items:start;">
             <div class="card">
-                <h2>Schreiben</h2>
+                <h2>Bericht</h2>
                 <div class="no-print">
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
