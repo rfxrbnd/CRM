@@ -929,6 +929,75 @@ load();
 normalizeDb();
 save();
 
+/* === Leaflet + Geocode helpers === */
+let _leafletReady = false;
+let _map = null;
+let _markersLayer = null;
+
+function ensureLeaflet(){
+  return new Promise((resolve, reject)=>{
+    if(window.L && typeof window.L.map === "function"){ _leafletReady = true; return resolve(); }
+    // Inject CSS
+    if(!document.getElementById("leaflet-css")){
+      const link=document.createElement("link");
+      link.id="leaflet-css";
+      link.rel="stylesheet";
+      link.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+    // Inject JS
+    if(document.getElementById("leaflet-js")){
+      // Wait until loaded
+      const t=setInterval(()=>{
+        if(window.L){ clearInterval(t); _leafletReady = true; resolve(); }
+      }, 50);
+      setTimeout(()=>{ clearInterval(t); reject(new Error("Leaflet load timeout")); }, 15000);
+      return;
+    }
+    const s=document.createElement("script");
+    s.id="leaflet-js";
+    s.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    s.onload=()=>{ _leafletReady = true; resolve(); };
+    s.onerror=()=>reject(new Error("Leaflet konnte nicht geladen werden (offline?)"));
+    document.head.appendChild(s);
+  });
+}
+
+function getCustomerCoords(c){
+  if(!c) return null;
+  if(c.coords && typeof c.coords.lat==="number" && typeof c.coords.lon==="number") return {lat:c.coords.lat, lon:c.coords.lon};
+  if(typeof c.lat==="number" && typeof c.lon==="number") return {lat:c.lat, lon:c.lon};
+  return null;
+}
+function setCustomerCoords(c, lat, lon){
+  if(!c.coords) c.coords = {};
+  c.coords.lat = lat;
+  c.coords.lon = lon;
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function geocodeAddress(addr){
+  const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=0&q=" + encodeURIComponent(addr);
+  const res = await fetch(url, { headers: { "Accept":"application/json" }});
+  if(!res.ok) throw new Error("Geocode HTTP " + res.status);
+  const data = await res.json();
+  if(!Array.isArray(data) || !data.length) return null;
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+}
+
+function haversineKm(a, b){
+  const R=6371;
+  const toRad=x=>x*Math.PI/180;
+  const dLat=toRad(b.lat-a.lat);
+  const dLon=toRad(b.lon-a.lon);
+  const lat1=toRad(a.lat);
+  const lat2=toRad(b.lat);
+  const s=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+
+
 /* ===== UI helpers ===== */
 function setActiveNav(id){
     document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
@@ -1097,6 +1166,7 @@ function showCustomer(id){
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
             <button class="btn btn-secondary" onclick="editCustomer('${id}')">Bearbeiten</button>
+            <button class="btn btn-secondary" onclick="addToTour('${id}'); showFloat('Tour', 'Kunde zur Tour hinzugefügt.', false);">Zur Tour</button>
             <button class="btn btn-danger" onclick="delCustomer('${id}')">Löschen</button>
           </div>
         </div>
@@ -1509,21 +1579,194 @@ function showDuplicates(){
 
 /* PDF / Reports (placeholder) */
 function exportPDF(){
-    showFloat("PDF","Export-Funktion ist hier nur als Platzhalter vorhanden.",false);
+  // Simple print-friendly view of all customers + today’s open tasks count
+  const today=new Date().toLocaleDateString('de-DE');
+  const w = window.open("", "_blank");
+  if(!w){ showFloat("PDF","Popup blockiert. Bitte Popups erlauben.", false); return; }
+
+  const rows = db.customers.map(c=>{
+    const openTasks = (c.tasks||[]).filter(t=>!t.done).length;
+    const todayVisited = (c.reports||[]).some(r=>r.date===today) ? "Ja" : "Nein";
+    return `<tr>
+      <td>${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.category||"B")}</td>
+      <td>${escapeHtml(c.address||"")}</td>
+      <td>${todayVisited}</td>
+      <td style="text-align:right;">${openTasks}</td>
+    </tr>`;
+  }).join("");
+
+  w.document.write(`<!doctype html>
+  <html><head><meta charset="utf-8">
+  <title>AD Board – Kundenübersicht</title>
+  <style>
+    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:24px; }
+    h1{ margin:0 0 6px 0; }
+    .muted{ color:#555; margin:0 0 16px 0; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ border:1px solid #ddd; padding:8px; vertical-align:top; }
+    th{ background:#f5f5f5; text-align:left; }
+  </style></head><body>
+    <h1>Kundenübersicht</h1>
+    <p class="muted">Stand: ${today}</p>
+    <table>
+      <thead><tr><th>Name</th><th>Cat</th><th>Adresse</th><th>Heute besucht</th><th>Offene Aufgaben</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="5">Keine Kunden</td></tr>`}</tbody>
+    </table>
+    <script>window.onload=()=>window.print();</script>
+  </body></html>`);
+  w.document.close();
 }
 function generateReportPDF(mode){
-    showFloat("Report", (mode==="day"?"Tages":"Wochen")+"bericht wird erstellt (Placeholder).", true);
-    setTimeout(()=>showFloat("Report","Fertig (Placeholder).",false),800);
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('de-DE');
+
+  let from, to;
+  if(mode==="day"){
+    from = todayStr; to = todayStr;
+  }else{
+    // last 7 days inclusive
+    const d1=new Date(now); d1.setDate(d1.getDate()-6);
+    from = d1.toLocaleDateString('de-DE');
+    to = todayStr;
+  }
+
+  // Collect reports within range (dd.mm.yyyy)
+  const parse = (s)=>{
+    const [d,m,y]=(s||"").split(".");
+    if(!d||!m||!y) return null;
+    return new Date(parseInt(y,10), parseInt(m,10)-1, parseInt(d,10));
+  };
+  const dFrom=parse(from), dTo=parse(to);
+  const inRange=(ds)=>{
+    const d=parse(ds); 
+    if(!d||!dFrom||!dTo) return false;
+    return d>=dFrom && d<=dTo;
+  };
+
+  const items=[];
+  db.customers.forEach(c=>{
+    (c.reports||[]).forEach(r=>{
+      if(inRange(r.date)) items.push({c, r});
+    });
+  });
+  items.sort((a,b)=>{
+    const da=parse(a.r.date), dbb=parse(b.r.date);
+    return (da-dbb) || a.c.name.localeCompare(b.c.name);
+  });
+
+  const w = window.open("", "_blank");
+  if(!w){ showFloat("Report","Popup blockiert. Bitte Popups erlauben.", false); return; }
+
+  const rows = items.map(x=>`
+    <tr>
+      <td>${escapeHtml(x.r.date)}</td>
+      <td>${escapeHtml(x.c.name)}</td>
+      <td>${escapeHtml(x.c.address||"")}</td>
+      <td>${escapeHtml(x.r.text||"")}</td>
+    </tr>
+  `).join("");
+
+  const title = mode==="day" ? "Tagesbericht" : "Wochenbericht";
+  w.document.write(`<!doctype html>
+  <html><head><meta charset="utf-8">
+  <title>${title}</title>
+  <style>
+    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:24px; }
+    h1{ margin:0 0 6px 0; }
+    .muted{ color:#555; margin:0 0 16px 0; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ border:1px solid #ddd; padding:8px; vertical-align:top; }
+    th{ background:#f5f5f5; text-align:left; }
+  </style></head><body>
+    <h1>${title}</h1>
+    <p class="muted">Zeitraum: ${from} – ${to}</p>
+    <table>
+      <thead><tr><th>Datum</th><th>Kunde</th><th>Adresse</th><th>Text</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="4">Keine Berichte im Zeitraum.</td></tr>`}</tbody>
+    </table>
+    <script>window.onload=()=>window.print();</script>
+  </body></html>`);
+  w.document.close();
 }
 
 /* Map / Geocode (placeholder) */
-function initMap(){
-    const el=document.getElementById('map-container');
-    if(el) el.innerHTML=`<div class="card"><h2>Map Placeholder</h2><div class="small">Hier würdest du z.B. Leaflet/Google Maps einbinden.</div></div>`;
+async function initMap(){
+  const el=document.getElementById('map-container');
+  if(!el) return;
+
+  try{
+    await ensureLeaflet();
+  }catch(e){
+    el.innerHTML = `<div class="card"><h2>Karte</h2><p class="muted">${escapeHtml(e.message)}</p>
+      <p class="small">Tipp: Für die Karte wird Leaflet von einem CDN geladen. Ohne Internet funktioniert das nicht.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = `<div id="leafletMap" style="width:100%; height:520px; border-radius: var(--radius); border:1px solid var(--border);"></div>`;
+  const mapEl = document.getElementById("leafletMap");
+
+  // Center: first customer coords, otherwise Germany
+  let center = {lat:51.1657, lon:10.4515}, zoom=6;
+  for(const c of db.customers){
+    const cc=getCustomerCoords(c);
+    if(cc){ center=cc; zoom=10; break; }
+  }
+
+  _map = L.map(mapEl).setView([center.lat, center.lon], zoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(_map);
+
+  _markersLayer = L.layerGroup().addTo(_map);
+
+  const bounds = [];
+  db.customers.forEach(c=>{
+    const cc=getCustomerCoords(c);
+    if(!cc) return;
+    bounds.push([cc.lat, cc.lon]);
+    const marker=L.marker([cc.lat, cc.lon]).addTo(_markersLayer);
+    marker.bindPopup(`<b>${escapeHtml(c.name)}</b><br>${escapeHtml(c.address||"")}`);
+    marker.on("click", ()=> showCustomer(c.id));
+  });
+
+  if(bounds.length){
+    _map.fitBounds(bounds, { padding:[20,20] });
+  }
 }
-function batchGeocode(){
-    showFloat("Positionen","Lade Koordinaten (Placeholder).",true);
-    setTimeout(()=>showFloat("Positionen","Fertig (Placeholder).",false),900);
+async function batchGeocode(){
+  const missing = db.customers.filter(c=>!getCustomerCoords(c) && (c.address||"").trim().length>0);
+  if(!missing.length){
+    showFloat("Positionen","Alle Kunden haben bereits Koordinaten (oder keine Adresse).", false);
+    initMap();
+    return;
+  }
+
+  showFloat("Positionen", `Geocoding startet… (${missing.length} fehlen)`, true);
+
+  let ok=0, fail=0;
+  for(let i=0;i<missing.length;i++){
+    const c = missing[i];
+    try{
+      // Nominatim rate limit: be nice
+      document.getElementById('float-desc').textContent = `Suche: ${c.name} (${i+1}/${missing.length})`;
+      const res = await geocodeAddress(c.address);
+      if(res && isFinite(res.lat) && isFinite(res.lon)){
+        setCustomerCoords(c, res.lat, res.lon);
+        ok++;
+        save();
+      }else{
+        fail++;
+      }
+    }catch(e){
+      fail++;
+    }
+    await sleep(1100);
+  }
+
+  showFloat("Positionen", `Fertig. OK: ${ok}, Fehler: ${fail}`, false);
+  initMap();
 }
 
 /* Tour */
@@ -1536,11 +1779,65 @@ function removeFromTour(id){
     save(); showTour();
 }
 function optTour(){
-    showFloat("Tour","Optimieren (Placeholder).",true);
-    setTimeout(()=>showFloat("Tour","Optimiert (Placeholder).",false),900);
+  if(!db.tour.length){ showFloat("Tour","Tour ist leer.", false); return; }
+
+  // Build list with coords
+  const nodes = db.tour.map(id=>db.customers.find(c=>c.id===id)).filter(Boolean);
+  const withCoords = nodes.filter(c=>getCustomerCoords(c));
+  if(withCoords.length !== nodes.length){
+    showFloat("Tour","Einige Tour-Kunden haben keine Koordinaten. Erst '📍 Positionen laden' in der Karte ausführen.", false);
+    return;
+  }
+
+  // Nearest neighbor from first element
+  const ordered = [];
+  let current = withCoords[0];
+  const remaining = new Set(withCoords.slice(1));
+
+  ordered.push(current);
+  while(remaining.size){
+    const curC = getCustomerCoords(current);
+    let best=null, bestD=Infinity;
+    for(const c of remaining){
+      const d=haversineKm(curC, getCustomerCoords(c));
+      if(d<bestD){ bestD=d; best=c; }
+    }
+    remaining.delete(best);
+    ordered.push(best);
+    current=best;
+  }
+
+  db.tour = ordered.map(c=>c.id);
+  save();
+  showTour();
+  showFloat("Tour","Tour optimiert (Nearest-Neighbor).", false);
 }
 function openMaps(){
-    showFloat("Maps","Öffne Maps (Placeholder).",false);
+  if(!db.tour.length){ showFloat("Maps","Tour ist leer.", false); return; }
+  const customers = db.tour.map(id=>db.customers.find(c=>c.id===id)).filter(Boolean);
+
+  // Prefer coords, fallback to address
+  const points = customers.map(c=>{
+    const cc=getCustomerCoords(c);
+    if(cc) return `${cc.lat},${cc.lon}`;
+    return (c.address||"").trim();
+  }).filter(Boolean);
+
+  if(points.length < 2){
+    showFloat("Maps","Mindestens 2 Stopps nötig.", false); 
+    return;
+  }
+
+  // Google Maps Directions URL: origin + destination + waypoints (max ~23)
+  const origin = points[0];
+  const dest = points[points.length-1];
+  const waypoints = points.slice(1,-1).slice(0, 20); // keep conservative
+  const url = new URL("https://www.google.com/maps/dir/");
+  url.searchParams.set("api","1");
+  url.searchParams.set("origin", origin);
+  url.searchParams.set("destination", dest);
+  if(waypoints.length) url.searchParams.set("waypoints", waypoints.join("|"));
+  window.open(url.toString(), "_blank");
 }
 
 /* OCR placeholder */
