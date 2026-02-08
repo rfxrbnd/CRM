@@ -1172,19 +1172,37 @@
             </div>
         `).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Keine Einträge</div>';
 
-        // Activity Timeline (360° Verlauf): Berichte + Aufgaben + Deals + Kommunikation
+        // Activity Timeline (360° Verlauf): Aktivitäten + Aufgaben + Deals
         const timelineItems = buildTimelineForCustomer(c);
-        const timelineHTML = timelineItems.map(it=>`
+        const timelineHTML = timelineItems.map(it=>{
+            const controls = (it.kind==='activity') ? `
+                <div class="no-print" style="display:flex; gap:8px;">
+                    <span style="cursor:pointer;font-size:12px;color:#6b7280" onclick="startEditActivity(${id},${it.actId})">bearbeiten</span>
+                    <span style="cursor:pointer;font-size:12px;color:#6b7280" onclick="delActivity(${id},${it.actId})">löschen</span>
+                </div>` : ``;
+
+            const headerRight = (it.kind==='activity') ? controls : `<div style="font-size:12px; color:#6b7280; white-space:nowrap;">${fmtDateTime(it.ts)}</div>`;
+            const dateLine = (it.kind==='activity') ? `<div style="font-size:12px; color:#6b7280; white-space:nowrap;">${fmtDateTime(it.ts)}</div>` : ``;
+
+            const subj = (it.kind==='activity' && it.subject) ? `<div style="font-size:13px; font-weight:700; margin-top:6px;">${escapeHtml(it.subject)}</div>` : ``;
+            const outcome = (it.kind==='activity' && it.outcome) ? `<div style="margin-top:6px; font-size:12px; color:#64748b;"><b>Ergebnis:</b> ${escapeHtml(it.outcome)}</div>` : ``;
+
+            return `
             <div class="report-entry" style="padding:10px;">
                 <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
                     <div style="font-weight:700; font-size:13px;">${it.icon} ${escapeHtml(it.title)}</div>
-                    <div style="font-size:12px; color:#6b7280; white-space:nowrap;">${fmtDateTime(it.ts)}</div>
+                    ${it.kind==='activity' ? controls : `<div style="font-size:12px; color:#6b7280; white-space:nowrap;">${fmtDateTime(it.ts)}</div>`}
                 </div>
+                ${it.kind==='activity' ? `<div style="font-size:12px; color:#6b7280; white-space:nowrap; margin-top:4px;">${fmtDateTime(it.ts)}</div>` : ``}
                 ${it.subtitle?`<div style="font-size:12px; color:#64748b; margin-top:4px;">${escapeHtml(it.subtitle)}</div>`:''}
-                ${it.body?`<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151; margin-top:6px;">${escapeHtml(it.body)}</div>`:''}${it.img?`<img src="${it.img}" class="rep-img" onclick="window.open(this.src)">`:''}
+                ${subj}
+                ${it.body?`<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151; margin-top:6px;">${escapeHtml(it.body)}</div>`:''}
+                ${outcome}
             </div>
-        `).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Noch kein Verlauf</div>';
-        const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
+            `;
+        }).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Noch kein Verlauf</div>';
+
+        const badgeClass = = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
         document.getElementById('content').innerHTML = `
         <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
@@ -1273,14 +1291,11 @@
                     <textarea id="act_text" rows="4" style="margin:0; width:100%;" placeholder="..."></textarea>
                 </div>
 
-                <div id="actPhotoRow" style="display:none; margin-top:10px;">
-                    <label>Foto (optional, nur für Bericht)</label>
-                    <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; text-align:center; display:inline-block;">
-                        Foto Laden <input type="file" id="act_img" accept="image/*" style="display:none;">
-                    </label>
+                <input type="hidden" id="act_edit_id" value="">
+<div style="display:flex; gap:10px; margin-top:10px;">
+                    <button class="btn btn-primary btn-full" onclick="addActivity(${id})">Sichern</button>
+                    <button class="btn btn-secondary btn-full" onclick="cancelEditActivity()">Abbrechen</button>
                 </div>
-
-                <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="addActivity(${id})">Sichern</button>
             </div>
         </div>
 
@@ -1351,21 +1366,31 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
         } catch(e){ return iso; }
     }
 
+    
     function buildTimelineForCustomer(c){
         const items = [];
         // Aktivitäten (Anruf/E-Mail/Notiz/Bericht)
         getCustomerActivities(c).forEach(a=>{
             const icon = a.type==='call'?'📞':(a.type==='email'?'✉️':(a.type==='report'?'🧾':'📝'));
             const title = a.type==='call'?'Anruf':(a.type==='email'?'E-Mail':(a.type==='report'?'Bericht':'Notiz'));
-            const subtitle = (a.type==='report' ? (a.date||'') : (a.subject||a.outcome||'')) || '';
-            items.push({ ts: a.createdAt || new Date().toISOString(), icon, title, subtitle, body: a.text||'', img: a.img||null });
+            items.push({
+                kind: 'activity',
+                customerId: c.id,
+                actId: a.id,
+                ts: a.createdAt || new Date().toISOString(),
+                icon,
+                title,
+                subject: a.subject || '',
+                outcome: a.outcome || '',
+                body: a.text || ''
+            });
         });
 
         // Aufgaben (erledigt bleibt trotzdem als Verlauf)
         (c.tasks||[]).forEach(t=>{
             const title = t.done ? 'Aufgabe erledigt' : 'Aufgabe';
             const sub = t.dueDate ? ('Fällig: ' + (t.dueDate.split('-').reverse().join('.'))) : '';
-            items.push({ ts: t.createdAt || new Date().toISOString(), icon:'✅', title, subtitle: sub, body: t.text||'' });
+            items.push({ kind:'task', ts: t.createdAt || new Date().toISOString(), icon:'✅', title, subtitle: sub, body: t.text||'' });
         });
 
         // Deals/Leads (Pipeline)
@@ -1374,12 +1399,13 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
             const title = d.type==='lead' ? 'Lead' : 'Deal';
             const sub = d.stage ? ('Stufe: ' + d.stage) : '';
             const body = (d.name||d.company||'').trim();
-            items.push({ ts: d.updatedAt || d.createdAt || new Date().toISOString(), icon, title, subtitle: sub, body });
+            items.push({ kind:'deal', ts: d.updatedAt || d.createdAt || new Date().toISOString(), icon, title, subtitle: sub, body });
         });
 
         items.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
-        return items.slice(0, 80);
+        return items.slice(0, 120);
     }
+
 
     function applyAutomationsForDeal(deal, prevStage){
         try{
@@ -1406,12 +1432,7 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
         } catch(e){ console.warn(e); }
     }
 
-    function toggleActivityTypeUI(){
-        const t = document.getElementById('act_type');
-        const row = document.getElementById('actPhotoRow');
-        if(!t || !row) return;
-        row.style.display = (t.value === 'report') ? 'block' : 'none';
-    }
+    function toggleActivityTypeUI(){ /* Foto-Option entfernt */ }
 
     function ensureActivityDateDefaults(){
         const dt = document.getElementById('act_dt');
@@ -1423,9 +1444,13 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
         toggleActivityTypeUI();
     }
 
-    function addActivity(id){
+    
+function addActivity(id){
         const c = db.customers.find(x=>x.id===id); if(!c) return;
         c.activities = Array.isArray(c.activities) ? c.activities : [];
+
+        const editIdRaw = document.getElementById('act_edit_id')?.value || '';
+        const editId = editIdRaw ? parseInt(editIdRaw,10) : null;
 
         const type = (document.getElementById('act_type')?.value || 'note');
         const dtVal = document.getElementById('act_dt')?.value || '';
@@ -1433,68 +1458,107 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
         const subject = (document.getElementById('act_subj')?.value || '').trim();
         const outcome = (document.getElementById('act_outcome')?.value || '').trim();
         const textVal = (document.getElementById('act_text')?.value || '').trim();
-        const fileEl = document.getElementById('act_img');
-        const f = fileEl && fileEl.files ? fileEl.files[0] : null;
 
-        if(!textVal && !subject && !outcome && !(type==='report' && f)) return;
+        // Ohne Foto-Option: es muss mindestens etwas Inhalt da sein
+        if(!textVal && !subject && !outcome) return;
 
         const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOString();
         const dateStr = (()=>{ try { return new Date(createdAt).toLocaleDateString('de-DE'); } catch(e){ return ''; } })();
 
-        const finalize = (imgDataUrl)=>{
-            c.activities.unshift({
-                id: Date.now() + Math.floor(Math.random()*100000),
-                type,
-                createdAt,
-                subject,
-                outcome,
-                text: textVal,
-                img: (type==='report' ? (imgDataUrl||null) : null),
-                date: dateStr
-            });
-
-            // Aufgaben-Automatik: Follow-up aus Aktivität
-            if(follow){
-                const tag = `auto:activity:${Date.now()}`;
-                const tText = subject ? `Follow-up: ${subject}` : (type==='report' ? 'Follow-up: Bericht' : 'Follow-up');
-                c.tasks.push({ text: tText, done:false, dueDate: follow, createdAt:new Date().toISOString(), tag });
-            }
-
-            // Aufgaben-Automatik: optionales Follow-up nach Bericht (global)
-            if(type==='report' && db.automations && db.automations.enabled && parseInt(db.automations.reportFollowUpDays||0)>0){
-                const days=parseInt(db.automations.reportFollowUpDays||0);
-                const dd=new Date(); dd.setDate(dd.getDate()+days);
-                const due=dd.toISOString().split('T')[0];
-                const tag=`auto:report:${Date.now()}`;
-                c.tasks.push({text:(db.automations.reportFollowUpText||'Besuch nachfassen'), done:false, dueDate:due, createdAt:new Date().toISOString(), tag});
-            }
-
-            save();
-            showDetail(id);
+        const payload = {
+            id: editId || (Date.now() + Math.floor(Math.random()*100000)),
+            type,
+            createdAt,
+            subject,
+            outcome,
+            text: textVal,
+            date: dateStr
         };
 
-        // Bild optional (nur Bericht)
-        if(type==='report' && f){
-            const r=new FileReader();
-            r.onload=e=>{
-                const i=new Image();
-                i.onload=()=>{
-                    const cvs=document.createElement('canvas');
-                    const ctx=cvs.getContext('2d');
-                    const targetW=600;
-                    const s=targetW/i.width;
-                    cvs.width=targetW;
-                    cvs.height=i.height*s;
-                    ctx.drawImage(i,0,0,cvs.width,cvs.height);
-                    finalize(cvs.toDataURL('image/jpeg',0.6));
-                };
-                i.src=e.target.result;
-            };
-            r.readAsDataURL(f);
+        if(editId){
+            const idx = c.activities.findIndex(a=>String(a.id)===String(editId));
+            if(idx>=0){
+                c.activities[idx] = payload;
+            } else {
+                c.activities.unshift(payload);
+            }
         } else {
-            finalize(null);
+            c.activities.unshift(payload);
         }
+
+        // Aufgaben-Automatik: Follow-up aus Aktivität
+        if(follow){
+            const tag = `auto:activity:${payload.id}`;
+            const tText = subject ? `Follow-up: ${subject}` : (type==='report' ? 'Follow-up: Bericht' : 'Follow-up');
+            const exists = (c.tasks||[]).some(t=>t.tag===tag);
+            if(!exists){
+                c.tasks.push({ text: tText, done:false, dueDate: follow, createdAt:new Date().toISOString(), tag });
+            }
+        }
+
+        // Aufgaben-Automatik: optionales Follow-up nach Bericht (global)
+        if(type==='report' && db.automations && db.automations.enabled && parseInt(db.automations.reportFollowUpDays||0)>0){
+            const days=parseInt(db.automations.reportFollowUpDays||0);
+            const dd=new Date(); dd.setDate(dd.getDate()+days);
+            const due=dd.toISOString().split('T')[0];
+            const tag=`auto:report:${payload.id}`;
+            const exists = (c.tasks||[]).some(t=>t.tag===tag);
+            if(!exists){
+                c.tasks.push({text:(db.automations.reportFollowUpText||'Besuch nachfassen'), done:false, dueDate:due, createdAt:new Date().toISOString(), tag});
+            }
+        }
+
+        // Form zurücksetzen
+        try{
+            document.getElementById('act_subj').value='';
+            document.getElementById('act_outcome').value='';
+            document.getElementById('act_text').value='';
+            document.getElementById('act_follow').value='';
+            document.getElementById('act_edit_id').value='';
+            ensureActivityDateDefaults();
+        } catch(e){}
+
+        save();
+        showDetail(id);
     }
+
+    function startEditActivity(custId, actId){
+        const c = db.customers.find(x=>x.id===custId); if(!c) return;
+        const a = (c.activities||[]).find(x=>String(x.id)===String(actId));
+        if(!a) return;
+        try{
+            document.getElementById('act_type').value = a.type || 'note';
+            const d = new Date(a.createdAt || new Date().toISOString());
+            const pad=n=>String(n).padStart(2,'0');
+            const localVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            document.getElementById('act_dt').value = localVal;
+            document.getElementById('act_subj').value = a.subject || '';
+            document.getElementById('act_outcome').value = a.outcome || '';
+            document.getElementById('act_text').value = a.text || '';
+            document.getElementById('act_edit_id').value = a.id;
+            document.getElementById('act_type').scrollIntoView({behavior:'smooth', block:'center'});
+        } catch(e){ console.warn(e); }
+    }
+
+    function delActivity(custId, actId){
+        const c = db.customers.find(x=>x.id===custId); if(!c) return;
+        if(!confirm('Aktivität löschen?')) return;
+        c.activities = (c.activities||[]).filter(a=>String(a.id)!==String(actId));
+        save();
+        showDetail(custId);
+    }
+
+    function cancelEditActivity(){
+        try{
+            document.getElementById('act_edit_id').value='';
+            document.getElementById('act_subj').value='';
+            document.getElementById('act_outcome').value='';
+            document.getElementById('act_text').value='';
+            document.getElementById('act_follow').value='';
+            ensureActivityDateDefaults();
+        } catch(e){}
+    }
+
     function togTour(id){if(db.tour.includes(id))db.tour=db.tour.filter(x=>x!==id);else db.tour.push(id);save();showDetail(id);}
     
     function showForm(id=null){
