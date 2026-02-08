@@ -402,6 +402,7 @@
   <div class="nav-menu">
     <button class="nav-item active" onclick="nav('home', this)"><span>Dashboard</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('customers', this)"><span>Kunden</span><span class="nav-arrow">›</span></button>
+    <button class=\"nav-item\" onclick=\"nav('pipeline', this)\"><span>Pipeline</span><span class=\"nav-arrow\">›</span></button>
     <button class="nav-item" onclick="nav('expenses', this)"><span>Spesen</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('map', this)"><span>Karte</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('calendar', this)"><span>Kalender</span><span class="nav-arrow">›</span></button>
@@ -416,7 +417,7 @@
     const DB_KEY = 'raphael_crm_v122_revenue';
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
-    let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [] };
+    let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [], deals: [] };
     let currentCalDate = new Date();
     let calView = 'month'; 
     let dragId = null, dragTargetDate = null;
@@ -440,6 +441,7 @@
             if(!db.expenses) db.expenses = [];
             if(!db.events) db.events = [];
             if(!db.customers) db.customers = [];
+            if(!db.deals) db.deals = [];
             
             if(!db.meta_revenue_migrated) {
                 db.customers.forEach(c => {
@@ -455,6 +457,27 @@
                 if(!c.nextAppointment) c.nextAppointment = "";
                 if(!c.visitInterval) c.visitInterval = 4;
             });
+            // Pipeline/Deals Migration (crash-sicher)
+            db.deals = Array.isArray(db.deals) ? db.deals : [];
+            db.deals.forEach(d => {
+                if(!d.id) d.id = Date.now() + Math.floor(Math.random()*10000);
+                if(!d.type) d.type = 'opportunity';
+                if(!d.stage) d.stage = (d.type==='lead') ? 'Neu' : 'Qualifiziert';
+                if(d.probability === undefined || d.probability === null || d.probability === '') d.probability = (d.type==='lead') ? 10 : 30;
+                d.probability = Math.max(0, Math.min(100, parseInt(d.probability)||0));
+                if(!d.source) d.source = '';
+                if(!d.qualification) d.qualification = '';
+                if(!d.expectedClose) d.expectedClose = '';
+                if(d.value === undefined || d.value === null || d.value === '') d.value = 0;
+                d.value = parseFloat(d.value)||0;
+                if(!d.name) d.name = '';
+                if(!d.company) d.company = '';
+                if(!d.customerId) d.customerId = '';
+                if(!d.notes) d.notes = '';
+                if(!d.createdAt) d.createdAt = new Date().toISOString();
+                if(!d.updatedAt) d.updatedAt = new Date().toISOString();
+            });
+
             updateLogoUI();
             showHome();
         } catch(e) {
@@ -487,6 +510,7 @@
         else if(page === 'tour') showTour();
         else if(page === 'routes') showRoutes();
         else if(page === 'expenses') showExpenses();
+        else if(page === 'pipeline') showPipeline();
     }
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
@@ -1245,6 +1269,371 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
 window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub')?'vacation':t.includes('arzt')?'doctor':(t.includes('büro')||t.includes('buero'))?'office':''};window.getEvts=function(ds,t){let items=[],toMins=s=>{s=(s||'').slice(0,5).split(':');return(+s[0]||0)*60+(+s[1]||0)};db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;if(t&&!(c.nextAppointment.split('T')[1]||'').startsWith(t.slice(0,2)))return;const time=(c.nextAppointment.split('T')[1]||'').slice(0,5),mins=toMins(time);items.push({mins,html:`<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});(db.events||[]).forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;if(t){const slotHour=parseInt(t.split(':')[0]);const startHour=parseInt((e.start.split('T')[1]||'0:0').split(':')[0]);const startMin=parseInt((e.start.split('T')[1]||'0:0').split(':')[1]);let endHour=startHour+1,endMin=startMin;if(e.end){endHour=parseInt((e.end.split('T')[1]||'0:0').split(':')[0]);endMin=parseInt((e.end.split('T')[1]||'0:0').split(':')[1]);}const evtStartMins=startHour*60+startMin,evtEndMins=endHour*60+endMin,slotStartMins=slotHour*60,slotEndMins=(slotHour+1)*60;if(!(evtStartMins<slotEndMins&&evtEndMins>slotStartMins))return;}const s=(e.start.split('T')[1]||'').slice(0,5),mins=toMins(s),end=e.end?((e.end.split('T')[1]||'').slice(0,5)):'';items.push({mins,html:`<div class="cal-event manual ${getEvtClass(e.title)}" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});items.sort((a,b)=>a.mins-b.mins);return items.map(x=>x.html).join('');};window.getEvtsMonth=function(ds,limit){let items=[],toMins=s=>{s=(s||'').slice(0,5).split(':');return(+s[0]||0)*60+(+s[1]||0)};db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;const t=(c.nextAppointment.split('T')[1]||'').slice(0,5);items.push({m:toMins(t),h:`<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${t} ${c.name}</span><span onclick="delAppt(${c.id})">×</span></div>`})});(db.events||[]).forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;const s=(e.start.split('T')[1]||'').slice(0,5),end=e.end?((e.end.split('T')[1]||'').slice(0,5)):'';items.push({m:toMins(s),h:`<div class="cal-event manual ${getEvtClass(e.title)}" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`})});items.sort((a,b)=>a.m-b.m);const shown=items.slice(0,limit),more=items.length-limit;return shown.map(x=>x.h).join('')+(more>0?`<div class="cal-more" onclick="openDayFromMonth('${ds}')">+${more}</div>`:'');};
 
     
+
+
+    // --- PIPELINE (Leads & Opportunities) ---
+    const PIPELINE_SOURCES = ["Empfehlung", "Website", "Inbound", "Outbound", "Messe", "Bestandskunde", "Partner", "Sonstiges"];
+    const PIPELINE_QUALS   = ["Kalt", "Warm", "Heiß", "BANT ok", "Disqualifiziert"];
+    const LEAD_STAGES      = ["Neu", "Kontaktiert", "Qualifiziert", "Disqualifiziert"];
+    const OPP_STAGES       = ["Qualifiziert", "Bedarf", "Angebot", "Verhandlung", "Won", "Lost"];
+
+    let pipelineState = { tab: 'opportunity', stage: '', source: '', q: '', sort: 'expectedClose' };
+
+    function showPipeline(){
+        if(!db.deals) db.deals = [];
+        const opps = db.deals.filter(d => d.type === 'opportunity');
+        const openOpps = opps.filter(d => !['Won','Lost'].includes(d.stage));
+        const pipeValue = openOpps.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+        const forecast = openOpps.reduce((s,d)=>s+((parseFloat(d.value)||0)*((parseInt(d.probability)||0)/100)),0);
+        const wonValue = opps.filter(d=>d.stage==='Won').reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+
+        document.getElementById('content').innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <h1>Pipeline</h1>
+                <div style="display:flex;gap:10px;" class="no-print">
+                    <button class="btn btn-secondary" onclick="pipelineState.tab='lead'; pipelineState.stage=''; renderPipeline()">Lead</button>
+                    <button class="btn btn-secondary" onclick="pipelineState.tab='opportunity'; pipelineState.stage=''; renderPipeline()">Deal</button>
+                    <button class="btn btn-primary" onclick="openDealForm()">＋ Neu</button>
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div class="card" style="margin-bottom:0;">
+                    <div style="font-size:10px;color:var(--text-light);font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Offene Pipeline</div>
+                    <div style="font-size:22px;font-weight:900;margin-top:6px;">${fmtEUR(pipeValue)}</div>
+                    <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Deals offen: <b>${openOpps.length}</b></div>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <div style="font-size:10px;color:var(--text-light);font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Forecast (gewichtet)</div>
+                    <div style="font-size:22px;font-weight:900;margin-top:6px;">${fmtEUR(forecast)}</div>
+                    <div style="font-size:12px;color:var(--text-light);margin-top:4px;">∑ (Wert × Wahrscheinlichkeit)</div>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <div style="font-size:10px;color:var(--text-light);font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Gewonnen</div>
+                    <div style="font-size:22px;font-weight:900;margin-top:6px;">${fmtEUR(wonValue)}</div>
+                    <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Deals won: <b>${opps.filter(d=>d.stage==='Won').length}</b></div>
+                </div>
+            </div>
+
+            <div class="card no-print" style="margin-top:20px;">
+                <div class="grid-4-custom" style="grid-template-columns: 1.2fr 1fr 1fr 1fr;">
+                    <div>
+                        <label>Suchen</label>
+                        <input id="pl_q" placeholder="🔍 Name / Firma" value="${escapeHtml(pipelineState.q||'')}" onkeyup="pipelineState.q=this.value; renderPipeline()" style="margin:0;">
+                    </div>
+                    <div>
+                        <label>Stufe</label>
+                        <select id="pl_stage" onchange="pipelineState.stage=this.value; renderPipeline()" style="margin:0;">
+                            <option value="">Alle</option>
+                            ${(pipelineState.tab==='lead'?LEAD_STAGES:OPP_STAGES).map(s=>`<option value="${s}" ${pipelineState.stage===s?'selected':''}>${s}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label>Quelle</label>
+                        <select id="pl_source" onchange="pipelineState.source=this.value; renderPipeline()" style="margin:0;">
+                            <option value="">Alle</option>
+                            ${PIPELINE_SOURCES.map(s=>`<option value="${s}" ${pipelineState.source===s?'selected':''}>${s}</option>`).join('')}
+                            <option value="__OTHER__" ${pipelineState.source==='__OTHER__'?'selected':''}>Andere (frei)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Sortierung</label>
+                        <select onchange="pipelineState.sort=this.value; renderPipeline()" style="margin:0;">
+                            <option value="expectedClose" ${pipelineState.sort==='expectedClose'?'selected':''}>Close-Date</option>
+                            <option value="value_desc" ${pipelineState.sort==='value_desc'?'selected':''}>Wert ↓</option>
+                            <option value="prob_desc" ${pipelineState.sort==='prob_desc'?'selected':''}>W'keit ↓</option>
+                            <option value="updated_desc" ${pipelineState.sort==='updated_desc'?'selected':''}>Zuletzt geändert</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dealFormHost"></div>
+            <div id="pipelineList"></div>
+        `;
+        renderPipeline();
+    }
+
+    function renderPipeline(){
+        const type = pipelineState.tab === 'lead' ? 'lead' : 'opportunity';
+        let list = (db.deals||[]).filter(d => d.type === type);
+
+        // Filters
+        if(pipelineState.stage) list = list.filter(d => d.stage === pipelineState.stage);
+        if(pipelineState.source){
+            if(pipelineState.source === '__OTHER__') list = list.filter(d => d.source && !PIPELINE_SOURCES.includes(d.source));
+            else list = list.filter(d => d.source === pipelineState.source);
+        }
+        const q = (pipelineState.q||'').trim().toLowerCase();
+        if(q){
+            list = list.filter(d => (d.name||'').toLowerCase().includes(q) || (d.company||'').toLowerCase().includes(q));
+        }
+
+        // Sort
+        const byDate = s => s ? new Date(s).getTime() : 0;
+        if(pipelineState.sort==='value_desc') list.sort((a,b)=>(parseFloat(b.value)||0)-(parseFloat(a.value)||0));
+        else if(pipelineState.sort==='prob_desc') list.sort((a,b)=>(parseInt(b.probability)||0)-(parseInt(a.probability)||0));
+        else if(pipelineState.sort==='updated_desc') list.sort((a,b)=>byDate(b.updatedAt)-byDate(a.updatedAt));
+        else list.sort((a,b)=>byDate(a.expectedClose)-byDate(b.expectedClose));
+
+        const stagePill = (stage) => `<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#fff;">${escapeHtml(stage||'')}</span>`;
+        const probPill = (p) => `<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#fff;">${(parseInt(p)||0)}%</span>`;
+
+        document.getElementById('pipelineList').innerHTML = list.length ? list.map(d => {
+            const cust = d.customerId ? (db.customers||[]).find(c=>String(c.id)===String(d.customerId)) : null;
+            const line2 = [
+                d.company ? escapeHtml(d.company) : null,
+                d.source ? escapeHtml(d.source) : null,
+                d.expectedClose ? `Close: <b>${fmtDateISO(d.expectedClose)}</b>` : null,
+                cust ? `Kunde: <b>${escapeHtml(cust.name)}</b>` : null
+            ].filter(Boolean).join(' · ');
+
+            const weighted = (parseFloat(d.value)||0) * ((parseInt(d.probability)||0)/100);
+
+            return `
+                <div class="card" style="margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+                        <div style="min-width:0;">
+                            <div style="font-weight:900;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(d.name||'(ohne Name)')}</div>
+                            <div style="font-size:12px;color:var(--text-light);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${line2 || '—'}</div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                                ${stagePill(d.stage)}
+                                ${type==='opportunity' ? probPill(d.probability) : ''}
+                                ${type==='opportunity' ? `<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#fff;">Wert: ${fmtEUR(d.value)}</span>` : ''}
+                                ${type==='opportunity' ? `<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#fff;">Forecast: ${fmtEUR(weighted)}</span>` : ''}
+                                ${d.qualification ? `<span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#fff;">${escapeHtml(d.qualification)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="no-print" style="display:flex;gap:6px;flex-shrink:0;">
+                            ${type==='lead' ? `<button class="btn btn-secondary" onclick="convertLead(${d.id})">⇢ Deal</button>` : ''}
+                            <button class="btn btn-secondary" onclick="openDealForm(${d.id})">✏️</button>
+                            <button class="btn btn-danger" onclick="deleteDeal(${d.id})">🗑️</button>
+                        </div>
+                    </div>
+                    ${d.notes ? `<div style="margin-top:10px;font-size:13px;color:#374151;white-space:pre-wrap;">${escapeHtml(d.notes)}</div>` : ''}
+                </div>
+            `;
+        }).join('') : `<div class="card" style="text-align:center;color:#9ca3af;">Keine Einträge</div>`;
+    }
+
+    function openDealForm(id){
+        const d = id ? (db.deals||[]).find(x=>String(x.id)===String(id)) : null;
+        const type = d ? d.type : (pipelineState.tab==='lead' ? 'lead' : 'opportunity');
+        const isLead = type === 'lead';
+        const stages = isLead ? LEAD_STAGES : OPP_STAGES;
+
+        const custOptions = (db.customers||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}" ${(d && String(d.customerId)===String(c.id))?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+
+        document.getElementById('dealFormHost').innerHTML = `
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                    <div style="font-weight:900;font-size:16px;">${d?'Eintrag bearbeiten':'Neuer Eintrag'}</div>
+                    <div class="no-print" style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" onclick="closeDealForm()">Schließen</button>
+                    </div>
+                </div>
+
+                <input type="hidden" id="deal_id" value="${d?d.id:''}">
+                <div class="grid-2" style="margin-top:15px;">
+                    <div>
+                        <label>Typ</label>
+                        <select id="deal_type" onchange="toggleDealTypeFields()" style="margin:0;">
+                            <option value="lead" ${type==='lead'?'selected':''}>Lead</option>
+                            <option value="opportunity" ${type==='opportunity'?'selected':''}>Deal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Stufe</label>
+                        <select id="deal_stage" style="margin:0;">
+                            ${stages.map(s=>`<option value="${s}" ${d&&d.stage===s?'selected':''}>${s}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top:15px;">
+                    <div>
+                        <label>Name</label>
+                        <input id="deal_name" placeholder="z.B. Projekt / Anfrage" value="${escapeHtml(d?.name||'')}" style="margin:0;">
+                    </div>
+                    <div>
+                        <label>Firma</label>
+                        <input id="deal_company" placeholder="z.B. Kunde / Firma" value="${escapeHtml(d?.company||'')}" style="margin:0;">
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top:15px;">
+                    <div>
+                        <label>Quelle</label>
+                        <input id="deal_source" list="dealSourceList" placeholder="z.B. Website / Messe" value="${escapeHtml(d?.source||'')}" style="margin:0;">
+                        <datalist id="dealSourceList">
+                            ${PIPELINE_SOURCES.map(s=>`<option value="${s}"></option>`).join('')}
+                        </datalist>
+                    </div>
+                    <div>
+                        <label>Qualifizierung</label>
+                        <select id="deal_qual" style="margin:0;">
+                            <option value="">—</option>
+                            ${PIPELINE_QUALS.map(s=>`<option value="${s}" ${d&&d.qualification===s?'selected':''}>${s}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top:15px;" id="deal_opp_fields">
+                    <div>
+                        <label>Deal Value (€)</label>
+                        <input type="number" id="deal_value" placeholder="0" value="${d? (parseFloat(d.value)||0):0}" style="margin:0;">
+                    </div>
+                    <div>
+                        <label>Wahrscheinlichkeit (%)</label>
+                        <input type="number" id="deal_prob" min="0" max="100" placeholder="0-100" value="${d? (parseInt(d.probability)||0):(type==='lead'?10:30)}" style="margin:0;">
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top:15px;">
+                    <div>
+                        <label>Expected Close Date</label>
+                        <input type="date" id="deal_close" value="${escapeHtml(d?.expectedClose||'')}" style="margin:0;">
+                    </div>
+                    <div>
+                        <label>Zuordnung Kunde (optional)</label>
+                        <select id="deal_customer" style="margin:0;">
+                            <option value="">—</option>
+                            ${custOptions}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-top:15px;">
+                    <label>Notizen</label>
+                    <textarea id="deal_notes" rows="4" placeholder="Kurze Notizen" style="margin:0;">${escapeHtml(d?.notes||'')}</textarea>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:15px;" class="no-print">
+                    <button class="btn btn-primary" style="flex:1;" onclick="saveDeal()">Sichern</button>
+                    ${d?`<button class="btn btn-danger" onclick="deleteDeal(${d.id}); closeDealForm();">Löschen</button>`:''}
+                </div>
+            </div>
+        `;
+        toggleDealTypeFields();
+        // scroll into view for mobile
+        try{ document.getElementById('dealFormHost').scrollIntoView({behavior:'smooth', block:'start'});}catch(e){}
+    }
+
+    function closeDealForm(){
+        const host = document.getElementById('dealFormHost');
+        if(host) host.innerHTML = '';
+    }
+
+    function toggleDealTypeFields(){
+        const type = (document.getElementById('deal_type')||{}).value || (pipelineState.tab==='lead'?'lead':'opportunity');
+        const isLead = type === 'lead';
+        const stages = isLead ? LEAD_STAGES : OPP_STAGES;
+
+        // refresh stage options
+        const stageSel = document.getElementById('deal_stage');
+        if(stageSel){
+            const current = stageSel.value;
+            stageSel.innerHTML = stages.map(s=>`<option value="${s}">${s}</option>`).join('');
+            if(stages.includes(current)) stageSel.value = current;
+            else stageSel.value = stages[0];
+        }
+
+        const oppFields = document.getElementById('deal_opp_fields');
+        if(oppFields) oppFields.style.display = isLead ? 'none' : 'grid';
+    }
+
+    function saveDeal(){
+        const id = document.getElementById('deal_id').value;
+        const type = document.getElementById('deal_type').value;
+        const stage = document.getElementById('deal_stage').value;
+        const name = (document.getElementById('deal_name').value||'').trim();
+        const company = (document.getElementById('deal_company').value||'').trim();
+        const source = (document.getElementById('deal_source').value||'').trim();
+        const qualification = document.getElementById('deal_qual').value;
+        const expectedClose = document.getElementById('deal_close').value;
+        const customerId = document.getElementById('deal_customer').value;
+        const notes = (document.getElementById('deal_notes').value||'').trim();
+
+        let value = 0;
+        let probability = 0;
+        if(type === 'opportunity'){
+            value = parseFloat(document.getElementById('deal_value').value)||0;
+            probability = Math.max(0, Math.min(100, parseInt(document.getElementById('deal_prob').value)||0));
+        } else {
+            // Leads: keep prob for later conversion
+            probability = Math.max(0, Math.min(100, parseInt(document.getElementById('deal_prob')?.value)||10));
+        }
+
+        const obj = {
+            id: id ? parseInt(id) : Date.now(),
+            type, stage,
+            name, company,
+            source, qualification,
+            expectedClose,
+            customerId,
+            notes,
+            value,
+            probability,
+            createdAt: id ? ((db.deals||[]).find(x=>String(x.id)===String(id))?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if(!db.deals) db.deals = [];
+        if(id){
+            const idx = db.deals.findIndex(x=>String(x.id)===String(id));
+            if(idx>-1) db.deals[idx]=obj;
+            else db.deals.push(obj);
+        } else db.deals.push(obj);
+
+        save();
+        closeDealForm();
+        renderPipeline();
+    }
+
+    function deleteDeal(id){
+        if(!confirm("Eintrag löschen?")) return;
+        db.deals = (db.deals||[]).filter(d => String(d.id)!==String(id));
+        save();
+        renderPipeline();
+    }
+
+    function convertLead(id){
+        const d = (db.deals||[]).find(x=>String(x.id)===String(id));
+        if(!d) return;
+        d.type = 'opportunity';
+        d.stage = 'Qualifiziert';
+        if(d.probability === undefined || d.probability === null) d.probability = 30;
+        if(d.value === undefined || d.value === null) d.value = 0;
+        d.updatedAt = new Date().toISOString();
+        save();
+        pipelineState.tab='opportunity';
+        pipelineState.stage='';
+        renderPipeline();
+    }
+
+    function fmtEUR(n){
+        n = parseFloat(n)||0;
+        try{ return n.toLocaleString('de-DE', {style:'currency', currency:'EUR'}); }
+        catch(e){ return (Math.round(n*100)/100).toFixed(2) + " €"; }
+    }
+    function fmtDateISO(s){
+        if(!s) return '';
+        try{
+            const d = new Date(s);
+            return d.toLocaleDateString('de-DE');
+        } catch(e){ return s; }
+    }
+    function escapeHtml(str){
+        if(str===undefined||str===null) return '';
+        return String(str)
+            .replaceAll('&','&amp;')
+            .replaceAll('<','&lt;')
+            .replaceAll('>','&gt;')
+            .replaceAll('"','&quot;')
+            .replaceAll("'","&#039;");
+    }
+
+
 </script>
 </body>
 </html>
