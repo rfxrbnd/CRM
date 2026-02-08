@@ -145,66 +145,7 @@
             #rep-input-area, textarea { display: none; }
         }
 
-    /* --- FORCE MONOCHROME OVERRIDES --- */
-
-/* Kategorie-Badges (A/B/C) -> alle gleich grau */
-.cat-badge { background: #111827 !important; color: #fff !important; }
-.cat-A, .cat-B, .cat-C { background-color: #111827 !important; color:#fff !important; }
-
-/* Kalender-Events: alle neutral */
-.cal-event {
-  background: #111827 !important;
-  color: #fff !important;
-  border-color: rgba(0,0,0,0.15) !important;
-}
-.cal-event.manual {
-  background: #e5e7eb !important;
-  color: #111827 !important;
-  border-color: #d1d5db !important;
-}
-
-/* Buttons: Success/Danger nicht mehr grün/rot */
-.btn-success {
-  background: #111827 !important;
-  color: #fff !important;
-  border-color: #111827 !important;
-}
-.btn-danger {
-  background: #ffffff !important;
-  color: #111827 !important;
-  border-color: #d1d5db !important;
-}
-
-/* Optional: aktive Navigation nicht gelblich */
-.nav-item.active {
-  background: #f3f4f6 !important;
-  color: var(--text-main) !important;
-  font-weight: 700;
-  border: 1px solid #d1d5db !important;
-}
-
-/* Optional: Highlight-Flächen (z.B. selected) neutral */
-.cust-row.selected {
-  background: #f3f4f6 !important;
-  border-color: #d1d5db !important;
-}
-.float-bar {
-  border-color: #d1d5db !important;
-}
-        
-    
-        /* --- MONOCHROME OVERRIDES --- */
-        .cat-badge, .cat-A, .cat-B, .cat-C { background-color:#111827 !important; color:#fff !important; }
-        .nav-item.active { background:#f3f4f6 !important; border:1px solid #d1d5db !important; }
-        .btn-success { background:#111827 !important; color:#fff !important; border-color:#111827 !important; }
-        .btn-danger { background:#fff !important; color:#111827 !important; border-color:#d1d5db !important; }
-        .cust-row.selected { background:#f3f4f6 !important; border-color:#d1d5db !important; }
-        .report-entry { background:#f9fafb !important; border-left:3px solid #d1d5db !important; }
-        .report-entry:hover { border-color:#9ca3af !important; }
-        .cal-event { background:#111827 !important; color:#fff !important; border-color:rgba(0,0,0,0.15) !important; }
-        .cal-event.manual { background:#e5e7eb !important; color:#111827 !important; border-color:#d1d5db !important; }
-
-/* Sidebar Navigation – saubere Ausrichtung */
+    /* Sidebar Navigation – saubere Ausrichtung */
 .nav-item {
   display:flex;
   justify-content:space-between;
@@ -340,9 +281,6 @@
 .cal-day.empty {
   opacity: 0.35;
 }
-
-.pool-collapsed{display:none;}
-
 /* Pool optisch wie normale CRM-Card */
 .cal-pool {
   background: #ffffff !important;
@@ -394,7 +332,11 @@
 .pool-title{display:none!important}.cal-pool>div:first-child>div:first-child{justify-content:center!important}
         
         
-    </style>
+    
+/* Pool Head (clean) */
+.pool-head{padding:12px;border-bottom:1px solid var(--border);background:#fff;display:flex;flex-direction:column;gap:8px;}
+.pool-head-label{font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.08em;margin:0;}
+</style>
 </head>
 <body>
 
@@ -1231,7 +1173,7 @@
     }
 
     // --- CALENDAR LOGIC ---
-    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button type="button" class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div style="padding:10px;border-bottom:1px solid #eee;background:#f1f5f9;display:flex;flex-direction:column;gap:8px;"><div style="display:flex;align-items:center;justify-content:space-between;"><label class="pool-title">Route</label><button class="btn btn-secondary" style="padding:6px 10px;" onclick="togglePool()">Einblenden</button></div><div id="poolControls" class="pool-collapsed"><select id="poolRoute" onchange="renderPoolList()"><option value="">Route</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].sort().map(r=>`<option>${r}</option>`).join('')}</select><select id="poolCat" onchange="renderPoolList()" style="width:100%;margin-top:8px;"><option value="">Kundenqualifizierung</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
+    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button type="button" class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div class="pool-head"><label class="pool-head-label">Route</label><select id="poolRoute" onchange="renderPoolList()"><option value="">Route auswählen</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].sort().map(r=>`<option>${r}</option>`).join('')}</select><label class="pool-head-label">Kundenqualifizierung</label><select id="poolCat" onchange="renderPoolList()"><option value="">Alle Kunden</option><option value="A">A-Kunden</option><option value="B">B-Kunden</option><option value="C">C-Kunden</option></select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
     function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div class="cal-day empty"></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b class="day-num">${i}</b>${getEvtsMonth(ds,3)}</div>`;}const totalCells=off+d;const rest=(7-(totalCells%7))%7;for(let i=0;i<rest;i++)h+=`<div class="cal-day empty"></div>`;con.innerHTML=h+`</div>`;}
     function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
@@ -1245,8 +1187,7 @@
     function openEventModal(){document.getElementById('eventModal').style.display='flex'}
     function closeModal(){document.getElementById('timeModal').style.display='none';}
     function delAppt(id){if(confirm("Termin löschen?")){db.customers.find(x=>x.id===id).nextAppointment="";save();showCalendar();}}
-    function togglePool(){const c=document.getElementById('poolControls');if(!c)return;const btn=c.parentElement.querySelector('button');const open=c.classList.toggle('pool-collapsed')===false;btn.textContent=open?'Ausblenden':'Einblenden';}
-    function saveDetail(id){
+function saveDetail(id){
         const c=db.customers.find(x=>x.id===id);
         c.nextAppointment=document.getElementById('nextAppt').value;
         c.visitInterval=parseInt(document.getElementById('visitInt').value)||4;
