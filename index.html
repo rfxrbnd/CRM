@@ -47,10 +47,6 @@
         .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
         .nav-item.active { background: #fffbeb; color: var(--text-main); font-weight: 700; border: 1px solid var(--brand); }
 
-        .chip { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:#f8fafc; color:#334155; text-decoration:none; font-size:12px; }
-        .chip:hover { background:#f1f5f9; }
-
-
         #main { flex: 1; overflow-y: auto; padding: 0; position: relative; }
         .content-wrap { max-width: 1000px; margin: 0 auto; padding: 30px; padding-bottom: 100px; }
 
@@ -460,11 +456,6 @@
                 if(!c.tasks) c.tasks = [];
                 if(!c.nextAppointment) c.nextAppointment = "";
                 if(!c.visitInterval) c.visitInterval = 4;
-
-                // --- Kontakte + Custom Fields (crash-sicher) ---
-                if(!Array.isArray(c.contacts)) c.contacts = [];
-                if(!Array.isArray(c.customFields)) c.customFields = [];
-                if(!c.primaryContactId) c.primaryContactId = "";
             });
             // Pipeline/Deals Migration (crash-sicher)
             db.deals = Array.isArray(db.deals) ? db.deals : [];
@@ -485,7 +476,6 @@
                 if(!d.notes) d.notes = '';
                 if(!d.createdAt) d.createdAt = new Date().toISOString();
                 if(!d.updatedAt) d.updatedAt = new Date().toISOString();
-                if(!Array.isArray(d.customFields)) d.customFields = [];
             });
 
   
@@ -1169,12 +1159,6 @@
         const c = db.customers.find(x => x.id === id); if(!c) return; 
         const inTour = db.tour.includes(id); 
 
-        // Kontakte + Custom Fields (crash-sicher)
-        if(!Array.isArray(c.contacts)) c.contacts = [];
-        if(!Array.isArray(c.customFields)) c.customFields = [];
-        const primaryContact = (c.primaryContactId ? c.contacts.find(p=>String(p.id)===String(c.primaryContactId)) : null) || c.contacts[0] || null;
-        const primaryContactName = primaryContact ? primaryContact.name : (c.contact||'');
-
         const reports = (c.reports||[]).map((r,i) => `<div class="report-entry" id="rep-${i}"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><div style="font-weight:600; font-size:13px;">${r.date}</div><div class="no-print" style="display:flex; gap:8px;"><span style="cursor:pointer;font-size:12px;color:#6b7280" onclick="editRep(${id},${i})">bearbeiten</span><span style="cursor:pointer;font-size:12px;color:#6b7280" onclick="delRep(${id},${i})">löschen</span></div></div><div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151;">${r.text||''}</div>${r.img?`<img src="${r.img}" class="rep-img" onclick="window.open(this.src)">`:''}</div>`).join('');
         const reportsHTML = reports || '<div style="color:#999; padding:10px;">Keine Berichte vorhanden</div>';
 
@@ -1274,232 +1258,14 @@
 
         <div class="card" style="margin-top:15px;">
             <div class="grid-4-custom">
-                <div><label>Hauptkontakt</label><input value="${escapeHtml(primaryContactName||'')}" disabled style="margin:0; background:#f8fafc;"></div>
+                <div><label>Ansprechpartner</label><input value="${c.contact||''}" disabled style="margin:0; background:#f8fafc;"></div>
                 <div><label>Umsatz</label><input type="text" id="det-revenue" value="${c.products||''}" style="margin:0;" placeholder="Umsatz/Potenzial" onchange="saveDetail(${id})"></div>
                 <div><label>Intervall</label><input type="number" id="visitInt" value="${c.visitInterval||4}" style="margin:0;" onchange="saveDetail(${id})"></div>
                 <div><label>Nächster Termin</label><div style="display:flex; gap:5px;"><input type="datetime-local" id="nextAppt" value="${c.nextAppointment||''}" style="margin:0; background:white; font-size:12px;"><button class="btn btn-primary" style="padding:8px;" onclick="saveDetail(${id})">💾</button></div></div>
             </div>
         </div>
 
-        
         <div class="card" style="margin-top:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <h2 style="margin:0;">Ansprechpartner</h2>
-                <div class="no-print" style="display:flex; gap:8px; align-items:center;">
-                    <button class="btn btn-secondary" onclick="resetContactForm(${id})" style="padding:8px 10px;">Neu</button>
-                </div>
-            </div>
-
-            <div style="margin-top:12px;">
-                <div id="contactList">
-                    ${(c.contacts||[]).length ? (c.contacts||[]).map(p=>`
-                        <div class="report-entry" style="padding:10px;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-                                <div style="flex:1;">
-                                    <div style="font-weight:700; font-size:13px;">
-                                        ${escapeHtml(p.name||'-')}
-                                        ${p.role?`<span style="font-weight:500; color:#6b7280; margin-left:8px;">${escapeHtml(p.role)}</span>`:''}
-                                    </div>
-                                    <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:#475569;">
-                                        ${p.phone?`<a class="chip" href="tel:${escapeHtml(p.phone)}">📞 ${escapeHtml(p.phone)}</a>`:''}
-                                        ${p.email?`<a class="chip" href="mailto:${escapeHtml(p.email)}">✉️ ${escapeHtml(p.email)}</a>`:''}
-                                        ${String(p.id)===String(c.primaryContactId)?`<span class="chip">⭐ Hauptkontakt</span>`:''}
-                                    </div>
-                                    ${p.notes?`<div style="margin-top:8px; white-space:pre-wrap; font-size:13px; color:#374151;">${escapeHtml(p.notes)}</div>`:''}
-                                </div>
-                                <div class="no-print" style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                                    <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="startEditContact(${id}, ${p.id})">Bearbeiten</button>
-                                    <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="setPrimaryContact(${id}, ${p.id})">Hauptkontakt</button>
-                                    <button class="btn btn-danger" style="padding:6px 10px; font-size:12px;" onclick="deleteContact(${id}, ${p.id})">Löschen</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('') : `<div style="color:#999;font-size:12px;padding:10px;">Noch keine Ansprechpartner – lege einen an.</div>`}
-                </div>
-            </div>
-
-            <div class="no-print" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
-                <input type="hidden" id="contact_id" value="">
-                <div class="grid-2" style="gap:10px;">
-                    <div>
-                        <label>Name *</label>
-                        <input id="contact_name" placeholder="z. B. Anna Müller" style="margin:0;" oninput="updateContactSaveState()">
-                    </div>
-                    <div>
-                        <label>Rolle</label>
-                        <input id="contact_role" placeholder="z. B. Einkauf" style="margin:0;">
-                    </div>
-                </div>
-                <div class="grid-2" style="gap:10px; margin-top:10px;">
-                    <div>
-                        <label>Telefon</label>
-                        <input id="contact_phone" placeholder="+49 ..." style="margin:0;">
-                    </div>
-                    <div>
-                        <label>E-Mail</label>
-                        <input id="contact_email" placeholder="name@firma.de" style="margin:0;">
-                    </div>
-                </div>
-                <div style="margin-top:10px;">
-                    <label>Notizen</label>
-                    <textarea id="contact_notes" rows="3" placeholder="Kurze Notizen" style="margin:0;"></textarea>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="contact_save_btn" class="btn btn-primary" style="flex:1;" onclick="saveContact(${id})" disabled>Sichern</button>
-                    <button class="btn btn-secondary" onclick="resetContactForm(${id})">Zurücksetzen</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <h2 style="margin:0;">Zusatzfelder</h2>
-            </div>
-
-            <div style="margin-top:12px;">
-                ${(c.customFields||[]).length ? (c.customFields||[]).map(f=>`
-                    <div class="task-mini-row" style="align-items:flex-start;">
-                        <div style="flex:1;">
-                            <div style="font-weight:700; font-size:12px; color:#0f172a;">${escapeHtml(f.label||'')}</div>
-                            <div style="white-space:pre-wrap; font-size:13px; color:#334155; margin-top:2px;">${escapeHtml(f.value||'')}</div>
-                        </div>
-                        <div class="no-print" style="display:flex; gap:6px;">
-                            <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="startEditCustomField(${id}, ${f.id})">Bearbeiten</button>
-                            <button class="btn btn-danger" style="padding:6px 10px; font-size:12px;" onclick="deleteCustomField(${id}, ${f.id})">Löschen</button>
-                        </div>
-                    </div>
-                `).join('') : `<div style="color:#999;font-size:12px;padding:10px;">Keine Zusatzfelder</div>`}
-            </div>
-
-            <div class="no-print" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
-                <input type="hidden" id="cf_id" value="">
-                <div class="grid-2" style="gap:10px;">
-                    <div>
-                        <label>Feldname *</label>
-                        <input id="cf_label" placeholder="z. B. Kundennummer" style="margin:0;" oninput="updateCustomFieldSaveState()">
-                    </div>
-                    <div>
-                        <label>Wert</label>
-                        <input id="cf_value" placeholder="..." style="margin:0;">
-                    </div>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="cf_save_btn" class="btn btn-primary" style="flex:1;" onclick="saveCustomField(${id})" disabled>Sichern</button>
-                    <button class="btn btn-secondary" onclick="resetCustomFieldForm()">Zurücksetzen</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <h2 style="margin:0;">Ansprechpartner</h2>
-                <div class="no-print" style="display:flex; gap:8px; align-items:center;">
-                    <button class="btn btn-secondary" onclick="resetContactForm(${id})" style="padding:8px 10px;">Neu</button>
-                </div>
-            </div>
-
-            <div style="margin-top:12px;">
-                <div id="contactList">
-                    ${(c.contacts||[]).length ? (c.contacts||[]).map(p=>`
-                        <div class="report-entry" style="padding:10px;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-                                <div style="flex:1;">
-                                    <div style="font-weight:700; font-size:13px;">
-                                        ${escapeHtml(p.name||'-')}
-                                        ${p.role?`<span style="font-weight:500; color:#6b7280; margin-left:8px;">${escapeHtml(p.role)}</span>`:''}
-                                    </div>
-                                    <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:#475569;">
-                                        ${p.phone?`<a class="chip" href="tel:${escapeHtml(p.phone)}">📞 ${escapeHtml(p.phone)}</a>`:''}
-                                        ${p.email?`<a class="chip" href="mailto:${escapeHtml(p.email)}">✉️ ${escapeHtml(p.email)}</a>`:''}
-                                        ${String(p.id)===String(c.primaryContactId)?`<span class="chip">⭐ Hauptkontakt</span>`:''}
-                                    </div>
-                                    ${p.notes?`<div style="margin-top:8px; white-space:pre-wrap; font-size:13px; color:#374151;">${escapeHtml(p.notes)}</div>`:''}
-                                </div>
-                                <div class="no-print" style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                                    <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="startEditContact(${id}, ${p.id})">Bearbeiten</button>
-                                    <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="setPrimaryContact(${id}, ${p.id})">Hauptkontakt</button>
-                                    <button class="btn btn-danger" style="padding:6px 10px; font-size:12px;" onclick="deleteContact(${id}, ${p.id})">Löschen</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('') : `<div style="color:#999;font-size:12px;padding:10px;">Noch keine Ansprechpartner – lege einen an.</div>`}
-                </div>
-            </div>
-
-            <div class="no-print" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
-                <input type="hidden" id="contact_id" value="">
-                <div class="grid-2" style="gap:10px;">
-                    <div>
-                        <label>Name *</label>
-                        <input id="contact_name" placeholder="z. B. Anna Müller" style="margin:0;" oninput="updateContactSaveState()">
-                    </div>
-                    <div>
-                        <label>Rolle</label>
-                        <input id="contact_role" placeholder="z. B. Einkauf" style="margin:0;">
-                    </div>
-                </div>
-                <div class="grid-2" style="gap:10px; margin-top:10px;">
-                    <div>
-                        <label>Telefon</label>
-                        <input id="contact_phone" placeholder="+49 ..." style="margin:0;">
-                    </div>
-                    <div>
-                        <label>E-Mail</label>
-                        <input id="contact_email" placeholder="name@firma.de" style="margin:0;">
-                    </div>
-                </div>
-                <div style="margin-top:10px;">
-                    <label>Notizen</label>
-                    <textarea id="contact_notes" rows="3" placeholder="Kurze Notizen" style="margin:0;"></textarea>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="contact_save_btn" class="btn btn-primary" style="flex:1;" onclick="saveContact(${id})" disabled>Sichern</button>
-                    <button class="btn btn-secondary" onclick="resetContactForm(${id})">Zurücksetzen</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <h2 style="margin:0;">Zusatzfelder</h2>
-            </div>
-
-            <div style="margin-top:12px;">
-                ${(c.customFields||[]).length ? (c.customFields||[]).map(f=>`
-                    <div class="task-mini-row" style="align-items:flex-start;">
-                        <div style="flex:1;">
-                            <div style="font-weight:700; font-size:12px; color:#0f172a;">${escapeHtml(f.label||'')}</div>
-                            <div style="white-space:pre-wrap; font-size:13px; color:#334155; margin-top:2px;">${escapeHtml(f.value||'')}</div>
-                        </div>
-                        <div class="no-print" style="display:flex; gap:6px;">
-                            <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="startEditCustomField(${id}, ${f.id})">Bearbeiten</button>
-                            <button class="btn btn-danger" style="padding:6px 10px; font-size:12px;" onclick="deleteCustomField(${id}, ${f.id})">Löschen</button>
-                        </div>
-                    </div>
-                `).join('') : `<div style="color:#999;font-size:12px;padding:10px;">Keine Zusatzfelder</div>`}
-            </div>
-
-            <div class="no-print" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
-                <input type="hidden" id="cf_id" value="">
-                <div class="grid-2" style="gap:10px;">
-                    <div>
-                        <label>Feldname *</label>
-                        <input id="cf_label" placeholder="z. B. Kundennummer" style="margin:0;" oninput="updateCustomFieldSaveState()">
-                    </div>
-                    <div>
-                        <label>Wert</label>
-                        <input id="cf_value" placeholder="..." style="margin:0;">
-                    </div>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="cf_save_btn" class="btn btn-primary" style="flex:1;" onclick="saveCustomField(${id})" disabled>Sichern</button>
-                    <button class="btn btn-secondary" onclick="resetCustomFieldForm()">Zurücksetzen</button>
-                </div>
-            </div>
-        </div>
-
-
-<div class="card" style="margin-top:15px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
                 <h2 style="margin:0;">Neue Aktivität</h2>
             </div>
@@ -2033,189 +1799,6 @@ function addActivity(id){
     function openEventModal(){document.getElementById('eventModal').style.display='flex'}
     function closeModal(){document.getElementById('timeModal').style.display='none';}
     function delAppt(id){if(confirm("Termin löschen?")){db.customers.find(x=>x.id===id).nextAppointment="";save();showCalendar();}}
-
-    // =========================
-    // Kontakte (mehrere pro Kunde)
-    // =========================
-    function resetContactForm(customerId){
-        const ids = ['contact_id','contact_name','contact_role','contact_phone','contact_email','contact_notes'];
-        ids.forEach(k=>{ const el = document.getElementById(k); if(el) el.value=''; });
-        updateContactSaveState();
-        // optional: Scroll zum Formular
-        const el = document.getElementById('contact_name'); if(el) el.focus();
-    }
-    function updateContactSaveState(){
-        const btn = document.getElementById('contact_save_btn');
-        const name = (document.getElementById('contact_name')?.value||'').trim();
-        if(btn) btn.disabled = !name;
-    }
-    function startEditContact(customerId, contactId){
-        const c = db.customers.find(x=>x.id===customerId); if(!c) return;
-        if(!Array.isArray(c.contacts)) c.contacts = [];
-        const p = c.contacts.find(x=>String(x.id)===String(contactId)); if(!p) return;
-        document.getElementById('contact_id').value = p.id;
-        document.getElementById('contact_name').value = p.name||'';
-        document.getElementById('contact_role').value = p.role||'';
-        document.getElementById('contact_phone').value = p.phone||'';
-        document.getElementById('contact_email').value = p.email||'';
-        document.getElementById('contact_notes').value = p.notes||'';
-        updateContactSaveState();
-        const el = document.getElementById('contact_name'); if(el) el.focus();
-    }
-    function saveContact(customerId){
-        const c = db.customers.find(x=>x.id===customerId); if(!c) return;
-        if(!Array.isArray(c.contacts)) c.contacts = [];
-        const id = document.getElementById('contact_id').value;
-        const name = (document.getElementById('contact_name').value||'').trim();
-        if(!name) return;
-        const obj = {
-            id: id ? parseInt(id) : Date.now() + Math.floor(Math.random()*10000),
-            name,
-            role: (document.getElementById('contact_role').value||'').trim(),
-            phone: (document.getElementById('contact_phone').value||'').trim(),
-            email: (document.getElementById('contact_email').value||'').trim(),
-            notes: (document.getElementById('contact_notes').value||'').trim(),
-            updatedAt: new Date().toISOString()
-        };
-        if(id){
-            const idx = c.contacts.findIndex(x=>String(x.id)===String(id));
-            if(idx>-1) c.contacts[idx]=obj;
-            else c.contacts.push(obj);
-        } else {
-            c.contacts.push(obj);
-            if(!c.primaryContactId) c.primaryContactId = String(obj.id);
-        }
-        save();
-        showDetail(customerId);
-    }
-    function deleteContact(customerId, contactId){
-        if(!confirm("Kontakt löschen?")) return;
-        const c = db.customers.find(x=>x.id===customerId); if(!c) return;
-        c.contacts = (c.contacts||[]).filter(x=>String(x.id)!==String(contactId));
-        if(String(c.primaryContactId)===String(contactId)){
-            c.primaryContactId = c.contacts[0] ? String(c.contacts[0].id) : "";
-        }
-        save();
-        showDetail(customerId);
-    }
-    function setPrimaryContact(customerId, contactId){
-        const c = db.customers.find(x=>x.id===customerId); if(!c) return;
-        c.primaryContactId = String(contactId);
-        save();
-        showDetail(customerId);
-    }
-
-    // =========================
-    // Custom Fields (Kunde)
-    // =========================
-    function resetCustomFieldForm(){
-        const ids = ['cf_id','cf_label','cf_value'];
-        ids.forEach(k=>{ const el = document.getElementById(k); if(el) el.value=''; });
-        updateCustomFieldSaveState();
-        const el = document.getElementById('cf_label'); if(el) el.focus();
-    }
-    function updateCustomFieldSaveState(){
-        const btn = document.getElementById('cf_save_btn');
-        const label = (document.getElementById('cf_label')?.value||'').trim();
-        if(btn) btn.disabled = !label;
-    }
-    function startEditCustomField(customerId, fieldId){
-        const c = db.customers.find(x=>x.id===customerId); if(!c) return;
-        if(!Array.isArray(c.customFields)) c.customFields = [];
-        const f = c.customFields.find(x=>String(x.id)===String(fieldId)); if(!f) return;
-        document.getElementById('cf_id').value = f.id;
-        document.getElementById('cf_label').value = f.label||'';
-        document.getElementById('cf_value').value = f.value||'';
-        updateCustomFieldSaveState();
-        const el = document.getElementById('cf_label'); if(el) el.focus();
-    }
-    function saveCustomField(customerId){
-        const c = db.customers.find(x=>x.id===customerId); if(!c) return;
-        if(!Array.isArray(c.customFields)) c.customFields = [];
-        const id = document.getElementById('cf_id').value;
-        const label = (document.getElementById('cf_label').value||'').trim();
-        if(!label) return;
-        const value = (document.getElementById('cf_value').value||'').trim();
-        const obj = { id: id ? parseInt(id) : Date.now() + Math.floor(Math.random()*10000), label, value };
-        if(id){
-            const idx = c.customFields.findIndex(x=>String(x.id)===String(id));
-            if(idx>-1) c.customFields[idx]=obj; else c.customFields.push(obj);
-        } else c.customFields.push(obj);
-        save();
-        showDetail(customerId);
-    }
-    function deleteCustomField(customerId, fieldId){
-        if(!confirm("Feld löschen?")) return;
-        const c = db.customers.find(x=>x.id===customerId); if(!c) return;
-        c.customFields = (c.customFields||[]).filter(x=>String(x.id)!==String(fieldId));
-        save();
-        showDetail(customerId);
-    }
-
-    // =========================
-    // Custom Fields (Deal)
-    // =========================
-    function renderDealCustomFieldsList(){
-        if(!Array.isArray(dealFormCustomFields) || dealFormCustomFields.length===0){
-            return `<div style="color:#999;font-size:12px;padding:6px 0;">Keine Zusatzfelder</div>`;
-        }
-        return dealFormCustomFields.map(f=>`
-            <div class="task-mini-row" style="align-items:flex-start;">
-                <div style="flex:1;">
-                    <div style="font-weight:700; font-size:12px; color:#0f172a;">${escapeHtml(f.label||'')}</div>
-                    <div style="white-space:pre-wrap; font-size:13px; color:#334155; margin-top:2px;">${escapeHtml(f.value||'')}</div>
-                </div>
-                <div class="no-print" style="display:flex; gap:6px;">
-                    <button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="startEditDealCustomField(${f.id})">Bearbeiten</button>
-                    <button class="btn btn-danger" style="padding:6px 10px; font-size:12px;" onclick="deleteDealCustomField(${f.id})">Löschen</button>
-                </div>
-            </div>
-        `).join('');
-    }
-    function refreshDealCustomFieldsUI(){
-        const host = document.getElementById('deal_cf_list');
-        if(host) host.innerHTML = renderDealCustomFieldsList();
-        updateDealCFSaveState();
-    }
-    function resetDealCFForm(){
-        const ids=['deal_cf_id','deal_cf_label','deal_cf_value'];
-        ids.forEach(k=>{ const el=document.getElementById(k); if(el) el.value=''; });
-        updateDealCFSaveState();
-        const el = document.getElementById('deal_cf_label'); if(el) el.focus();
-    }
-    function updateDealCFSaveState(){
-        const btn=document.getElementById('deal_cf_save_btn');
-        const label=(document.getElementById('deal_cf_label')?.value||'').trim();
-        if(btn) btn.disabled = !label;
-    }
-    function startEditDealCustomField(fieldId){
-        const f = (dealFormCustomFields||[]).find(x=>String(x.id)===String(fieldId)); if(!f) return;
-        document.getElementById('deal_cf_id').value = f.id;
-        document.getElementById('deal_cf_label').value = f.label||'';
-        document.getElementById('deal_cf_value').value = f.value||'';
-        updateDealCFSaveState();
-    }
-    function saveDealCustomField(){
-        if(!Array.isArray(dealFormCustomFields)) dealFormCustomFields = [];
-        const id = document.getElementById('deal_cf_id').value;
-        const label=(document.getElementById('deal_cf_label').value||'').trim();
-        if(!label) return;
-        const value=(document.getElementById('deal_cf_value').value||'').trim();
-        const obj={ id: id ? parseInt(id) : Date.now()+Math.floor(Math.random()*10000), label, value };
-        if(id){
-            const idx = dealFormCustomFields.findIndex(x=>String(x.id)===String(id));
-            if(idx>-1) dealFormCustomFields[idx]=obj; else dealFormCustomFields.push(obj);
-        } else dealFormCustomFields.push(obj);
-        refreshDealCustomFieldsUI();
-        resetDealCFForm();
-    }
-    function deleteDealCustomField(fieldId){
-        if(!confirm("Feld löschen?")) return;
-        dealFormCustomFields = (dealFormCustomFields||[]).filter(x=>String(x.id)!==String(fieldId));
-        refreshDealCustomFieldsUI();
-    }
-
-
 function saveDetail(id){
         const c=db.customers.find(x=>x.id===id);
         c.nextAppointment=document.getElementById('nextAppt').value;
@@ -2272,7 +1855,6 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
     const OPP_STAGES       = ["Qualifiziert", "Bedarf", "Angebot", "Verhandlung", "Won", "Lost"];
 
     let pipelineState = { tab: 'opportunity', stage: '', source: '', q: '', sort: 'expectedClose' };
-    let dealFormCustomFields = [];
 
     function showPipeline(){
         if(!db.deals) db.deals = [];
@@ -2417,9 +1999,6 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
         const isLead = type === 'lead';
         const stages = isLead ? LEAD_STAGES : OPP_STAGES;
 
-        // Custom Fields im Deal-Formular (Bearbeiten ohne Datenverlust)
-        dealFormCustomFields = (d && Array.isArray(d.customFields)) ? d.customFields.map(x=>({id: x.id||Date.now()+Math.floor(Math.random()*10000), label: x.label||'', value: x.value||''})) : [];
-
         const custOptions = (db.customers||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}" ${(d && String(d.customerId)===String(c.id))?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
 
         document.getElementById('dealFormHost').innerHTML = `
@@ -2506,38 +2085,12 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
                     <textarea id="deal_notes" rows="4" placeholder="Kurze Notizen" style="margin:0;">${escapeHtml(d?.notes||'')}</textarea>
                 </div>
 
-                
-                <div style="margin-top:15px;">
-                    <label>Zusatzfelder</label>
-                    <div id="deal_cf_list" style="margin-top:8px;">
-                        ${renderDealCustomFieldsList()}
-                    </div>
-
-                    <div class="no-print" style="margin-top:10px; border-top:1px solid var(--border); padding-top:10px;">
-                        <input type="hidden" id="deal_cf_id" value="">
-                        <div class="grid-2" style="gap:10px;">
-                            <div>
-                                <label style="font-size:12px;">Feldname *</label>
-                                <input id="deal_cf_label" placeholder="z. B. Wettbewerber" style="margin:0;" oninput="updateDealCFSaveState()">
-                            </div>
-                            <div>
-                                <label style="font-size:12px;">Wert</label>
-                                <input id="deal_cf_value" placeholder="..." style="margin:0;">
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:10px; margin-top:10px;">
-                            <button id="deal_cf_save_btn" class="btn btn-secondary" style="flex:1;" onclick="saveDealCustomField()" disabled>Hinzufügen / Speichern</button>
-                            <button class="btn btn-secondary" onclick="resetDealCFForm()">Zurücksetzen</button>
-                        </div>
-                    </div>
-                </div>
-<div style="display:flex;gap:10px;margin-top:15px;" class="no-print">
+                <div style="display:flex;gap:10px;margin-top:15px;" class="no-print">
                     <button class="btn btn-primary" style="flex:1;" onclick="saveDeal()">Sichern</button>
                     ${d?`<button class="btn btn-danger" onclick="deleteDeal(${d.id}); closeDealForm();">Löschen</button>`:''}
                 </div>
             </div>
         `;
-        refreshDealCustomFieldsUI();
         toggleDealTypeFields();
         // scroll into view for mobile
         try{ document.getElementById('dealFormHost').scrollIntoView({behavior:'smooth', block:'start'});}catch(e){}
@@ -2552,9 +2105,6 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
         const type = (document.getElementById('deal_type')||{}).value || (pipelineState.tab==='lead'?'lead':'opportunity');
         const isLead = type === 'lead';
         const stages = isLead ? LEAD_STAGES : OPP_STAGES;
-
-        // Custom Fields im Deal-Formular (Bearbeiten ohne Datenverlust)
-        dealFormCustomFields = (d && Array.isArray(d.customFields)) ? d.customFields.map(x=>({id: x.id||Date.now()+Math.floor(Math.random()*10000), label: x.label||'', value: x.value||''})) : [];
 
         // refresh stage options
         const stageSel = document.getElementById('deal_stage');
@@ -2604,8 +2154,7 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
             value,
             probability,
             createdAt: id ? ((db.deals||[]).find(x=>String(x.id)===String(id))?.createdAt || new Date().toISOString()) : new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            customFields: (Array.isArray(dealFormCustomFields) ? dealFormCustomFields : [])
+            updatedAt: new Date().toISOString()
         };
 
         if(!db.deals) db.deals = [];
