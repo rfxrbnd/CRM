@@ -369,7 +369,7 @@
 
 <div id="eventModal" class="modal-overlay">
     <div class="modal-box">
-        <div class="ios-head"><button class="ios-iconbtn" onclick="document.getElementById('eventModal').style.display='none'">✕</button><div class="ios-title">Neu</div><button type="button" class="ios-iconbtn ios-done" onclick="saveManualEvent();return false;">✓</button></div>
+        <div class="ios-head"><button class="ios-iconbtn" onclick="document.getElementById('eventModal').style.display='none'">✕</button><div class="ios-title">Neu</div><button type="button" class="ios-iconbtn ios-done" onclick="(()=>{try{saveManualEvent();document.getElementById('eventModal').style.display='none';}catch(e){alert('Speichern-Fehler: '+e.message);console.error(e);}})()">✓</button></div>
         <input type="hidden" id="evtId">
         <label>Titel / Art</label>
         <div style="display:flex; gap:5px; margin-bottom:10px;">
