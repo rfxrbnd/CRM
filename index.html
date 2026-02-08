@@ -1202,7 +1202,7 @@
             `;
         }).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Noch kein Verlauf</div>';
 
-        const badgeClass = = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
+        const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
         document.getElementById('content').innerHTML = `
         <div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showCustomers()">← Zurück</button></div>
