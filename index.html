@@ -1027,23 +1027,32 @@
     
     // --- REPORTS (SORTED) ---
     function generateReportPDF(range){
-        const today=new Date();
-        const dateStr=today.toLocaleDateString('de-DE');
-        let reportData=[];
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('de-DE');
+        let reportData = [];
 
         db.customers.forEach(c=>{
             getCustomerReportActivities(c).forEach(a=>{
                 const dStr = a.date || '';
-                const parts=dStr.split('.');
+                const parts = dStr.split('.');
                 if(parts.length===3){
-                    const repDate=new Date(parts[2],parts[1]-1,parts[0]);
-                    let include=false;
-                    if(range==='day' && dStr===dateStr) include=true;
+                    const repDate = new Date(parts[2], parts[1]-1, parts[0]);
+                    let include = false;
+                    if(range==='day' && dStr===dateStr) include = true;
                     if(range==='week'){
-                        const diff=(today-repDate)/(1000*60*60*24);
-                        if(diff<=7 && diff>=0) include=true;
+                        const diff = (today - repDate) / (1000*60*60*24);
+                        if(diff <= 7 && diff >= 0) include = true;
                     }
-                    if(include) reportData.push({ date: dStr, text: a.text||'', img: a.img||null, customerName: c.name, rawDate: repDate });
+                    if(include){
+                        reportData.push({
+                            date: dStr,
+                            subject: a.subject || '',
+                            outcome: a.outcome || '',
+                            text: a.text || '',
+                            customerName: c.name,
+                            rawDate: repDate
+                        });
+                    }
                 }
             });
         });
@@ -1052,13 +1061,16 @@
 
         reportData.sort((a,b) => a.rawDate - b.rawDate);
 
-        let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showHome()">Zurück</button></div><h1>${range==='day'?'Tagesbericht':'Wochenbericht'}</h1>`;
+        let html = `<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showHome()">Zurück</button></div><h1>${range==='day'?'Tagesbericht':'Wochenbericht'}</h1>`;
 
         reportData.forEach(r=>{
-            html+=`<div class="card" style="page-break-inside:avoid;"><div style="font-weight:bold;font-size:16px;">${r.customerName}</div><div style="font-size:12px;color:#666;">Datum: ${r.date}</div><div style="white-space:pre-wrap;margin-top:10px;">${escapeHtml(r.text)}</div>${r.img?`<img src="${r.img}" style="max-width:300px;display:block;margin-top:10px;border:1px solid #eee;">`:''}</div>`;
+            const subj = r.subject ? `<div style="margin-top:8px; font-weight:700;">${escapeHtml(r.subject)}</div>` : '';
+            const out = r.outcome ? `<div style="margin-top:6px; font-size:12px; color:#64748b;"><b>Ergebnis:</b> ${escapeHtml(r.outcome)}</div>` : '';
+            const body = r.text ? `<div style="white-space:pre-wrap;margin-top:10px;">${escapeHtml(r.text)}</div>` : '';
+            html += `<div class="card" style="page-break-inside:avoid;"><div style="font-weight:bold;font-size:16px;">${escapeHtml(r.customerName)}</div><div style="font-size:12px;color:#666;">Datum: ${escapeHtml(r.date)}</div>${subj}${body}${out}</div>`;
         });
 
-        document.getElementById('content').innerHTML=html;
+        document.getElementById('content').innerHTML = html;
     }
 
     function uploadLogo(input) { const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d'); const s=100/img.height; cvs.height=100; cvs.width=img.width*s; ctx.drawImage(img,0,0,cvs.width,cvs.height); db.logo=cvs.toDataURL('image/png'); save(); updateLogoUI(); }; img.src=e.target.result; }; r.readAsDataURL(f); }
@@ -1187,6 +1199,9 @@
             const subj = (it.kind==='activity' && it.subject) ? `<div style="font-size:13px; font-weight:700; margin-top:6px;">${escapeHtml(it.subject)}</div>` : ``;
             const outcome = (it.kind==='activity' && it.outcome) ? `<div style="margin-top:6px; font-size:12px; color:#64748b;"><b>Ergebnis:</b> ${escapeHtml(it.outcome)}</div>` : ``;
 
+            const uid = (it.kind==='activity' ? `act_${it.actId}` : `${it.kind}_${String(it.ts||'').replace(/\W/g,'')}`);
+            const bodyHtml = it.body ? renderTimelineBody(it.body, uid) : '';
+
             return `
             <div class="report-entry" style="padding:10px;">
                 <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
@@ -1196,11 +1211,11 @@
                 ${it.kind==='activity' ? `<div style="font-size:12px; color:#6b7280; white-space:nowrap; margin-top:4px;">${fmtDateTime(it.ts)}</div>` : ``}
                 ${it.subtitle?`<div style="font-size:12px; color:#64748b; margin-top:4px;">${escapeHtml(it.subtitle)}</div>`:''}
                 ${subj}
-                ${it.body?`<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151; margin-top:6px;">${escapeHtml(it.body)}</div>`:''}
+                ${bodyHtml}
                 ${outcome}
             </div>
             `;
-        }).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Noch kein Verlauf</div>';
+        }).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Noch keine Einträge – leg eine neue Aktivität an 👇</div>';
 
         const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
@@ -1258,7 +1273,7 @@
                 <div class="grid-3" style="gap:10px;">
                     <div>
                         <label>Typ</label>
-                        <select id="act_type" style="margin:0;" onchange="toggleActivityTypeUI()">
+                        <select id="act_type" style="margin:0;" onchange="storeLastActType(); toggleActivityTypeUI(); updateActivitySaveState()">
                             <option value="call">Anruf</option>
                             <option value="email">E-Mail</option>
                             <option value="note">Notiz</option>
@@ -1278,23 +1293,23 @@
                 <div class="grid-2" style="gap:10px; margin-top:10px;">
                     <div>
                         <label>Betreff</label>
-                        <input id="act_subj" style="margin:0;" placeholder="z. B. Angebot besprochen">
+                        <input id="act_subj" style="margin:0;" placeholder="z. B. Angebot besprochen" oninput="updateActivitySaveState()">
                     </div>
                     <div>
                         <label>Ergebnis</label>
-                        <input id="act_outcome" style="margin:0;" placeholder="z. B. Rückmeldung bis Freitag">
+                        <input id="act_outcome" style="margin:0;" placeholder="z. B. Rückmeldung bis Freitag" oninput="updateActivitySaveState()">
                     </div>
                 </div>
 
                 <div style="margin-top:10px;">
                     <label>Notiz</label>
-                    <textarea id="act_text" rows="4" style="margin:0; width:100%;" placeholder="..."></textarea>
+                    <textarea id="act_text" rows="4" style="margin:0; width:100%;" placeholder="Wichtige Details, nächste Schritte, offene Punkte…" oninput="updateActivitySaveState()"></textarea>
                 </div>
 
                 <input type="hidden" id="act_edit_id" value="">
 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn btn-primary btn-full" onclick="addActivity(${id})">Sichern</button>
-                    <button class="btn btn-secondary btn-full" onclick="cancelEditActivity()">Abbrechen</button>
+                    <button id="act_save_btn" class="btn btn-primary btn-full" onclick="addActivity(${id})" disabled>Sichern</button>
+                    <button class="btn btn-secondary btn-full" onclick="cancelEditActivity(); updateActivitySaveState()">Abbrechen</button>
                 </div>
             </div>
         </div>
@@ -1362,7 +1377,14 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
         if(!iso) return '';
         try{
             const d = new Date(iso);
-            return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            const dayDiff = Math.round((startOfToday - startOfThatDay) / 86400000);
+            const time = d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+            if(dayDiff === 0) return `Heute ${time}`;
+            if(dayDiff === 1) return `Gestern ${time}`;
+            return d.toLocaleDateString('de-DE') + ' ' + time;
         } catch(e){ return iso; }
     }
 
@@ -1434,13 +1456,76 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
 
     function toggleActivityTypeUI(){ /* Foto-Option entfernt */ }
 
+    function storeLastActType(){
+        try{
+            const t = document.getElementById('act_type')?.value;
+            if(t) localStorage.setItem('crm:lastActType', t);
+        } catch(e){}
+    }
+
+    function updateActivitySaveState(){
+        const btn = document.getElementById('act_save_btn');
+        if(!btn) return;
+        const type = (document.getElementById('act_type')?.value || '').trim();
+        const subj = (document.getElementById('act_subj')?.value || '').trim();
+        // Minimal: Typ + Betreff
+        const ok = !!type && !!subj;
+        btn.disabled = !ok;
+        btn.style.opacity = ok ? '1' : '0.55';
+        btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+    }
+
     function ensureActivityDateDefaults(){
+        // Datum/Uhrzeit default
         const dt = document.getElementById('act_dt');
         if(dt && !dt.value){
             const now = new Date();
             const pad=n=>String(n).padStart(2,'0');
             dt.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
         }
+        // Letzten Typ merken/setzen
+        const sel = document.getElementById('act_type');
+        if(sel){
+            const last = localStorage.getItem('crm:lastActType');
+            if(last && !sel.value) sel.value = last;
+            if(last && sel.value && sel.value !== last){
+                // leave as-is
+            }
+        }
+        toggleActivityTypeUI();
+        updateActivitySaveState();
+    }
+
+    function renderTimelineBody(text, uid){
+        if(!text) return '';
+        const safe = escapeHtml(String(text));
+        const plain = String(text);
+        const limit = 220;
+        if(plain.length <= limit){
+            return `<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151; margin-top:6px;">${safe}</div>`;
+        }
+        const short = escapeHtml(plain.slice(0, limit).trimEnd() + '…');
+        const id = `tl_${uid}`;
+        return `
+            <div style="margin-top:6px;">
+                <div id="${id}_short" style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151;">${short}</div>
+                <div id="${id}_full" style="display:none; white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151;">${safe}</div>
+                <div style="margin-top:6px;">
+                    <span class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" onclick="toggleTimelineText('${id}')">mehr anzeigen</span>
+                </div>
+            </div>`;
+    }
+
+    function toggleTimelineText(id){
+        const s = document.getElementById(id+'_short');
+        const f = document.getElementById(id+'_full');
+        if(!s || !f) return;
+        const isShort = s.style.display !== 'none';
+        s.style.display = isShort ? 'none' : 'block';
+        f.style.display = isShort ? 'block' : 'none';
+        const btn = s.parentElement?.querySelector('span.btn');
+        if(btn) btn.textContent = isShort ? 'weniger' : 'mehr anzeigen';
+    }
         toggleActivityTypeUI();
     }
 
@@ -1459,8 +1544,11 @@ function addActivity(id){
         const outcome = (document.getElementById('act_outcome')?.value || '').trim();
         const textVal = (document.getElementById('act_text')?.value || '').trim();
 
-        // Ohne Foto-Option: es muss mindestens etwas Inhalt da sein
-        if(!textVal && !subject && !outcome) return;
+        // Pflicht: Betreff (damit Timeline & Druck sauber bleiben)
+        if(!subject){
+            alert('Bitte einen Betreff eingeben.');
+            return;
+        }
 
         const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOString();
         const dateStr = (()=>{ try { return new Date(createdAt).toLocaleDateString('de-DE'); } catch(e){ return ''; } })();
@@ -1516,6 +1604,7 @@ function addActivity(id){
             document.getElementById('act_follow').value='';
             document.getElementById('act_edit_id').value='';
             ensureActivityDateDefaults();
+            updateActivitySaveState();
         } catch(e){}
 
         save();
@@ -1537,6 +1626,7 @@ function addActivity(id){
             document.getElementById('act_text').value = a.text || '';
             document.getElementById('act_edit_id').value = a.id;
             document.getElementById('act_type').scrollIntoView({behavior:'smooth', block:'center'});
+            updateActivitySaveState();
         } catch(e){ console.warn(e); }
     }
 
