@@ -478,7 +478,57 @@
                 if(!d.updatedAt) d.updatedAt = new Date().toISOString();
             });
 
-            updateLogoUI();
+  
+            // --- Kommunikation + Activity Timeline Migration (crash-sicher) ---
+            if(!db.automations) {
+                db.automations = {
+                    enabled: true,
+                    // Wenn ein Deal in eine bestimmte Stufe geht, wird automatisch ein Follow-up als Aufgabe erzeugt
+                    dealStageRules: [
+                        { stage: 'Angebot', days: 3, text: 'Angebot nachfassen' },
+                        { stage: 'Verhandlung', days: 2, text: 'Verhandlung: nächsten Schritt klären' }
+                    ],
+                    // Optional: nach Besuchsbericht automatisch Follow-up erzeugen (0 = aus)
+                    reportFollowUpDays: 0,
+                    reportFollowUpText: 'Besuch nachfassen'
+                };
+            }
+
+            db.customers.forEach(c => {
+                if(!c.comms) c.comms = []; // Kommunikations-Log (Call/Email/Notiz)
+                c.comms = Array.isArray(c.comms) ? c.comms : [];
+
+                // Task-Felder normalisieren (für Automationen/Timeline)
+                if(!c.tasks) c.tasks = [];
+                c.tasks = Array.isArray(c.tasks) ? c.tasks : [];
+                c.tasks.forEach(t => {
+                    if(!t.createdAt) t.createdAt = new Date().toISOString();
+                    if(!t.tag) t.tag = '';
+                    if(t.done === undefined) t.done = false;
+                });
+
+                // Reports-Felder normalisieren (für Timeline)
+                if(!c.reports) c.reports = [];
+                c.reports = Array.isArray(c.reports) ? c.reports : [];
+                c.reports.forEach(r => {
+                    if(!r.createdAt) {
+                        // falls nur Datum existiert
+                        const d = (r.date || '').split('.').reverse().join('-');
+                        r.createdAt = (d && d.length===10) ? (d + 'T12:00:00.000Z') : new Date().toISOString();
+                    }
+                });
+
+                // Kommunikations-Felder normalisieren
+                c.comms.forEach(m => {
+                    if(!m.id) m.id = Date.now() + Math.floor(Math.random()*10000);
+                    if(!m.type) m.type = 'note';
+                    if(!m.createdAt) m.createdAt = new Date().toISOString();
+                    if(!m.subject) m.subject = '';
+                    if(!m.text) m.text = '';
+                    if(!m.outcome) m.outcome = '';
+                });
+            });
+          updateLogoUI();
             showHome();
         } catch(e) {
             console.error(e);
@@ -996,6 +1046,37 @@
         const todayStr = new Date().toISOString().split('T')[0]; 
         const taskHTML = (c.tasks||[]).map((t,i) => { const isOverdue = t.dueDate && t.dueDate < todayStr && !t.done; return `<div class="task-mini-row"><input type="checkbox" class="task-chk" ${t.done?'checked':''} onclick="toggleTask(${id},${i})"><span style="flex:1; ${t.done?'text-decoration:line-through;color:#999':''}">${t.text} ${t.dueDate ? `<span class="task-date ${isOverdue?'overdue':''}">${t.dueDate.split('-').reverse().join('.')}</span>` : ''}</span><span style="color:#6b7280;cursor:pointer;font-weight:bold;margin-left:5px;" onclick="delTask(${id},${i})">×</span></div>` }).join(''); 
 
+
+        // Kommunikation (Call/Email/Notiz)
+        const commHTML = (c.comms||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map((m,i)=>`
+            <div class="report-entry" style="padding:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
+                    <div style="font-weight:700; font-size:13px;">
+                        ${m.type==='call'?'📞 Anruf':(m.type==='email'?'✉️ E-Mail':'📝 Notiz')}
+                        <span style="font-weight:500; color:#6b7280; margin-left:6px; font-size:12px;">${fmtDateTime(m.createdAt)}</span>
+                    </div>
+                    <div class="no-print" style="display:flex; gap:8px;">
+                        <span style="cursor:pointer;font-size:12px;color:#6b7280" onclick="delComm(${id},${i})">löschen</span>
+                    </div>
+                </div>
+                ${m.subject?`<div style="font-size:13px; font-weight:600; margin-bottom:4px;">${escapeHtml(m.subject)}</div>`:''}
+                ${m.text?`<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151;">${escapeHtml(m.text)}</div>`:''}
+                ${m.outcome?`<div style="margin-top:6px; font-size:12px; color:#64748b;"><b>Ergebnis:</b> ${escapeHtml(m.outcome)}</div>`:''}
+            </div>
+        `).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Keine Einträge</div>';
+
+        // Activity Timeline (360° Verlauf): Berichte + Aufgaben + Deals + Kommunikation
+        const timelineItems = buildTimelineForCustomer(c);
+        const timelineHTML = timelineItems.map(it=>`
+            <div class="report-entry" style="padding:10px;">
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+                    <div style="font-weight:700; font-size:13px;">${it.icon} ${escapeHtml(it.title)}</div>
+                    <div style="font-size:12px; color:#6b7280; white-space:nowrap;">${fmtDateTime(it.ts)}</div>
+                </div>
+                ${it.subtitle?`<div style="font-size:12px; color:#64748b; margin-top:4px;">${escapeHtml(it.subtitle)}</div>`:''}
+                ${it.body?`<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151; margin-top:6px;">${escapeHtml(it.body)}</div>`:''}
+            </div>
+        `).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Noch kein Verlauf</div>';
         const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
         document.getElementById('content').innerHTML = `
@@ -1060,13 +1141,189 @@
                 <h2>Verlauf</h2>
                 <div style="margin-top:10px; max-height:520px; overflow-y:auto;">${reportsHTML}</div>
             </div>
-        </div>`; 
+        </div>
+
+        <div class="grid-2" style="margin-top:15px; align-items:start;">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <h2 style="margin:0;">Kommunikation</h2>
+                    <button class="btn btn-secondary no-print" style="padding:6px 10px;" onclick="toggleCommForm()">+ Neu</button>
+                </div>
+
+                <div id="commForm" class="no-print" style="display:none; margin-top:12px; padding:12px; border:1px solid var(--border); border-radius:var(--radius); background:#f8fafc;">
+                    <div class="grid-3" style="gap:10px;">
+                        <div>
+                            <label>Typ</label>
+                            <select id="comm_type" style="margin:0;">
+                                <option value="call">Anruf</option>
+                                <option value="email">E-Mail</option>
+                                <option value="note">Notiz</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Datum/Uhrzeit</label>
+                            <input type="datetime-local" id="comm_dt" style="margin:0;">
+                        </div>
+                        <div>
+                            <label>Follow-up (optional)</label>
+                            <input type="date" id="comm_follow" style="margin:0;">
+                        </div>
+                    </div>
+                    <div class="grid-2" style="gap:10px; margin-top:10px;">
+                        <div>
+                            <label>Betreff</label>
+                            <input id="comm_subj" style="margin:0;" placeholder="z. B. Angebot besprochen">
+                        </div>
+                        <div>
+                            <label>Ergebnis</label>
+                            <input id="comm_outcome" style="margin:0;" placeholder="z. B. Rückmeldung bis Freitag">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Notiz</label>
+                        <textarea id="comm_text" rows="3" style="margin:0; width:100%;" placeholder="..."></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button class="btn btn-primary" onclick="addComm(${id})">Sichern</button>
+                        <button class="btn btn-secondary" onclick="toggleCommForm(false)">Schließen</button>
+                    </div>
+                </div>
+
+                <div style="margin-top:12px; max-height:520px; overflow-y:auto;">${commHTML}</div>
+            </div>
+
+            <div class="card">
+                <h2>Activity Timeline</h2>
+                <div style="margin-top:10px; max-height:520px; overflow-y:auto;">${timelineHTML}</div>
+            </div>
+        </div>
+`; 
     }
 
-    function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d}); save(); showDetail(id); }
+    function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d, createdAt:new Date().toISOString(), tag:''}); save(); showDetail(id); }
     function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showDetail(id); }
     function delTask(id, idx) { db.customers.find(x=>x.id===id).tasks.splice(idx,1); save(); showDetail(id); }
-    function addRep(id) { const t=document.getElementById('repTxt').value; const dInput=document.getElementById('repDate').value; const f=document.getElementById('repImg').files[0]; if(!t && !f) return; let dateStr = new Date().toLocaleDateString('de-DE'); if(dInput) { const [y,m,d] = dInput.split('-'); dateStr = `${d}.${m}.${y}`; } const sR=(img)=>{ db.customers.find(x=>x.id===id).reports.unshift({date:dateStr, text:t, img:img}); save(); showDetail(id); }; if(f){ const r=new FileReader(); r.onload=e=>{ const i=new Image(); i.onload=()=>{ const c=document.createElement('canvas'); const x=c.getContext('2d'); const s=600/i.width; c.width=600; c.height=i.height*s; x.drawImage(i,0,0,c.width,c.height); sR(c.toDataURL('image/jpeg',0.6)); }; i.src=e.target.result; }; r.readAsDataURL(f); } else sR(null); }
+
+    function toggleCommForm(force){
+        const el = document.getElementById('commForm');
+        if(!el) return;
+        if(force===false){ el.style.display='none'; return; }
+        const show = (force===true) ? true : (el.style.display==='none' || !el.style.display);
+        el.style.display = show ? 'block' : 'none';
+        if(show){
+            const dt = document.getElementById('comm_dt');
+            if(dt && !dt.value){
+                // local datetime without seconds
+                const now = new Date();
+                const pad=n=>String(n).padStart(2,'0');
+                dt.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            }
+        }
+    }
+
+    function addComm(id){
+        const c = db.customers.find(x=>x.id===id); if(!c) return;
+        const type = document.getElementById('comm_type').value;
+        const dt = document.getElementById('comm_dt').value;
+        const follow = document.getElementById('comm_follow').value;
+        const subject = (document.getElementById('comm_subj').value||'').trim();
+        const outcome = (document.getElementById('comm_outcome').value||'').trim();
+        const text = (document.getElementById('comm_text').value||'').trim();
+
+        const createdAt = dt ? (new Date(dt)).toISOString() : new Date().toISOString();
+        c.comms = Array.isArray(c.comms) ? c.comms : [];
+        c.comms.unshift({ id: Date.now(), type, createdAt, subject, outcome, text });
+
+        // Aufgaben-Automatik: Follow-up-Datum aus Kommunikation
+        if(follow){
+            const tag = `auto:comm:${Date.now()}`;
+            c.tasks.push({ text: subject ? `Follow-up: ${subject}` : 'Follow-up', done:false, dueDate: follow, createdAt:new Date().toISOString(), tag });
+        }
+
+        save();
+        showDetail(id);
+        toggleCommForm(false);
+    }
+
+    function delComm(id, idx){
+        const c = db.customers.find(x=>x.id===id); if(!c) return;
+        c.comms.splice(idx,1);
+        save();
+        showDetail(id);
+    }
+
+    function fmtDateTime(iso){
+        if(!iso) return '';
+        try{
+            const d = new Date(iso);
+            return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+        } catch(e){ return iso; }
+    }
+
+    function buildTimelineForCustomer(c){
+        const items = [];
+        // Kommunikation
+        (c.comms||[]).forEach(m=>{
+            items.push({ ts: m.createdAt, icon: (m.type==='call'?'📞':(m.type==='email'?'✉️':'📝')), title: (m.type==='call'?'Anruf':(m.type==='email'?'E-Mail':'Notiz')), subtitle: m.subject||m.outcome||'', body: m.text||'' });
+        });
+        // Berichte
+        (c.reports||[]).forEach(r=>{
+            items.push({ ts: r.createdAt || (r.date||''), icon:'🧾', title:'Bericht', subtitle:r.date||'', body:r.text||'' });
+        });
+        // Aufgaben (nur die letzten/aktuellen; erledigt bleibt trotzdem als Verlauf)
+        (c.tasks||[]).forEach(t=>{
+            const title = t.done ? 'Aufgabe erledigt' : 'Aufgabe';
+            const sub = t.dueDate ? ('Fällig: ' + (t.dueDate.split('-').reverse().join('.'))) : '';
+            items.push({ ts: t.createdAt || new Date().toISOString(), icon:'✅', title, subtitle: sub, body: t.text||'' });
+        });
+        // Deals
+        (db.deals||[]).filter(d=>String(d.customerId||'')===String(c.id)).forEach(d=>{
+            const icon = d.type==='lead' ? '🌱' : '💼';
+            const title = d.type==='lead' ? 'Lead' : 'Deal';
+            const sub = d.stage ? ('Stufe: ' + d.stage) : '';
+            const body = (d.name||d.company||'').trim();
+            items.push({ ts: d.updatedAt || d.createdAt || new Date().toISOString(), icon, title, subtitle: sub, body });
+        });
+
+        items.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+        return items.slice(0, 60);
+    }
+
+    function applyAutomationsForDeal(deal, prevStage){
+        try{
+            if(!db.automations || !db.automations.enabled) return;
+            if(!deal || !deal.customerId) return;
+            const c = db.customers.find(x=>String(x.id)===String(deal.customerId));
+            if(!c) return;
+
+            const stageChanged = !prevStage || String(prevStage)!==String(deal.stage);
+            if(!stageChanged) return;
+
+            (db.automations.dealStageRules||[]).forEach(rule=>{
+                if(String(rule.stage)===String(deal.stage)){
+                    const days = parseInt(rule.days||0);
+                    const dd = new Date(); dd.setDate(dd.getDate()+days);
+                    const due = dd.toISOString().split('T')[0];
+                    const tag = `auto:deal:${deal.id}:${deal.stage}`;
+                    const exists = (c.tasks||[]).some(t=>t.tag===tag);
+                    if(!exists){
+                        c.tasks.push({ text: rule.text || `Follow-up (${deal.stage})`, done:false, dueDate: due, createdAt:new Date().toISOString(), tag });
+                    }
+                }
+            });
+        } catch(e){ console.warn(e); }
+    }
+
+    function addRep(id) { const t=document.getElementById('repTxt').value; const dInput=document.getElementById('repDate').value; const f=document.getElementById('repImg').files[0]; if(!t && !f) return; let dateStr = new Date().toLocaleDateString('de-DE'); if(dInput) { const [y,m,d] = dInput.split('-'); dateStr = `${d}.${m}.${y}`; } const sR=(img)=>{ const cust=db.customers.find(x=>x.id===id); cust.reports.unshift({date:dateStr, text:t, img:img, createdAt:new Date().toISOString()});
+            // Aufgaben-Automatik: optionales Follow-up nach Bericht
+            if(db.automations && db.automations.enabled && parseInt(db.automations.reportFollowUpDays||0)>0){
+                const days=parseInt(db.automations.reportFollowUpDays||0);
+                const dd=new Date(); dd.setDate(dd.getDate()+days);
+                const due=dd.toISOString().split('T')[0];
+                const tag=`auto:report:${Date.now()}`;
+                cust.tasks.push({text:(db.automations.reportFollowUpText||'Besuch nachfassen'), done:false, dueDate:due, createdAt:new Date().toISOString(), tag});
+            }
+            save(); showDetail(id); }; if(f){ const r=new FileReader(); r.onload=e=>{ const i=new Image(); i.onload=()=>{ const c=document.createElement('canvas'); const x=c.getContext('2d'); const s=600/i.width; c.width=600; c.height=i.height*s; x.drawImage(i,0,0,c.width,c.height); sR(c.toDataURL('image/jpeg',0.6)); }; i.src=e.target.result; }; r.readAsDataURL(f); } else sR(null); }
     function editRep(cid, rid) { const c=db.customers.find(x=>x.id===cid); const r=c.reports[rid]; const newTxt = prompt("Text bearbeiten:", r.text); if(newTxt !== null) { const newDate = prompt("Datum (TT.MM.JJJJ):", r.date); if(newDate) { r.text = newTxt; r.date = newDate; save(); showDetail(cid); } } }
     function delRep(cid, rid) { const c=db.customers.find(x=>x.id===cid); if(!c||!c.reports) return; if(confirm('Bericht löschen?')) { c.reports.splice(rid,1); save(); showDetail(cid); } }
 
@@ -1544,6 +1801,8 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
 
     function saveDeal(){
         const id = document.getElementById('deal_id').value;
+        const prev = id ? (db.deals||[]).find(x=>String(x.id)===String(id)) : null;
+        const prevStage = prev ? prev.stage : null;
         const type = document.getElementById('deal_type').value;
         const stage = document.getElementById('deal_stage').value;
         const name = (document.getElementById('deal_name').value||'').trim();
@@ -1585,6 +1844,7 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
             else db.deals.push(obj);
         } else db.deals.push(obj);
 
+        applyAutomationsForDeal(obj, prevStage);
         save();
         closeDealForm();
         renderPipeline();
