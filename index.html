@@ -495,8 +495,16 @@
             }
 
             db.customers.forEach(c => {
-                if(!c.comms) c.comms = []; // Kommunikations-Log (Call/Email/Notiz)
+                // --- Aktivitäten (neu): ersetzt Kommunikation + Berichte ---
+                if(!c.activities) c.activities = [];
+                c.activities = Array.isArray(c.activities) ? c.activities : [];
+
+                // Legacy-Felder crash-sicher halten (für alte Datenstände)
+                if(!c.comms) c.comms = [];
                 c.comms = Array.isArray(c.comms) ? c.comms : [];
+
+                if(!c.reports) c.reports = [];
+                c.reports = Array.isArray(c.reports) ? c.reports : [];
 
                 // Task-Felder normalisieren (für Automationen/Timeline)
                 if(!c.tasks) c.tasks = [];
@@ -507,18 +515,15 @@
                     if(t.done === undefined) t.done = false;
                 });
 
-                // Reports-Felder normalisieren (für Timeline)
-                if(!c.reports) c.reports = [];
-                c.reports = Array.isArray(c.reports) ? c.reports : [];
+                // Legacy Reports normalisieren
                 c.reports.forEach(r => {
                     if(!r.createdAt) {
-                        // falls nur Datum existiert
                         const d = (r.date || '').split('.').reverse().join('-');
                         r.createdAt = (d && d.length===10) ? (d + 'T12:00:00.000Z') : new Date().toISOString();
                     }
                 });
 
-                // Kommunikations-Felder normalisieren
+                // Legacy Kommunikation normalisieren
                 c.comms.forEach(m => {
                     if(!m.id) m.id = Date.now() + Math.floor(Math.random()*10000);
                     if(!m.type) m.type = 'note';
@@ -526,6 +531,55 @@
                     if(!m.subject) m.subject = '';
                     if(!m.text) m.text = '';
                     if(!m.outcome) m.outcome = '';
+                });
+
+                // --- Migration: comms -> activities (idempotent) ---
+                const hasActKey = (key)=>c.activities.some(a => a && a.migrationKey === key);
+                c.comms.forEach(m=>{
+                    const key = `comms:${m.id}`;
+                    if(hasActKey(key)) return;
+                    c.activities.push({
+                        id: Date.now() + Math.floor(Math.random()*100000),
+                        type: m.type || 'note',
+                        createdAt: m.createdAt || new Date().toISOString(),
+                        subject: m.subject || '',
+                        outcome: m.outcome || '',
+                        text: m.text || '',
+                        img: null,
+                        migrationKey: key
+                    });
+                });
+
+                // --- Migration: reports -> activities (idempotent) ---
+                c.reports.forEach((r, idx)=>{
+                    const key = `reports:${r.createdAt || r.date || idx}`;
+                    if(hasActKey(key)) return;
+                    c.activities.push({
+                        id: Date.now() + Math.floor(Math.random()*100000),
+                        type: 'report',
+                        createdAt: r.createdAt || new Date().toISOString(),
+                        subject: '',
+                        outcome: '',
+                        text: r.text || '',
+                        img: r.img || null,
+                        date: r.date || '',
+                        migrationKey: key
+                    });
+                });
+
+                // Aktivitäten normalisieren
+                c.activities.forEach(a=>{
+                    if(!a.id) a.id = Date.now() + Math.floor(Math.random()*100000);
+                    if(!a.type) a.type = 'note';
+                    if(!a.createdAt) a.createdAt = new Date().toISOString();
+                    if(!a.subject) a.subject = '';
+                    if(!a.outcome) a.outcome = '';
+                    if(!a.text) a.text = '';
+                    if(a.img === undefined) a.img = null;
+                    if(!a.date){
+                        // für Report/Filter/Print: lokales Datum ableiten
+                        try { a.date = new Date(a.createdAt).toLocaleDateString('de-DE'); } catch(e){ a.date = ''; }
+                    }
                 });
             });
           updateLogoUI();
@@ -603,7 +657,7 @@
                         id: Date.now() + i, name: name, address: fullAddress, 
                         phone: iTel > -1 ? row[iTel] : "", nr: iNr > -1 ? row[iNr] : "",
                         route: iTour > -1 ? row[iTour] : "", category: 'C', status: 'aktiv', 
-                        products: '', reports: [], nextAppointment: '', visitInterval: 4, tasks: []
+                        products: '', reports: [], activities: [], nextAppointment: '', visitInterval: 4, tasks: []
                     });
                     count++;
                 }
@@ -612,11 +666,55 @@
         };
     }
 
-    // --- DASHBOARD ---
+    
+    // --- ACTIVITY HELPERS (Bericht/Kommunikation als "Neue Aktivität") ---
+    function getCustomerActivities(c){
+        const acts = Array.isArray(c.activities) ? c.activities : [];
+        // fallback: wenn alte Daten noch nicht migriert sind (sollte aber passiert sein)
+        const legacyComms = Array.isArray(c.comms) ? c.comms.map(m=>({
+            id: m.id || (Date.now()+Math.floor(Math.random()*100000)),
+            type: m.type || 'note',
+            createdAt: m.createdAt || new Date().toISOString(),
+            subject: m.subject || '',
+            outcome: m.outcome || '',
+            text: m.text || '',
+            img: null,
+            date: (()=>{ try{return new Date(m.createdAt||Date.now()).toLocaleDateString('de-DE');}catch(e){return '';} })()
+        })) : [];
+        const legacyReports = Array.isArray(c.reports) ? c.reports.map((r,idx)=>({
+            id: (Date.now()+idx),
+            type: 'report',
+            createdAt: r.createdAt || new Date().toISOString(),
+            subject: '',
+            outcome: '',
+            text: r.text || '',
+            img: r.img || null,
+            date: r.date || (()=>{ try{return new Date(r.createdAt||Date.now()).toLocaleDateString('de-DE');}catch(e){return '';} })()
+        })) : [];
+        return acts.length ? acts : legacyComms.concat(legacyReports);
+    }
+
+    function getCustomerReportActivities(c){
+        return getCustomerActivities(c).filter(a => a.type === 'report');
+    }
+
+    function getLatestReportDateObj(c){
+        const reps = getCustomerReportActivities(c);
+        if(!reps.length) return null;
+        // newest by createdAt
+        reps.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const dStr = reps[0].date || '';
+        if(dStr && dStr.includes('.')){
+            const [dd,mm,yy] = dStr.split('.');
+            return new Date(yy, mm-1, dd);
+        }
+        try { return new Date(reps[0].createdAt); } catch(e){ return null; }
+    }
+// --- DASHBOARD ---
     function showHome(){
         const today=new Date().toLocaleDateString('de-DE');
         const count=db.customers.length;
-        const visited=db.customers.filter(c=>c.reports&&c.reports.some(r=>r.date===today)).length;
+        const visited=db.customers.filter(c=>getCustomerReportActivities(c).some(r=>r.date===today)).length;
         const openTasksCount = db.customers.reduce((sum, c) => sum + (c.tasks ? c.tasks.filter(t => !t.done).length : 0), 0);
 
         let stats={};
@@ -624,8 +722,8 @@
             const d=new Date();d.setMonth(d.getMonth()-i);
             const k=d.toLocaleString('de',{month:'short'});
             stats[k]=0;
-            db.customers.forEach(c=>c.reports.forEach(r=>{const[D,M,Y]=r.date.split('.');if(parseInt(M)==d.getMonth()+1&&parseInt(Y)==d.getFullYear()) stats[k]++;}));
-        }
+            db.customers.forEach(c=>getCustomerReportActivities(c).forEach(r=>{ const parts=(r.date||'').split('.'); if(parts.length===3){ const M=parts[1], Y=parts[2]; if(parseInt(M)==d.getMonth()+1 && parseInt(Y)==d.getFullYear()) stats[k]++; } }));
+}
         const maxV=Math.max(...Object.values(stats))||1;
         const bars=Object.keys(stats).map(k=>`<div class="stat-bar" style="height:${(stats[k]/maxV)*100}%"><span class="stat-val">${stats[k]}</span><span class="stat-lbl">${k}</span></div>`).join('');
         
@@ -912,7 +1010,15 @@
         document.getElementById('stopGeoBtn').style.display='none';
         showMap();
     }
-    function getStatus(c){if(!c.reports||c.reports.length===0)return'red';const lastRep=c.reports[0].date;const[d,m,y]=lastRep.split('.');const lastDate=new Date(y,m-1,d);const diffDays=(new Date()-lastDate)/(1000*60*60*24);const intervalDays=(c.visitInterval||4)*7;if(diffDays>intervalDays)return'red';if(diffDays>intervalDays-7)return'yellow';return'green';}
+    function getStatus(c){
+        const lastDate = getLatestReportDateObj(c);
+        if(!lastDate) return 'red';
+        const diffDays=(new Date()-lastDate)/(1000*60*60*24);
+        const intervalDays=(c.visitInterval||4)*7;
+        if(diffDays>intervalDays) return 'red';
+        if(diffDays>intervalDays-7) return 'yellow';
+        return 'green';
+    }
     function toggleSelectMode(){selectMode=!selectMode;selectedIds.clear();showCustomers();}
     function toggleSelection(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);showCustomers();}
     function addBatchToTour(){if(selectedIds.size===0)return alert("Bitte Kunden auswählen.");selectedIds.forEach(id=>{if(!db.tour.includes(id))db.tour.push(id);});save();selectMode=false;selectedIds.clear();showTour();}
@@ -924,19 +1030,20 @@
         const today=new Date();
         const dateStr=today.toLocaleDateString('de-DE');
         let reportData=[];
-        
+
         db.customers.forEach(c=>{
-            (c.reports||[]).forEach(r=>{
-                const parts=r.date.split('.');
+            getCustomerReportActivities(c).forEach(a=>{
+                const dStr = a.date || '';
+                const parts=dStr.split('.');
                 if(parts.length===3){
                     const repDate=new Date(parts[2],parts[1]-1,parts[0]);
                     let include=false;
-                    if(range==='day'&&r.date===dateStr) include=true;
+                    if(range==='day' && dStr===dateStr) include=true;
                     if(range==='week'){
                         const diff=(today-repDate)/(1000*60*60*24);
-                        if(diff<=7&&diff>=0) include=true;
+                        if(diff<=7 && diff>=0) include=true;
                     }
-                    if(include) reportData.push({...r, customerName:c.name, rawDate: repDate});
+                    if(include) reportData.push({ date: dStr, text: a.text||'', img: a.img||null, customerName: c.name, rawDate: repDate });
                 }
             });
         });
@@ -946,11 +1053,11 @@
         reportData.sort((a,b) => a.rawDate - b.rawDate);
 
         let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showHome()">Zurück</button></div><h1>${range==='day'?'Tagesbericht':'Wochenbericht'}</h1>`;
-        
+
         reportData.forEach(r=>{
-            html+=`<div class="card" style="page-break-inside:avoid;"><div style="font-weight:bold;font-size:16px;">${r.customerName}</div><div style="font-size:12px;color:#666;">Datum: ${r.date}</div><div style="white-space:pre-wrap;margin-top:10px;">${r.text}</div>${r.img?`<img src="${r.img}" style="max-width:300px;display:block;margin-top:10px;border:1px solid #eee;">`:''}</div>`;
+            html+=`<div class="card" style="page-break-inside:avoid;"><div style="font-weight:bold;font-size:16px;">${r.customerName}</div><div style="font-size:12px;color:#666;">Datum: ${r.date}</div><div style="white-space:pre-wrap;margin-top:10px;">${escapeHtml(r.text)}</div>${r.img?`<img src="${r.img}" style="max-width:300px;display:block;margin-top:10px;border:1px solid #eee;">`:''}</div>`;
         });
-        
+
         document.getElementById('content').innerHTML=html;
     }
 
@@ -1074,7 +1181,7 @@
                     <div style="font-size:12px; color:#6b7280; white-space:nowrap;">${fmtDateTime(it.ts)}</div>
                 </div>
                 ${it.subtitle?`<div style="font-size:12px; color:#64748b; margin-top:4px;">${escapeHtml(it.subtitle)}</div>`:''}
-                ${it.body?`<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151; margin-top:6px;">${escapeHtml(it.body)}</div>`:''}
+                ${it.body?`<div style="white-space:pre-wrap; font-size:13px; line-height:1.5; color:#374151; margin-top:6px;">${escapeHtml(it.body)}</div>`:''}${it.img?`<img src="${it.img}" class="rep-img" onclick="window.open(this.src)">`:''}
             </div>
         `).join('') || '<div style="color:#999;font-size:12px;padding:10px;">Noch kein Verlauf</div>';
         const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
@@ -1125,82 +1232,66 @@
             </div>
         </div>
 
-        <div class="grid-2" style="margin-top:15px; align-items:start;">
-            <div class="card">
-                <h2>Bericht</h2>
-                <div class="no-print">
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <input type="date" id="repDate" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:140px;">
-                        <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; flex:1; text-align:center;">Foto Laden <input type="file" id="repImg" accept="image/*" style="display:none;"></label>
-                    </div>
-                    <textarea id="repTxt" rows="4" placeholder="..." style="margin:0; width:100%; margin-bottom:10px;"></textarea>
-                    <button class="btn btn-primary btn-full" onclick="addRep(${id})">Sichern</button>
-                </div>
+        <div class="card" style="margin-top:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <h2 style="margin:0;">Neue Aktivität</h2>
             </div>
-            <div class="card">
-                <h2>Verlauf</h2>
-                <div style="margin-top:10px; max-height:520px; overflow-y:auto;">${reportsHTML}</div>
+            <div class="no-print" style="margin-top:12px;">
+                <div class="grid-3" style="gap:10px;">
+                    <div>
+                        <label>Typ</label>
+                        <select id="act_type" style="margin:0;" onchange="toggleActivityTypeUI()">
+                            <option value="call">Anruf</option>
+                            <option value="email">E-Mail</option>
+                            <option value="note">Notiz</option>
+                            <option value="report">Bericht</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Datum/Uhrzeit</label>
+                        <input type="datetime-local" id="act_dt" style="margin:0;">
+                    </div>
+                    <div>
+                        <label>Follow-up (optional)</label>
+                        <input type="date" id="act_follow" style="margin:0;">
+                    </div>
+                </div>
+
+                <div class="grid-2" style="gap:10px; margin-top:10px;">
+                    <div>
+                        <label>Betreff</label>
+                        <input id="act_subj" style="margin:0;" placeholder="z. B. Angebot besprochen">
+                    </div>
+                    <div>
+                        <label>Ergebnis</label>
+                        <input id="act_outcome" style="margin:0;" placeholder="z. B. Rückmeldung bis Freitag">
+                    </div>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Notiz</label>
+                    <textarea id="act_text" rows="4" style="margin:0; width:100%;" placeholder="..."></textarea>
+                </div>
+
+                <div id="actPhotoRow" style="display:none; margin-top:10px;">
+                    <label>Foto (optional, nur für Bericht)</label>
+                    <label class="btn btn-secondary" style="cursor:pointer; padding:6px 10px; margin:0; text-align:center; display:inline-block;">
+                        Foto Laden <input type="file" id="act_img" accept="image/*" style="display:none;">
+                    </label>
+                </div>
+
+                <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="addActivity(${id})">Sichern</button>
             </div>
         </div>
 
-        <div class="grid-2" style="margin-top:15px; align-items:start;">
-            <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                    <h2 style="margin:0;">Kommunikation</h2>
-                    <button class="btn btn-secondary no-print" style="padding:6px 10px;" onclick="toggleCommForm()">+ Neu</button>
-                </div>
-
-                <div id="commForm" class="no-print" style="display:none; margin-top:12px; padding:12px; border:1px solid var(--border); border-radius:var(--radius); background:#f8fafc;">
-                    <div class="grid-3" style="gap:10px;">
-                        <div>
-                            <label>Typ</label>
-                            <select id="comm_type" style="margin:0;">
-                                <option value="call">Anruf</option>
-                                <option value="email">E-Mail</option>
-                                <option value="note">Notiz</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Datum/Uhrzeit</label>
-                            <input type="datetime-local" id="comm_dt" style="margin:0;">
-                        </div>
-                        <div>
-                            <label>Follow-up (optional)</label>
-                            <input type="date" id="comm_follow" style="margin:0;">
-                        </div>
-                    </div>
-                    <div class="grid-2" style="gap:10px; margin-top:10px;">
-                        <div>
-                            <label>Betreff</label>
-                            <input id="comm_subj" style="margin:0;" placeholder="z. B. Angebot besprochen">
-                        </div>
-                        <div>
-                            <label>Ergebnis</label>
-                            <input id="comm_outcome" style="margin:0;" placeholder="z. B. Rückmeldung bis Freitag">
-                        </div>
-                    </div>
-                    <div style="margin-top:10px;">
-                        <label>Notiz</label>
-                        <textarea id="comm_text" rows="3" style="margin:0; width:100%;" placeholder="..."></textarea>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button class="btn btn-primary" onclick="addComm(${id})">Sichern</button>
-                        <button class="btn btn-secondary" onclick="toggleCommForm(false)">Schließen</button>
-                    </div>
-                </div>
-
-                <div style="margin-top:12px; max-height:520px; overflow-y:auto;">${commHTML}</div>
-            </div>
-
-            <div class="card">
-                <h2>Activity Timeline</h2>
-                <div style="margin-top:10px; max-height:520px; overflow-y:auto;">${timelineHTML}</div>
-            </div>
+        <div class="card" style="margin-top:15px;">
+            <h2>Activity Timeline</h2>
+            <div style="margin-top:10px; max-height:650px; overflow-y:auto;">${timelineHTML}</div>
         </div>
-`; 
+`;
+        setTimeout(ensureActivityDateDefaults, 0);
     }
-
-    function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d, createdAt:new Date().toISOString(), tag:''}); save(); showDetail(id); }
+function addTask(id) { const t=document.getElementById('newT').value; const d=document.getElementById('newTDate').value; if(!t)return; db.customers.find(x=>x.id===id).tasks.push({text:t, done:false, dueDate:d, createdAt:new Date().toISOString(), tag:''}); save(); showDetail(id); }
     function toggleTask(id, idx) { const t=db.customers.find(x=>x.id===id).tasks[idx]; t.done=!t.done; save(); showDetail(id); }
     function delTask(id, idx) { db.customers.find(x=>x.id===id).tasks.splice(idx,1); save(); showDetail(id); }
 
@@ -1262,21 +1353,22 @@
 
     function buildTimelineForCustomer(c){
         const items = [];
-        // Kommunikation
-        (c.comms||[]).forEach(m=>{
-            items.push({ ts: m.createdAt, icon: (m.type==='call'?'📞':(m.type==='email'?'✉️':'📝')), title: (m.type==='call'?'Anruf':(m.type==='email'?'E-Mail':'Notiz')), subtitle: m.subject||m.outcome||'', body: m.text||'' });
+        // Aktivitäten (Anruf/E-Mail/Notiz/Bericht)
+        getCustomerActivities(c).forEach(a=>{
+            const icon = a.type==='call'?'📞':(a.type==='email'?'✉️':(a.type==='report'?'🧾':'📝'));
+            const title = a.type==='call'?'Anruf':(a.type==='email'?'E-Mail':(a.type==='report'?'Bericht':'Notiz'));
+            const subtitle = (a.type==='report' ? (a.date||'') : (a.subject||a.outcome||'')) || '';
+            items.push({ ts: a.createdAt || new Date().toISOString(), icon, title, subtitle, body: a.text||'', img: a.img||null });
         });
-        // Berichte
-        (c.reports||[]).forEach(r=>{
-            items.push({ ts: r.createdAt || (r.date||''), icon:'🧾', title:'Bericht', subtitle:r.date||'', body:r.text||'' });
-        });
-        // Aufgaben (nur die letzten/aktuellen; erledigt bleibt trotzdem als Verlauf)
+
+        // Aufgaben (erledigt bleibt trotzdem als Verlauf)
         (c.tasks||[]).forEach(t=>{
             const title = t.done ? 'Aufgabe erledigt' : 'Aufgabe';
             const sub = t.dueDate ? ('Fällig: ' + (t.dueDate.split('-').reverse().join('.'))) : '';
             items.push({ ts: t.createdAt || new Date().toISOString(), icon:'✅', title, subtitle: sub, body: t.text||'' });
         });
-        // Deals
+
+        // Deals/Leads (Pipeline)
         (db.deals||[]).filter(d=>String(d.customerId||'')===String(c.id)).forEach(d=>{
             const icon = d.type==='lead' ? '🌱' : '💼';
             const title = d.type==='lead' ? 'Lead' : 'Deal';
@@ -1286,7 +1378,7 @@
         });
 
         items.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
-        return items.slice(0, 60);
+        return items.slice(0, 80);
     }
 
     function applyAutomationsForDeal(deal, prevStage){
@@ -1314,19 +1406,95 @@
         } catch(e){ console.warn(e); }
     }
 
-    function addRep(id) { const t=document.getElementById('repTxt').value; const dInput=document.getElementById('repDate').value; const f=document.getElementById('repImg').files[0]; if(!t && !f) return; let dateStr = new Date().toLocaleDateString('de-DE'); if(dInput) { const [y,m,d] = dInput.split('-'); dateStr = `${d}.${m}.${y}`; } const sR=(img)=>{ const cust=db.customers.find(x=>x.id===id); cust.reports.unshift({date:dateStr, text:t, img:img, createdAt:new Date().toISOString()});
-            // Aufgaben-Automatik: optionales Follow-up nach Bericht
-            if(db.automations && db.automations.enabled && parseInt(db.automations.reportFollowUpDays||0)>0){
+    function toggleActivityTypeUI(){
+        const t = document.getElementById('act_type');
+        const row = document.getElementById('actPhotoRow');
+        if(!t || !row) return;
+        row.style.display = (t.value === 'report') ? 'block' : 'none';
+    }
+
+    function ensureActivityDateDefaults(){
+        const dt = document.getElementById('act_dt');
+        if(dt && !dt.value){
+            const now = new Date();
+            const pad=n=>String(n).padStart(2,'0');
+            dt.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        }
+        toggleActivityTypeUI();
+    }
+
+    function addActivity(id){
+        const c = db.customers.find(x=>x.id===id); if(!c) return;
+        c.activities = Array.isArray(c.activities) ? c.activities : [];
+
+        const type = (document.getElementById('act_type')?.value || 'note');
+        const dtVal = document.getElementById('act_dt')?.value || '';
+        const follow = document.getElementById('act_follow')?.value || '';
+        const subject = (document.getElementById('act_subj')?.value || '').trim();
+        const outcome = (document.getElementById('act_outcome')?.value || '').trim();
+        const textVal = (document.getElementById('act_text')?.value || '').trim();
+        const fileEl = document.getElementById('act_img');
+        const f = fileEl && fileEl.files ? fileEl.files[0] : null;
+
+        if(!textVal && !subject && !outcome && !(type==='report' && f)) return;
+
+        const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOString();
+        const dateStr = (()=>{ try { return new Date(createdAt).toLocaleDateString('de-DE'); } catch(e){ return ''; } })();
+
+        const finalize = (imgDataUrl)=>{
+            c.activities.unshift({
+                id: Date.now() + Math.floor(Math.random()*100000),
+                type,
+                createdAt,
+                subject,
+                outcome,
+                text: textVal,
+                img: (type==='report' ? (imgDataUrl||null) : null),
+                date: dateStr
+            });
+
+            // Aufgaben-Automatik: Follow-up aus Aktivität
+            if(follow){
+                const tag = `auto:activity:${Date.now()}`;
+                const tText = subject ? `Follow-up: ${subject}` : (type==='report' ? 'Follow-up: Bericht' : 'Follow-up');
+                c.tasks.push({ text: tText, done:false, dueDate: follow, createdAt:new Date().toISOString(), tag });
+            }
+
+            // Aufgaben-Automatik: optionales Follow-up nach Bericht (global)
+            if(type==='report' && db.automations && db.automations.enabled && parseInt(db.automations.reportFollowUpDays||0)>0){
                 const days=parseInt(db.automations.reportFollowUpDays||0);
                 const dd=new Date(); dd.setDate(dd.getDate()+days);
                 const due=dd.toISOString().split('T')[0];
                 const tag=`auto:report:${Date.now()}`;
-                cust.tasks.push({text:(db.automations.reportFollowUpText||'Besuch nachfassen'), done:false, dueDate:due, createdAt:new Date().toISOString(), tag});
+                c.tasks.push({text:(db.automations.reportFollowUpText||'Besuch nachfassen'), done:false, dueDate:due, createdAt:new Date().toISOString(), tag});
             }
-            save(); showDetail(id); }; if(f){ const r=new FileReader(); r.onload=e=>{ const i=new Image(); i.onload=()=>{ const c=document.createElement('canvas'); const x=c.getContext('2d'); const s=600/i.width; c.width=600; c.height=i.height*s; x.drawImage(i,0,0,c.width,c.height); sR(c.toDataURL('image/jpeg',0.6)); }; i.src=e.target.result; }; r.readAsDataURL(f); } else sR(null); }
-    function editRep(cid, rid) { const c=db.customers.find(x=>x.id===cid); const r=c.reports[rid]; const newTxt = prompt("Text bearbeiten:", r.text); if(newTxt !== null) { const newDate = prompt("Datum (TT.MM.JJJJ):", r.date); if(newDate) { r.text = newTxt; r.date = newDate; save(); showDetail(cid); } } }
-    function delRep(cid, rid) { const c=db.customers.find(x=>x.id===cid); if(!c||!c.reports) return; if(confirm('Bericht löschen?')) { c.reports.splice(rid,1); save(); showDetail(cid); } }
 
+            save();
+            showDetail(id);
+        };
+
+        // Bild optional (nur Bericht)
+        if(type==='report' && f){
+            const r=new FileReader();
+            r.onload=e=>{
+                const i=new Image();
+                i.onload=()=>{
+                    const cvs=document.createElement('canvas');
+                    const ctx=cvs.getContext('2d');
+                    const targetW=600;
+                    const s=targetW/i.width;
+                    cvs.width=targetW;
+                    cvs.height=i.height*s;
+                    ctx.drawImage(i,0,0,cvs.width,cvs.height);
+                    finalize(cvs.toDataURL('image/jpeg',0.6));
+                };
+                i.src=e.target.result;
+            };
+            r.readAsDataURL(f);
+        } else {
+            finalize(null);
+        }
+    }
     function togTour(id){if(db.tour.includes(id))db.tour=db.tour.filter(x=>x!==id);else db.tour.push(id);save();showDetail(id);}
     
     function showForm(id=null){
