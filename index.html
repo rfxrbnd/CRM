@@ -438,6 +438,8 @@
                 if(legacy) { db = legacy; save(); }
             }
 
+            autoMigrateRoutesOnce();
+
             if(!db.expenses) db.expenses = [];
             if(!db.events) db.events = [];
             if(!db.customers) db.customers = [];
