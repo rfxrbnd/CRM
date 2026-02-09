@@ -1023,6 +1023,49 @@
     }
     function toggleSelectMode(){selectMode=!selectMode;selectedIds.clear();showCustomers();}
     function toggleSelection(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);showCustomers();}
+
+    // --- FILTERED SELECTION HELPERS ---
+    function getFilteredCustomers(){
+        const s = (viewState.search||'').toLowerCase();
+        let list = db.customers;
+
+        if (viewState.filterRoute) {
+            list = list.filter(c => c.route === viewState.filterRoute);
+        }
+
+        if (s) {
+            list = list.filter(c =>
+                (c.name||'').toLowerCase().includes(s) ||
+                (c.nr||'').toLowerCase().includes(s) ||
+                (c.route||'').toLowerCase().includes(s) ||
+                (c.address||'').toLowerCase().includes(s) ||
+                (c.contact||'').toLowerCase().includes(s) ||
+                (c.phone||'').toLowerCase().includes(s) ||
+                (c.email||'').toLowerCase().includes(s) ||
+                (c.products||'').toLowerCase().includes(s)
+            );
+        }
+
+        // sort exactly like renderTable
+        if(viewState.sort==='route') list.sort((a,b)=>(a.route||'z').localeCompare(b.route||'z'));
+        else if(viewState.sort==='status') list.sort((a,b)=>(getStatus(a)==='red'?-1:1));
+        else list.sort((a,b)=>a.name.localeCompare(b.name));
+
+        return list;
+    }
+
+    function areAllFilteredSelected(){
+        const list = getFilteredCustomers();
+        return list.length > 0 && list.every(c => selectedIds.has(c.id));
+    }
+
+    function toggleAllFiltered(){
+        const list = getFilteredCustomers();
+        const allSelected = list.length > 0 && list.every(c => selectedIds.has(c.id));
+        list.forEach(c => { if(allSelected) selectedIds.delete(c.id); else selectedIds.add(c.id); });
+        showCustomers();
+    }
+
     function addBatchToTour(){if(selectedIds.size===0)return alert("Bitte Kunden auswählen.");selectedIds.forEach(id=>{if(!db.tour.includes(id))db.tour.push(id);});save();selectMode=false;selectedIds.clear();showTour();}
     function deleteCustomerDirect(e, id) { e.stopPropagation(); if(confirm("Kunden löschen?")) { db.customers = db.customers.filter(x => x.id !== id); db.tour = db.tour.filter(x => x !== id); save(); renderTable(); } }
     function deleteBatch() { if(selectedIds.size === 0) return alert("Keine Kunden ausgewählt."); if(!confirm(`${selectedIds.size} Kunden löschen?`)) return; db.customers = db.customers.filter(c => !selectedIds.has(c.id)); db.tour = db.tour.filter(id => !selectedIds.has(id)); save(); selectMode = false; selectedIds.clear(); showCustomers(); }
@@ -1092,8 +1135,9 @@
         document.getElementById('content').innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             ${headerHTML}
-            <div style="display:flex; gap:10px;">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
                 <button class="btn btn-secondary" onclick="toggleSelectMode()">${selectMode?'Abbrechen':'Auswahl'}</button>
+                ${(selectMode && viewState.filterRoute)?`<button class="btn btn-secondary" onclick="toggleAllFiltered()">${areAllFilteredSelected()?'Auswahl aufheben':'Alle auswählen'}</button>`:''}
                 ${!selectMode?'<button class="btn btn-primary" onclick="showForm()">+ Neu</button>':''}
             </div>
         </div>
@@ -1113,35 +1157,13 @@
     }
 
     function renderTable(){
-        const s = viewState.search.toLowerCase();
-        let list = db.customers;
-
-        if (viewState.filterRoute) {
-            list = list.filter(c => c.route === viewState.filterRoute);
-        }
-
-        if (s) {
-            list = list.filter(c => 
-                (c.name||'').toLowerCase().includes(s) || 
-                (c.nr||'').toLowerCase().includes(s) || 
-                (c.route||'').toLowerCase().includes(s) ||
-                (c.address||'').toLowerCase().includes(s) ||
-                (c.contact||'').toLowerCase().includes(s) || 
-                (c.phone||'').toLowerCase().includes(s) ||
-                (c.email||'').toLowerCase().includes(s) ||
-                (c.products||'').toLowerCase().includes(s)
-            );
-        }
-
-        if(viewState.sort==='route') list.sort((a,b)=>(a.route||'z').localeCompare(b.route||'z'));
-        else if(viewState.sort==='status') list.sort((a,b)=>(getStatus(a)==='red'?-1:1));
-        else list.sort((a,b)=>a.name.localeCompare(b.name));
+        const list = getFilteredCustomers();
 
         document.getElementById('tableContainer').innerHTML = list.map(c => {
             const isSelected = selectedIds.has(c.id);
             const clickAction = selectMode ? `toggleSelection(${c.id})` : `showDetail(${c.id})`;
             const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
-            
+
             return `
             <div class="cust-row ${isSelected?'selected':''}" onclick="${clickAction}">
                 ${selectMode?`<div class="check-circle"></div>`:''}
