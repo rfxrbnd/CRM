@@ -2506,6 +2506,127 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
             .replaceAll("'","&#039;");
     }
 
+
+/* =========================================================
+   ✨ Text prüfen & verbessern (lokal im Browser)
+   - keine Inhalte umformulieren
+   - keine neuen Infos
+   - nur formale Glättung & vorsichtige Stilkorrektur
+   ========================================================= */
+
+function __crm_textImprove_applyGermanQuotes(input){
+    // Vereinheitlicht doppelte Anführungszeichen: "..." -> „...“
+    // (deterministisch, ohne Inhalte zu ändern)
+    let s = input
+        .replace(/[„“”«»]/g, '"'); // alles auf "
+    let out = '';
+    let open = true;
+    for(let i=0;i<s.length;i++){
+        const ch = s[i];
+        if(ch === '"'){
+            out += open ? '„' : '“';
+            open = !open;
+        } else {
+            out += ch;
+        }
+    }
+    return out;
+}
+
+function improveText(textarea){
+    try{
+        if(!textarea || typeof textarea.value !== 'string') return;
+
+        let t = textarea.value;
+
+        // Normalisiere Zeilenenden
+        t = t.replace(/\r\n/g, '\n');
+
+        /* ---------- Rechtschreibung & Formales ---------- */
+
+        // doppelte Leerzeichen (außer Zeilenumbrüche)
+        t = t.replace(/[ \t]{2,}/g, ' ');
+
+        // Satzzeichen-Abstände: " Wort ." -> "Wort."
+        t = t.replace(/\s+([.,;:!?])/g, '$1');
+
+        // Satzzeichen-Abstände: "Wort,Text" -> "Wort, Text"
+        t = t.replace(/([.,;:!?])([^\s\n])/g, '$1 $2');
+
+        // z.B / zb / z b -> z. B.
+        t = t.replace(/\b(z\s*\.?\s*b\.?)\b/gi, 'z. B.');
+
+        // Listen/Absätze sauber trennen: max. 1 Leerzeile
+        t = t.replace(/\n{3,}/g, '\n\n');
+
+        // Satzanfänge automatisch groß (nach . ! ? oder Zeilenanfang)
+        t = t.replace(/(^|[.!?]\s+|\n+)([a-zäöü])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+
+        // einheitliche Anführungszeichen
+        t = __crm_textImprove_applyGermanQuotes(t);
+
+        /* ---------- Stil-Glättung (vorsichtig) ---------- */
+
+        // klassische Komma-Ergänzung (vorsichtig, explizit)
+        t = t.replace(/\b(ich habe festgestellt)\s+dass\b/gi, '$1, dass');
+
+        // sehr einfache Wiederholungen entschärfen (nur direkt doppelte Wörter)
+        t = t.replace(/\b(\w+)\s+\1\b/gi, '$1');
+
+        textarea.value = t;
+    } catch(e){
+        console.error('Text verbessern Fehler:', e);
+    }
+}
+
+function __crm_textImprove_enhanceTextareas(root){
+    const scope = root || document;
+    const areas = scope.querySelectorAll('textarea');
+    areas.forEach(ta=>{
+        // Schon enhanced?
+        if(ta.dataset.textImproveAttached === '1') return;
+
+        // Button erstellen
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-secondary';
+        btn.textContent = '✨ Text prüfen & verbessern';
+        btn.style.marginTop = '8px';
+        btn.dataset.textImproveBtn = '1';
+        btn.addEventListener('click', ()=>improveText(ta));
+
+        // Einfügen direkt nach textarea (ohne Popup, ersetzt direkt)
+        ta.insertAdjacentElement('afterend', btn);
+
+        ta.dataset.textImproveAttached = '1';
+    });
+}
+
+function __crm_textImprove_setup(){
+    // initial
+    __crm_textImprove_enhanceTextareas(document);
+
+    // Beobachte Inhalt (CRM rendert per innerHTML)
+    const content = document.getElementById('content');
+    if(!content) return;
+
+    const mo = new MutationObserver(()=>{
+        __crm_textImprove_enhanceTextareas(content);
+    });
+    mo.observe(content, { childList: true, subtree: true });
+
+    // modals ebenfalls (falls Textareas dort später sind)
+    ['timeModal','eventModal'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el){
+            const mo2 = new MutationObserver(()=>__crm_textImprove_enhanceTextareas(el));
+            mo2.observe(el, { childList:true, subtree:true });
+        }
+    });
+}
+
+window.addEventListener('load', __crm_textImprove_setup);
+
 </script>
 </body>
 </html>
