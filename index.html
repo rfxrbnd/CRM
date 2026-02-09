@@ -1297,7 +1297,15 @@
                     </div>
                     <div>
                         <label>Ergebnis</label>
-                        <input id="act_outcome" style="margin:0;" placeholder="z. B. Rückmeldung bis Freitag" oninput="updateActivitySaveState()">
+                        <select id="act_outcome" style="margin:0;" onchange="handleOutcomeChange(); updateActivitySaveState()">
+                            <option value="">Bitte auswählen</option>
+                            <option value="Abschluss">Abschluss</option>
+                            <option value="Auftragseingang">Auftragseingang</option>
+                            <option value="Follow-Up">Follow-Up</option>
+                            <option value="Keins">Keins</option>
+                            <option value="Anrufen">Anrufen</option>
+                            <option value="Rückruf angefordert">Rückruf angefordert</option>
+                        </select>
                     </div>
                 </div>
 
@@ -1360,6 +1368,9 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
             const tag = `auto:comm:${Date.now()}`;
             c.tasks.push({ text: subject ? `Follow-up: ${subject}` : 'Follow-up', done:false, dueDate: follow, createdAt:new Date().toISOString(), tag });
         }
+
+        // Automationen: Ergebnis -> Aufgaben / Pipeline
+        applyAutomationsForActivity(c, payload);
 
         save();
         showDetail(id);
@@ -1454,7 +1465,117 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
         } catch(e){ console.warn(e); }
     }
 
-    function toggleActivityTypeUI(){ /* Foto-Option entfernt */ }
+    
+    // --- OUTCOME RULES (Neue Aktivität -> Ergebnis Dropdown) ---
+    const ACT_OUTCOME_RULES = {
+        "Abschluss":             { autoTask:false, days:null,  taskPrefix:"",             pipelineStage:"Won" },
+        "Auftragseingang":       { autoTask:false, days:null,  taskPrefix:"",             pipelineStage:"Won" },
+        "Follow-Up":             { autoTask:true,  days:3,     taskPrefix:"Follow-up",    pipelineStage:null },
+        "Keins":                 { autoTask:false, days:null,  taskPrefix:"",             pipelineStage:null },
+        "Anrufen":               { autoTask:true,  days:1,     taskPrefix:"Anrufen",      pipelineStage:null },
+        "Rückruf angefordert":   { autoTask:true,  days:0,     taskPrefix:"Rückruf",      pipelineStage:null }
+    };
+
+    function addDaysISO(baseISO, days){
+        const d = baseISO ? new Date(baseISO) : new Date();
+        if(isNaN(d.getTime())) return '';
+        d.setDate(d.getDate() + (parseInt(days)||0));
+        return d.toISOString().split('T')[0];
+    }
+
+    function handleOutcomeChange(){
+        try{
+            const outcome = (document.getElementById('act_outcome')?.value || '').trim();
+            const followEl = document.getElementById('act_follow');
+            if(!followEl) return;
+            if(outcome && !followEl.value){
+                const rule = ACT_OUTCOME_RULES[outcome];
+                if(rule && rule.autoTask && rule.days !== null && rule.days !== undefined){
+                    followEl.value = addDaysISO('', rule.days);
+                }
+            }
+        } catch(e){ console.warn(e); }
+    }
+
+    function applyAutomationsForActivity(customer, payload){
+        try{
+            if(!customer || !payload) return;
+            const outcome = String(payload.outcome||'').trim();
+            if(!outcome) return;
+
+            const rule = ACT_OUTCOME_RULES[outcome];
+            if(!rule) return;
+
+            // 1) Auto-Task (wenn Ergebnis das nahelegt)
+            if(rule.autoTask){
+                const due = (document.getElementById('act_follow')?.value || '').trim() || addDaysISO(payload.createdAt, rule.days);
+                if(due){
+                    const tag = `auto:activity:${payload.id}:outcome`;
+                    const exists = (customer.tasks||[]).some(t=>t.tag===tag);
+                    if(!exists){
+                        const subj = payload.subject ? `: ${payload.subject}` : '';
+                        customer.tasks.push({
+                            text: `${rule.taskPrefix}${subj}`.trim(),
+                            done:false,
+                            dueDate: due,
+                            createdAt: new Date().toISOString(),
+                            tag
+                        });
+                    }
+                }
+            }
+
+            // 2) Pipeline-Impact: Abschluss/Auftragseingang -> Deal "Won"
+            if(rule.pipelineStage === 'Won'){
+                db.deals = Array.isArray(db.deals) ? db.deals : [];
+                const tag = `auto:dealfromactivity:${payload.id}`;
+                const already = db.deals.some(d => String(d.notes||'').includes(tag));
+                if(!already){
+                    const today = new Date().toISOString().split('T')[0];
+                    db.deals.push({
+                        id: Date.now() + Math.floor(Math.random()*100000),
+                        type: 'opportunity',
+                        stage: 'Won',
+                        probability: 100,
+                        expectedClose: today,
+                        value: 0,
+                        name: payload.subject || outcome,
+                        company: customer.name || '',
+                        source: 'Aktivität',
+                        qualification: '',
+                        customerId: customer.id || '',
+                        notes: `${outcome} (auto)\n${tag}`,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+            }
+        } catch(e){ console.warn(e); }
+    }
+
+    // --- STATISTIK: Ergebnisse aus Aktivitäten ---
+    function getOutcomeStats(days=30){
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - (parseInt(days)||30));
+        const counts = {};
+        let total = 0;
+
+        (db.customers||[]).forEach(c=>{
+            (getCustomerActivities(c)||[]).forEach(a=>{
+                const ts = new Date(a.createdAt || a.date || Date.now());
+                if(isNaN(ts.getTime())) return;
+                if(ts < cutoff) return;
+                const o = String(a.outcome||'').trim();
+                if(!o) return;
+                counts[o] = (counts[o]||0) + 1;
+                total++;
+            });
+        });
+
+        return { total, counts };
+    }
+
+function toggleActivityTypeUI(){ /* Foto-Option entfernt */ }
 
     function storeLastActType(){
         try{
@@ -1468,8 +1589,10 @@ function addTask(id) { const t=document.getElementById('newT').value; const d=do
         if(!btn) return;
         const type = (document.getElementById('act_type')?.value || '').trim();
         const subj = (document.getElementById('act_subj')?.value || '').trim();
-        // Minimal: Typ + Betreff
-        const ok = !!type && !!subj;
+        // Pflicht: Typ + Betreff + Ergebnis
+        const outcome = (document.getElementById('act_outcome')?.value || '').trim();
+        // Pflicht: Typ + Betreff + Ergebnis
+        const ok = !!type && !!subj && !!outcome;
         btn.disabled = !ok;
         btn.style.opacity = ok ? '1' : '0.55';
         btn.style.cursor = ok ? 'pointer' : 'not-allowed';
@@ -1548,7 +1671,14 @@ function addActivity(id){
             return;
         }
 
-        const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOString();
+        
+        // Pflicht: Ergebnis (Dropdown)
+        if(!outcome){
+            alert('Bitte ein Ergebnis auswählen.');
+            return;
+        }
+
+const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOString();
         const dateStr = (()=>{ try { return new Date(createdAt).toLocaleDateString('de-DE'); } catch(e){ return ''; } })();
 
         const payload = {
@@ -1891,6 +2021,23 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
                     <div style="font-size:10px;color:var(--text-light);font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Gewonnen</div>
                     <div style="font-size:22px;font-weight:900;margin-top:6px;">${fmtEUR(wonValue)}</div>
                     <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Deals won: <b>${opps.filter(d=>d.stage==='Won').length}</b></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:12px;">
+                    <div>
+                        <div style="font-size:10px;color:var(--text-light);font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Aktivitäten-Ergebnisse</div>
+                        <div style="font-size:16px;font-weight:900;margin-top:6px;">Letzte 30 Tage</div>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-light);">Summe: <b>${getOutcomeStats(30).total}</b></div>
+                </div>
+                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px;">
+                    ${Object.entries(getOutcomeStats(30).counts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+                        <div style="border:1px solid var(--border); border-radius:999px; padding:6px 10px; font-size:12px; background:#fff;">
+                            <b>${escapeHtml(k)}</b> <span style="color:var(--text-light);">(${v})</span>
+                        </div>
+                    `).join('') || `<div style="color:#9ca3af; font-size:12px;">Noch keine Ergebnisse in den letzten 30 Tagen.</div>`}
                 </div>
             </div>
 
