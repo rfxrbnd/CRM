@@ -2653,6 +2653,63 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
             .replaceAll("'","&#039;");
     }
 
+// ===== ROUTEN / TOUR: NUMMERN -> NAMEN (Migration) =====
+const ROUTE_MAP = {
+  "21": "Aalen",
+  "22": "Karlsruhe",
+  "24": "Crailsheim",
+  "25": "Heilbronn",
+  "26": "Bodensee",
+  "27": "Göppingen",
+  "28": "Ulm/Heidenheim",
+  "29": "Memmingen",
+  "31": "Stuttgart",
+  "32": "Schwarzwald",
+  "33": "Remstal",
+  "34": "Balingen/Ebingen",
+  "35": "Reutlingen",
+  "36": "Böblingen/Sindelfingen",
+  "37": "Kirchheim/Nürtingen",
+  "38": "Filder",
+  "39": "Freudenstadt",
+  "42": "Ludwigsburg",
+  "45": "Mannheim/Heidelberg",
+  "48": "Pforzheim"
+};
+
+function migrateRoutesNumbersToNames() {
+  let changed = false;
+
+  // Kunden-Route umbenennen (crash-sicher)
+  (db.customers || []).forEach(c => {
+    const key = String((c.route ?? "")).trim();
+    if (ROUTE_MAP[key]) {
+      c.route = ROUTE_MAP[key];
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    save();
+    alert("Routen/Touren erfolgreich von Nummern auf Namen umgestellt ✅");
+  } else {
+    alert("Keine passenden nummerischen Routen gefunden.");
+  }
+}
+
+// Optional: automatisch nur 1x beim Start ausführen (empfohlen)
+// -> verhindert, dass du es manuell in der Konsole starten musst.
+function autoMigrateRoutesOnce() {
+  if (!db.meta_routes_migrated) {
+    migrateRoutesNumbersToNames();
+    db.meta_routes_migrated = true;
+    save();
+  }
+}
+// ===== ENDE ROUTEN / TOUR MIGRATION =====
+
+
+    
 </script>
 </body>
 </html>
