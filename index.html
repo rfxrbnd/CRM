@@ -1870,7 +1870,9 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
                 <div style="display:flex;gap:10px;" class="no-print">
                     <button class="btn btn-secondary" onclick="pipelineState.tab='lead'; pipelineState.stage=''; renderPipeline()">Lead</button>
                     <button class="btn btn-secondary" onclick="pipelineState.tab='opportunity'; pipelineState.stage=''; renderPipeline()">Deal</button>
+                    <button class="btn btn-secondary" onclick="triggerDealImport()">⬆️ Import</button>
                     <button class="btn btn-primary" onclick="openDealForm()">＋ Neu</button>
+                    <input type="file" id="dealImportFile" accept=".csv,.txt" style="display:none" onchange="handleDealImportFile(event)">
                 </div>
             </div>
 
@@ -2099,6 +2101,297 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
     function closeDealForm(){
         const host = document.getElementById('dealFormHost');
         if(host) host.innerHTML = '';
+    }
+
+
+    // --- PIPELINE IMPORT (CSV -> Leads/Deals) ---
+    function triggerDealImport(){
+        const inp = document.getElementById('dealImportFile');
+        if(!inp) return alert('Import nicht verfügbar.');
+        inp.value = '';
+        inp.click();
+    }
+
+    function handleDealImportFile(ev){
+        try{
+            const file = ev?.target?.files?.[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try{
+                    const text = String(e.target.result || '');
+                    const {rows, errors} = parseFlexibleCSV(text);
+                    if(errors.length){
+                        console.warn('CSV warnings', errors);
+                    }
+                    const result = importDealsFromRows(rows);
+                    save();
+                    renderPipeline();
+                    alert(`Import abgeschlossen: ${result.added} neu, ${result.skipped} übersprungen${result.updated ? `, ${result.updated} aktualisiert` : ''}.`);
+                }catch(err){
+                    console.error(err);
+                    alert('Import fehlgeschlagen: ' + err.message);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }catch(e){
+            console.error(e);
+            alert('Import fehlgeschlagen: ' + e.message);
+        }
+    }
+
+    function parseFlexibleCSV(text){
+        // Supports ; or , delimiters, quoted fields, CRLF/LF
+        const errors = [];
+        const lines = String(text||'').split(/\r\n|\n/).filter(l => l.trim() !== '');
+        if(lines.length < 2) throw new Error('Datei ist leer oder hat keine Datenzeilen.');
+        const delim = detectDelimiter(lines[0]);
+        const header = splitCSVLine(lines[0], delim).map(h => normalizeHeader(h));
+        const rows = [];
+        for(let i=1;i<lines.length;i++){
+            const cols = splitCSVLine(lines[i], delim);
+            if(cols.every(c => String(c).trim()==='')) continue;
+            const row = {};
+            header.forEach((h, idx) => { row[h] = (cols[idx] ?? '').trim(); });
+            rows.push(row);
+        }
+        return {rows, errors};
+    }
+
+    function detectDelimiter(line){
+        const semi = (line.match(/;/g)||[]).length;
+        const comma = (line.match(/,/g)||[]).length;
+        // Heuristic: pick the more frequent delimiter
+        return semi >= comma ? ';' : ',';
+    }
+
+    function splitCSVLine(line, delim){
+        // Minimal CSV parser with quotes
+        const out = [];
+        let cur = '';
+        let inQuotes = false;
+        for(let i=0;i<line.length;i++){
+            const ch = line[i];
+            if(ch === '"'){
+                if(inQuotes && line[i+1] === '"'){ cur += '"'; i++; }
+                else inQuotes = !inQuotes;
+            } else if(ch === delim && !inQuotes){
+                out.push(cur);
+                cur = '';
+            } else {
+                cur += ch;
+            }
+        }
+        out.push(cur);
+        return out.map(s => String(s).replace(/^\s+|\s+$/g,''));
+    }
+
+    function normalizeHeader(h){
+        const s = String(h||'').replace(/^"+|"+$/g,'').trim().toLowerCase();
+        // remove accents
+        return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+            .replace(/[^a-z0-9]+/g,'_')
+            .replace(/^_+|_+$/g,'');
+    }
+
+    function importDealsFromRows(rows){
+        if(!db.deals) db.deals = [];
+        const stageMapLead = {
+            neu:'Neu', new:'Neu',
+            kontaktiert:'Kontaktiert', contacted:'Kontaktiert',
+            qualifiziert:'Qualifiziert', qualified:'Qualifiziert',
+            disqualifiziert:'Disqualifiziert', disqualified:'Disqualifiziert'
+        };
+        const stageMapOpp = {
+            qualifiziert:'Qualifiziert', qualified:'Qualifiziert',
+            bedarf:'Bedarf', needs:'Bedarf',
+            angebot:'Angebot', offer:'Angebot', proposal:'Angebot',
+            verhandlung:'Verhandlung', negotiation:'Verhandlung',
+            won:'Won', gewonnen:'Won',
+            lost:'Lost', verloren:'Lost'
+        };
+
+        const keyFor = (d)=>`${(d.type||'')}:${(d.name||'').trim().toLowerCase()}|${(d.company||'').trim().toLowerCase()}|${(d.expectedClose||'')}`;
+        const existingIndex = new Map(db.deals.map((d, idx)=>[keyFor(d), idx]));
+
+        let added=0, skipped=0, updated=0;
+
+        rows.forEach(r=>{
+            const mapped = mapRowToDeal(r);
+            if(!mapped) { skipped++; return; }
+
+            const k = keyFor(mapped);
+            if(existingIndex.has(k)){
+                // do not overwrite by default; but if empty fields in existing, fill them
+                const idx = existingIndex.get(k);
+                const cur = db.deals[idx];
+                const before = JSON.stringify(cur);
+                ['source','qualification','notes','customerId','probability','value','stage','expectedClose'].forEach(f=>{
+                    if((cur[f]===undefined || cur[f]===null || String(cur[f]).trim()==='') && mapped[f]!==undefined){
+                        cur[f] = mapped[f];
+                    }
+                });
+                cur.updatedAt = new Date().toISOString();
+                if(JSON.stringify(cur) !== before) updated++;
+                return;
+            }
+
+            // Normalize stage
+            if(mapped.type === 'lead'){
+                const sKey = normalizeHeader(mapped.stage||'');
+                if(stageMapLead[sKey]) mapped.stage = stageMapLead[sKey];
+                if(!LEAD_STAGES.includes(mapped.stage)) mapped.stage = 'Neu';
+                mapped.probability = parseInt(mapped.probability)||10;
+                mapped.value = 0;
+            } else {
+                const sKey = normalizeHeader(mapped.stage||'');
+                if(stageMapOpp[sKey]) mapped.stage = stageMapOpp[sKey];
+                if(!OPP_STAGES.includes(mapped.stage)) mapped.stage = 'Qualifiziert';
+                mapped.probability = clampInt(mapped.probability, 0, 100, 30);
+                mapped.value = parseMoney(mapped.value);
+            }
+
+            mapped.id = Date.now() + Math.floor(Math.random()*100000);
+            mapped.createdAt = new Date().toISOString();
+            mapped.updatedAt = new Date().toISOString();
+            db.deals.push(mapped);
+            existingIndex.set(k, db.deals.length-1);
+            added++;
+        });
+
+        return {added, skipped, updated};
+    }
+
+    function mapRowToDeal(r){
+        // Map common column names to deal fields
+        const get = (...keys)=> {
+            for(const k of keys){
+                const nk = normalizeHeader(k);
+                if(r[nk] !== undefined && String(r[nk]).trim()!=='') return String(r[nk]).trim();
+            }
+            // also try direct normalized lookup
+            for(const k of keys){
+                const nk = normalizeHeader(k);
+                if(r[nk] !== undefined) return String(r[nk]||'').trim();
+            }
+            return '';
+        };
+
+        const name = firstNonEmpty(
+            get('name','titel','projekt','deal','lead','interessent','anfrage'),
+            get('bezeichnung','subject')
+        );
+        const company = firstNonEmpty(
+            get('firma','unternehmen','kunde','company','account','organisation','organization'),
+            get('kundename')
+        );
+
+        if(!name && !company) return null;
+
+        // Type: use provided type OR current tab
+        let typeRaw = get('type','typ');
+        typeRaw = (typeRaw||'').toLowerCase();
+        let type = '';
+        if(typeRaw.includes('lead') || typeRaw.includes('interess')) type = 'lead';
+        else if(typeRaw.includes('deal') || typeRaw.includes('opportun')) type = 'opportunity';
+        else type = (pipelineState.tab==='lead') ? 'lead' : 'opportunity';
+
+        const source = firstNonEmpty(get('quelle','source','kanal','channel'), '');
+        const qualification = firstNonEmpty(get('qualifizierung','qualification','rating'), '');
+        const stage = firstNonEmpty(get('stufe','stage','phase','status'), '');
+        const probability = firstNonEmpty(get('wahrscheinlichkeit','probability','prob','chance'), '');
+        const expectedClose = parseDateToISO(firstNonEmpty(get('expected_close','expectedclose','closedate','close_date','abschlussdatum','close','voraussichtlicher_abschluss'), ''));
+        const value = firstNonEmpty(get('wert','value','deal_value','dealvalue','betrag','umsatz','revenue'), '');
+        const notes = firstNonEmpty(get('notiz','notes','bemerkung','kommentar','comment'), '');
+
+        // customer mapping
+        let customerId = '';
+        const customerIdRaw = firstNonEmpty(get('customerid','kundeid','kunden_id'), '');
+        if(customerIdRaw) customerId = customerIdRaw;
+        else {
+            // attempt: match by customer name if company equals customer name
+            const match = (db.customers||[]).find(c => (c.name||'').trim().toLowerCase() === company.trim().toLowerCase());
+            if(match) customerId = match.id;
+        }
+
+        return {
+            type,
+            name: name || company || '(Import)',
+            company: company || '',
+            source,
+            qualification,
+            stage,
+            probability,
+            expectedClose: expectedClose || '',
+            value,
+            customerId: customerId || '',
+            notes
+        };
+    }
+
+    function firstNonEmpty(...vals){
+        for(const v of vals){
+            if(v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+        }
+        return '';
+    }
+
+    function parseMoney(v){
+        const s = String(v||'').replace(/€/g,'').trim();
+        if(!s) return 0;
+        // handle 1.234,56 and 1234,56 and 1,234.56
+        const cleaned = s.replace(/\s/g,'');
+        // if has both . and , decide decimal by last occurrence
+        const lastDot = cleaned.lastIndexOf('.');
+        const lastComma = cleaned.lastIndexOf(',');
+        let norm = cleaned;
+        if(lastDot > -1 && lastComma > -1){
+            if(lastComma > lastDot){
+                norm = cleaned.replace(/\./g,'').replace(',', '.');
+            } else {
+                norm = cleaned.replace(/,/g,'');
+            }
+        } else if(lastComma > -1){
+            norm = cleaned.replace(/\./g,'').replace(',', '.');
+        }
+        const num = parseFloat(norm);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function parseDateToISO(s){
+        const v = String(s||'').trim();
+        if(!v) return '';
+        // yyyy-mm-dd
+        if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+        // dd.mm.yyyy
+        const m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        if(m){
+            const dd = String(m[1]).padStart(2,'0');
+            const mm = String(m[2]).padStart(2,'0');
+            return `${m[3]}-${mm}-${dd}`;
+        }
+        // dd/mm/yyyy
+        const m2 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if(m2){
+            const dd = String(m2[1]).padStart(2,'0');
+            const mm = String(m2[2]).padStart(2,'0');
+            return `${m2[3]}-${mm}-${dd}`;
+        }
+        // fallback try Date parse
+        const d = new Date(v);
+        if(!isNaN(d.getTime())){
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth()+1).padStart(2,'0');
+            const dd = String(d.getDate()).padStart(2,'0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+        return '';
+    }
+
+    function clampInt(v, min, max, def){
+        const n = parseInt(v);
+        if(isNaN(n)) return def;
+        return Math.max(min, Math.min(max, n));
     }
 
     function toggleDealTypeFields(){
