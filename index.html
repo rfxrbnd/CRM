@@ -415,29 +415,37 @@
 
 <script>
     const DB_KEY = 'raphael_crm_v122_revenue';
+    
+    // --- ROUTEN: Nummer → Name (Anzeige + Speicherung) ---
     const ROUTE_NAMES = {
-    "21": "Aalen",
-    "22": "Karlsruhe",
-    "26": "Bodensee",
-    "28": "Ulm",
-    "31": "Stuttgart",
-    "32": "Schwarzwald",
-    "33": "Remstal",
-    "34": "Balingen",
-    "35": "Reutlingen",
-    "36": "Böblingen",
-    "39": "Freudenstadt",
-    "42": "Ludwigsburg",
-    "48": "Pforzheim"
-};
+        "21": "Aalen",
+        "22": "Karlsruhe",
+        "26": "Bodensee",
+        "28": "Ulm",
+        "31": "Stuttgart",
+        "32": "Schwarzwald",
+        "33": "Remstal",
+        "34": "Balingen",
+        "35": "Reutlingen",
+        "36": "Böblingen",
+        "39": "Freudenstadt",
+        "42": "Ludwigsburg",
+        "48": "Pforzheim"
+    };
 
-function routeLabel(r){
-    if (r === null || r === undefined) return '';
-    const key = String(r).trim();
-    return ROUTE_NAMES[key] || key;
-}
-  
-    const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
+    // Normalisiert: wenn Nummer -> Name, wenn schon Name -> Name
+    function normalizeRoute(route){
+        if(route === null || route === undefined) return '';
+        const key = String(route).trim();
+        return ROUTE_NAMES[key] || key;
+    }
+
+    // Für UI-Ausgabe
+    function routeLabel(r){
+        return normalizeRoute(r);
+    }
+
+const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
     let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [], deals: [] };
     let currentCalDate = new Date();
@@ -463,6 +471,17 @@ function routeLabel(r){
             if(!db.expenses) db.expenses = [];
             if(!db.events) db.events = [];
             if(!db.customers) db.customers = [];
+            // --- ROUTE MIGRATION: Nummern → Namen (idempotent) ---
+            db.customers.forEach(c => {
+                if(c && c.route !== undefined){
+                    const mapped = normalizeRoute(c.route);
+                    if(mapped !== c.route){
+                        c.route = mapped;
+                    }
+                }
+            });
+            save();
+
             if(!db.deals) db.deals = [];
             
             if(!db.meta_revenue_migrated) {
@@ -678,7 +697,7 @@ function routeLabel(r){
                     db.customers.push({
                         id: Date.now() + i, name: name, address: fullAddress, 
                         phone: iTel > -1 ? row[iTel] : "", nr: iNr > -1 ? row[iNr] : "",
-                        route: iTour > -1 ? row[iTour] : "", category: 'C', status: 'aktiv', 
+                        route: iTour > -1 ? normalizeRoute(row[iTour]) : "", category: 'C', status: 'aktiv', 
                         products: '', reports: [], activities: [], nextAppointment: '', visitInterval: 4, tasks: []
                     });
                     count++;
@@ -1137,7 +1156,7 @@ function routeLabel(r){
         let list = db.customers;
 
         if (viewState.filterRoute) {
-            list = list.filter(c => c.route === viewState.filterRoute);
+            list = list.filter(c => normalizeRoute(c.route) === normalizeRoute(viewState.filterRoute));
         }
 
         if (s) {
@@ -1694,7 +1713,7 @@ function addActivity(id){
         const d={
             id:id||Date.now(),name:n,
             nr:document.getElementById('f_nr').value,
-            route:document.getElementById('f_route').value,
+            route:normalizeRoute(document.getElementById('f_route').value),
             category:document.getElementById('f_cat').value,
             status:document.getElementById('f_stat').value,
             address:document.getElementById('f_adr').value,
