@@ -2049,10 +2049,7 @@ function showRoutes(){
         <h1>Routen</h1>
 
         <div class="card">
-            <h2 style="margin-top:0;">Wochenplanung (Mo–Do) nach Fahrzeit</h2>
-            <div style="font-size:13px;color:#6b7280;line-height:1.4;">
-                Montag = längste Fahrzeiten, Richtung Donnerstag = kürzer. (3–4 Routen pro Tag)
-            </div>
+            <h2 style="margin-top:0;">Wochenplanung (Montag - Donnerstag)</h2>
         </div>
 
         <div style="display:grid; gap:14px;">
@@ -2937,10 +2934,10 @@ function buildWeekdayRoutePlan(){
   // nach max absteigend (Mo am längsten, Do am kürzesten)
   const sorted = [...ROUTE_DRIVE_TIMES].sort((a,b)=>(b.max - a.max) || (b.min - a.min) || String(a.label).localeCompare(String(b.label)));
   const buckets = [
-    { day: "Mo", items: [] },
-    { day: "Di", items: [] },
-    { day: "Mi", items: [] },
-    { day: "Do", items: [] }
+    { day: "Montag", items: [] },
+    { day: "Dienstag", items: [] },
+    { day: "Mittwoch", items: [] },
+    { day: "Donnerstag", items: [] }
   ];
   // Ziel: 3–4 pro Tag (14–15 Einträge => 4/4/4/3 oder 4/4/3/3)
   const targets = [4,4,4,3];
