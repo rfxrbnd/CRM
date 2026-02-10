@@ -901,8 +901,8 @@ function saveData(id){
                 <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
                     <div class="exp-amount">${parseFloat(e.amount).toFixed(2)} €</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">✏️</button>
-                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">🗑️</button>
+                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">bearbeiten</button>
+                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">löschen</button>
                     </div>
                 </div>
             </div>`).join('');
@@ -2273,8 +2273,8 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
                         </div>
                         <div class="no-print" style="display:flex;gap:6px;flex-shrink:0;">
                             ${type==='lead' ? `<button class="btn btn-secondary" onclick="convertLead(${d.id})">⇢ Deal</button>` : ''}
-                            <button class="btn btn-secondary" onclick="openDealForm(${d.id})">✏️</button>
-                            <button class="btn btn-danger" onclick="deleteDeal(${d.id})">🗑️</button>
+                            <button class="btn btn-secondary" onclick="openDealForm(${d.id})">bearbeiten</button>
+                            <button class="btn btn-danger" onclick="deleteDeal(${d.id})">löschen</button>
                         </div>
                     </div>
                     ${d.notes ? `<div style="margin-top:10px;font-size:13px;color:#374151;white-space:pre-wrap;">${escapeHtml(d.notes)}</div>` : ''}
