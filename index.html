@@ -2018,9 +2018,63 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
     function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
-    function showRoutes(){const r=[...new Set(db.customers.map(c=>c.route).filter(x=>x))].sort();document.getElementById('content').innerHTML=`<h1>Routen</h1><div class="grid-3">${r.map(x=>`<div class="card" onclick="filterRoute('${x}')" style="cursor:pointer;text-align:center;"><h2>${x}</h2><div style="color:#666">${db.customers.filter(c=>c.route===x).length} Kunden</div></div>`).join('')}</div>`;}
     
-    function filterRoute(r){
+function showRoutes(){
+    const allRoutes = [...new Set((db.customers||[]).map(c=>c.route).filter(x=>x))].sort();
+
+    const plan = buildWeekdayRoutePlan();
+
+    const mkCard = (r, subtitle) => {
+        const cnt = (db.customers||[]).filter(c => c.route === r).length;
+        return `<div class="card" onclick="filterRoute('${String(r).replace(/'/g, "\'")}')" style="cursor:pointer;text-align:center;">
+                    <h2 style="margin:0 0 6px 0;">${r}</h2>
+                    ${subtitle ? `<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">${subtitle}</div>` : ``}
+                    <div style="color:#666">${cnt} Kunden</div>
+                </div>`;
+    };
+
+    const planHtml = plan.map(b=>{
+        const items = b.items.map(it=>{
+            const r = it.route;
+            const sub = `${it.label} · ${it.min}–${it.max} min`;
+            return mkCard(r, sub);
+        }).join('');
+        return `
+          <div class="card" style="padding:16px;">
+            <div style="font-weight:800; font-size:14px; margin-bottom:12px;">${b.day}</div>
+            <div class="grid-3" style="gap:12px;">${items}</div>
+          </div>
+        `;
+    }).join('');
+
+    const allHtml = allRoutes.length
+        ? `<div class="grid-3">${allRoutes.map(r=>mkCard(r, '')).join('')}</div>`
+        : `<div class="card" style="text-align:center;color:#9ca3af;">Noch keine Routen bei Kunden hinterlegt.</div>`;
+
+    document.getElementById('content').innerHTML = `
+        <h1>Routen</h1>
+
+        <div class="card">
+            <h2 style="margin-top:0;">Wochenplanung (Mo–Do) nach Fahrzeit</h2>
+            <div style="font-size:13px;color:#6b7280;line-height:1.4;">
+                Montag = längste Fahrzeiten, Richtung Donnerstag = kürzer. (3–4 Routen pro Tag)
+            </div>
+        </div>
+
+        <div style="display:grid; gap:14px;">
+            ${planHtml}
+        </div>
+
+        <div class="card" style="margin-top:18px;">
+            <h2 style="margin-top:0;">Alle Routen (aus deinen Kundendaten)</h2>
+            <div style="font-size:13px;color:#6b7280;">Tippe eine Route an, um in der Kundenliste danach zu filtern.</div>
+        </div>
+        ${allHtml}
+    `;
+}
+
+
+function filterRoute(r){
         viewState.filterRoute = r; 
         viewState.search = "";       
         showCustomers();             
@@ -2871,6 +2925,45 @@ const ROUTE_MAP = {
   "45": "Mannheim/Heidelberg",
   "48": "Pforzheim"
 };
+// ===== ROUTEN-PLAN (Mo–Do) nach Fahrzeit =====
+const ROUTE_DRIVE_TIMES = [
+  { route: "Bodensee", label: "Bodensee (z. B. Friedrichshafen)", min: 150, max: 170 },
+  { route: "Memmingen", label: "Memmingen", min: 120, max: 135 },
+  { route: "Ulm/Heidenheim", label: "Ulm", min: 90, max: 100 },
+  { route: "Ulm/Heidenheim", label: "Heidenheim", min: 85, max: 95 }, // gleiche Route wie Ulm/Heidenheim
+  { route: "Balingen/Ebingen", label: "Balingen / Ebingen", min: 85, max: 95 },
+  { route: "Aalen", label: "Aalen", min: 75, max: 85 },
+  { route: "Reutlingen", label: "Reutlingen", min: 75, max: 85 },
+  { route: "Freudenstadt", label: "Freudenstadt", min: 60, max: 70 },
+  { route: "Schwarzwald", label: "Schwarzwald (Nord, z. B. Calw)", min: 45, max: 60 },
+  { route: "Stuttgart", label: "Stuttgart", min: 45, max: 55 },
+  { route: "Karlsruhe", label: "Karlsruhe", min: 45, max: 55 },
+  { route: "Remstal", label: "Remstal (z. B. Schorndorf)", min: 45, max: 55 },
+  { route: "Böblingen/Sindelfingen", label: "Böblingen / Sindelfingen", min: 35, max: 45 },
+  { route: "Ludwigsburg", label: "Ludwigsburg", min: 35, max: 45 },
+  { route: "Pforzheim", label: "Pforzheim", min: 15, max: 20 }
+];
+
+function buildWeekdayRoutePlan(){
+  // nach max absteigend (Mo am längsten, Do am kürzesten)
+  const sorted = [...ROUTE_DRIVE_TIMES].sort((a,b)=>(b.max - a.max) || (b.min - a.min) || String(a.label).localeCompare(String(b.label)));
+  const buckets = [
+    { day: "Mo", items: [] },
+    { day: "Di", items: [] },
+    { day: "Mi", items: [] },
+    { day: "Do", items: [] }
+  ];
+  // Ziel: 3–4 pro Tag (14–15 Einträge => 4/4/4/3 oder 4/4/3/3)
+  const targets = [4,4,4,3];
+  let bi = 0;
+  for(const it of sorted){
+    while(bi < buckets.length-1 && buckets[bi].items.length >= targets[bi]) bi++;
+    buckets[bi].items.push(it);
+  }
+  return buckets;
+}
+// ===== ENDE ROUTEN-PLAN =====
+
 
 function migrateRoutesNumbersToNames() {
   let changed = false;
