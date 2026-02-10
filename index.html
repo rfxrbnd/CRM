@@ -350,6 +350,41 @@
 .cal-event.manual{border:0!important;box-shadow:none!important;outline:none!important}.cal-event.office{background:#fde68a!important;color:#111827!important}.cal-event.doctor{background:#fecaca!important;color:#7f1d1d!important}.cal-event.vacation{background:#bbf7d0!important;color:#14532d!important}
         
         
+/* ROUTEN BUBBLES – kompakt (4 pro Reihe) */
+.routes-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:12px;
+}
+.route-bubble{
+  padding:14px 12px;
+  border-radius:14px;
+  min-height:0;
+}
+.route-bubble h2,
+.route-bubble h3{
+  font-size:15px;
+  margin:0 0 4px 0;
+  font-weight:800;
+}
+.route-bubble .route-time{
+  font-size:12px;
+  color:#6b7280;
+  margin-bottom:6px;
+}
+.route-bubble .route-count{
+  font-size:12px;
+  color:#6b7280;
+}
+
+/* responsive: Tablet/Phone */
+@media (max-width: 1024px){
+  .routes-grid{ grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 800px){
+  .routes-grid{ grid-template-columns:1fr; }
+}
+
 </style>
 </head>
 <body>
@@ -2024,10 +2059,10 @@ function showRoutes(){
 
     const mkCard = (r, subtitle) => {
         const cnt = (db.customers||[]).filter(c => c.route === r).length;
-        return `<div class="card" onclick="filterRoute('${String(r).replace(/'/g, "\'")}')" style="cursor:pointer;text-align:center;">
-                    <h2 style="margin:0 0 6px 0;">${r}</h2>
-                    ${subtitle ? `<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">${subtitle}</div>` : ``}
-                    <div style="color:#666">${cnt} Kunden</div>
+        return `<div class="card route-bubble" onclick="filterRoute('${String(r).replace(/'/g, "\'")}')" style="cursor:pointer;text-align:center;">
+                    <h2>${r}</h2>
+                    ${subtitle ? `<div class="route-time">${subtitle}</div>` : ``}
+                    <div class="route-count">${cnt} Kunden</div>
                 </div>`;
     };
 
@@ -2040,7 +2075,7 @@ function showRoutes(){
         return `
           <div class="card" style="padding:16px;">
             <div style="font-weight:800; font-size:14px; margin-bottom:12px;">${b.day}</div>
-            <div class="grid-3" style="gap:12px;">${items}</div>
+            <div class="routes-grid">${items}</div>
           </div>
         `;
     }).join('');
