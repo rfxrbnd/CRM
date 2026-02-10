@@ -642,10 +642,16 @@ function createCustomer(obj){
 
 function saveData(id){
   try{
-    const n = (document.getElementById('f_name')?.value || '').trim();
+    const nEl = document.getElementById('f_name');
+    const n = nEl ? nEl.value.trim() : '';
     if(!n) return alert("Name fehlt");
 
+    // id kann als Zahl oder String kommen -> normalisieren
+    const isEdit = (id !== null && id !== undefined && String(id).trim() !== '');
+    const cid = isEdit ? Number(id) : null;
+
     const patch = {
+      id: isEdit ? cid : Date.now(),
       name: n,
       nr: (document.getElementById('f_nr')?.value || '').trim(),
       route: (document.getElementById('f_route')?.value || '').trim(),
@@ -658,23 +664,47 @@ function saveData(id){
       products: (document.getElementById('f_prod')?.value || '').trim()
     };
 
-    let c = null;
+    if(isEdit){
+      const idx = db.customers.findIndex(x => Number(x.id) === cid);
+      if(idx < 0) throw new Error('Kunde zum Bearbeiten nicht gefunden (id=' + id + ')');
 
-    if(id){
-      c = updateCustomer(id, patch);
-      // Falls aus irgendeinem Grund nicht gefunden: fallback auf "create"
-      if(!c) c = createCustomer({ id, ...patch });
+      // WICHTIG: Merge statt Replace -> Berichte/Timeline bleiben
+      db.customers[idx] = { ...db.customers[idx], ...patch };
+
+      // Container-Felder absichern (nicht verlieren)
+      const cur = db.customers[idx];
+      if(!Array.isArray(cur.activities)) cur.activities = [];
+      if(!Array.isArray(cur.reports)) cur.reports = [];
+      if(!Array.isArray(cur.tasks)) cur.tasks = [];
+      if(!Array.isArray(cur.comms)) cur.comms = [];
+
+      // Defaults nur wenn fehlen
+      if(cur.nextAppointment === undefined || cur.nextAppointment === null) cur.nextAppointment = '';
+      if(!cur.visitInterval) cur.visitInterval = 4;
+
+      save();
+      showDetail(cur.id);
     } else {
-      c = createCustomer(patch);
+      // neu
+      const c = {
+        nextAppointment: '',
+        visitInterval: 4,
+        tasks: [],
+        reports: [],
+        activities: [],
+        comms: [],
+        ...patch
+      };
+      db.customers.push(c);
+      save();
+      showDetail(c.id);
     }
-
-    save();
-    showDetail(c.id);
   } catch(e){
     console.error(e);
     alert("Speichern-Fehler: " + e.message);
   }
 }
+
 
 
         
@@ -1893,7 +1923,7 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
                 <div class="grid-2"><div><label>Ansprechpartner</label><input id="f_con" value="${c.contact||''}" placeholder="Kontakt"></div><div><label>Tel</label><input id="f_tel" value="${c.phone||''}" placeholder="Tel"></div></div>
                 <label>E-Mail</label><input id="f_mail" value="${c.email||''}" placeholder="Mail">
                 <label>Umsatz / Potenzial</label><input id="f_prod" value="${c.products||''}" placeholder="Umsatz, Potenzial...">
-                <button class="btn btn-primary btn-full" onclick="saveData(${id})">Sichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
+                <button type="button" class="btn btn-primary btn-full" onclick="saveData(${id})">Sichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
             </div>
         </div>`;
     }
