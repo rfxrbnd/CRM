@@ -78,6 +78,9 @@
         .cust-row { display: flex; align-items: center; padding: 14px; background: #fff; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.1s; justify-content: space-between; }
         .cust-row:hover { background: #f8fafc; }
         .cust-row.selected { background: #fffbeb; border-color: var(--brand); }
+
+        .cust-row.inactive { opacity: 0.55; }
+        .cust-row.inactive:hover { background: #f8fafc; }
         .check-circle { width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s; }
         .cust-row.selected .check-circle { background: var(--brand); border-color: var(--brand-dark); }
         .cust-row.selected .check-circle::after { content: '✓'; font-size: 12px; font-weight: bold; color: #451a03; }
@@ -423,7 +426,7 @@
     let dragId = null, dragTargetDate = null;
     let selectMode = false;
     let selectedIds = new Set();
-    let viewState = { sort: 'name', search: '', filterRoute: null };
+    let viewState = { sort: 'name', search: '', filterRoute: null, onlyActive: false };
     let mapInstance = null; 
     let editingExpenseId = null;
     window.currentOcrImage = null; 
@@ -595,6 +598,12 @@
     };
 
     function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+    function displayCustomerName(c){
+        if(c && c.status === 'inaktiv') return '* ' + (c.name || '');
+        return (c && c.name) ? c.name : '';
+    }
+
     function updateLogoUI() {
         const img = document.getElementById('sidebar-logo');
         const txt = document.getElementById('text-logo');
@@ -1064,7 +1073,7 @@ function saveData(id){
     function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();showExpenses();}}
     function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showExpenses()">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
 
-    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">Positionen Laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${c.name}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
+    function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">Positionen Laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${displayCustomerName(c)}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
     async function batchGeocode(){
         const missing=db.customers.filter(c=>!c.lat&&c.address.length>5);
         if(missing.length===0)return alert("Alle Adressen haben bereits Koordinaten.");
@@ -1110,6 +1119,10 @@ function saveData(id){
         if (viewState.filterRoute) {
             list = list.filter(c => c.route === viewState.filterRoute);
         }
+        if (viewState.onlyActive) {
+            list = list.filter(c => (c.status || 'aktiv') !== 'inaktiv');
+        }
+
 
         if (s) {
             list = list.filter(c =>
@@ -1227,6 +1240,10 @@ function saveData(id){
                     <option value="route" ${viewState.sort==='route'?'selected':''}>Tour</option>
                     <option value="status" ${viewState.sort==='status'?'selected':''}>Fälligkeit</option>
                 </select>
+                <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-light); margin:0; white-space:nowrap;">
+                    <input type="checkbox" ${viewState.onlyActive?'checked':''} onchange="viewState.onlyActive=this.checked; renderTable()" style="margin:0; width:auto;">
+                    Nur aktive
+                </label>
             </div>
             <div id="tableContainer"></div>
         </div>
@@ -1243,11 +1260,11 @@ function saveData(id){
             const badgeClass = c.category === 'A' ? 'cat-A' : (c.category === 'B' ? 'cat-B' : 'cat-C');
 
             return `
-            <div class="cust-row ${isSelected?'selected':''}" onclick="${clickAction}">
+            <div class="cust-row ${isSelected?'selected':''} ${c.status==='inaktiv'?'inactive':''}" onclick="${clickAction}">
                 ${selectMode?`<div class="check-circle"></div>`:''}
                 <div style="flex:1;">
                     <div style="font-weight:700;">
-                        ${c.name} 
+                        ${displayCustomerName(c)} 
                         <span class="cat-badge ${badgeClass}">${c.category}</span>
                     </div>
                     <div style="font-size:12px; color:#64748b;">${c.address||'-'}</div>
@@ -1329,7 +1346,7 @@ function saveData(id){
                 <div>
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:15px; margin-bottom:20px;">
                         <div style="flex:1;">
-                            <h1 style="margin:0;">${c.name} <span class="cat-badge ${badgeClass}" style="font-size:14px; vertical-align:middle;">${c.category}</span></h1>
+                            <h1 style="margin:0;">${displayCustomerName(c)} <span class="cat-badge ${badgeClass}" style="font-size:14px; vertical-align:middle;">${c.category}</span></h1>
                             <div style="color:var(--text-light); font-size:14px; margin-top:5px;">${c.address||'-'}</div>
                         </div>
                         <div class="no-print" style="display:flex; gap:5px;">
@@ -1761,6 +1778,9 @@ function addActivity(id){
         const editId = editIdRaw ? parseInt(editIdRaw,10) : null;
 
         const type = (document.getElementById('act_type')?.value || 'note');
+        if(type==='report' && (c.status||'aktiv')==='inaktiv'){
+            if(!confirm('Hinweis: Dieser Kunde ist als INAKTIV markiert. Besuch/Bericht trotzdem anlegen?')) return;
+        }
         const dtVal = document.getElementById('act_dt')?.value || '';
         const follow = document.getElementById('act_follow')?.value || '';
         const subject = (document.getElementById('act_subj')?.value || '').trim();
@@ -1902,7 +1922,7 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
 
 
 
-    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Zuhause</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Sichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
+    function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;${c.status===\'inaktiv\'?\'opacity:0.55;\':\'\'}"><div><b>${displayCustomerName(c)}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Zuhause</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Sichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
     function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
@@ -1976,7 +1996,7 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
                 ${group.map(c => `
                     <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding:10px 0;">
                         <div>
-                            <b>${c.name}</b> <span style="font-size:10px; color:#666;">(ID: ${c.id})</span><br>
+                            <b>${displayCustomerName(c)}</b> <span style="font-size:10px; color:#666;">(ID: ${c.id})</span><br>
                             Tour: ${c.route || '-'} | Status: ${c.status}
                         </div>
                         <button class="btn btn-danger" style="font-size:12px;" onclick="deleteDuplicate(${c.id})">Löschen</button>
