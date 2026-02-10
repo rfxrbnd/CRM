@@ -602,46 +602,80 @@
         else { img.src = DEFAULT_LOGO; img.style.display = 'inline-block'; txt.style.display = 'none'; }
 
     function updateCustomer(id, patch){
-    if(!id) throw new Error('updateCustomer: id fehlt');
-    db.customers = Array.isArray(db.customers) ? db.customers : [];
+  db.customers = Array.isArray(db.customers) ? db.customers : [];
+  const idx = db.customers.findIndex(c => c.id === id);
+  if(idx < 0) return null;
 
-    const idx = db.customers.findIndex(c => c.id === id);
-    if(idx < 0) throw new Error('updateCustomer: Kunde nicht gefunden: ' + id);
+  const cur = db.customers[idx] || {};
+  const merged = { ...cur, ...(patch || {}) };
 
-    const cur = db.customers[idx] || {};
+  merged.activities = Array.isArray(cur.activities) ? cur.activities : (Array.isArray(merged.activities) ? merged.activities : []);
+  merged.reports     = Array.isArray(cur.reports) ? cur.reports : (Array.isArray(merged.reports) ? merged.reports : []);
+  merged.tasks       = Array.isArray(cur.tasks) ? cur.tasks : (Array.isArray(merged.tasks) ? merged.tasks : []);
+  merged.comms       = Array.isArray(cur.comms) ? cur.comms : (Array.isArray(merged.comms) ? merged.comms : []);
 
-    const merged = { ...cur, ...(patch || {}) };
+  if(merged.nextAppointment === undefined || merged.nextAppointment === null) merged.nextAppointment = cur.nextAppointment || '';
+  if(!merged.visitInterval) merged.visitInterval = cur.visitInterval || 4;
 
-    merged.activities = Array.isArray(cur.activities) ? cur.activities : (Array.isArray(merged.activities) ? merged.activities : []);
-    merged.reports     = Array.isArray(cur.reports) ? cur.reports : (Array.isArray(merged.reports) ? merged.reports : []);
-    merged.tasks       = Array.isArray(cur.tasks) ? cur.tasks : (Array.isArray(merged.tasks) ? merged.tasks : []);
-    merged.comms       = Array.isArray(cur.comms) ? cur.comms : (Array.isArray(merged.comms) ? merged.comms : []);
-
-    if(merged.nextAppointment === undefined || merged.nextAppointment === null) merged.nextAppointment = cur.nextAppointment || '';
-    if(!merged.visitInterval) merged.visitInterval = cur.visitInterval || 4;
-
-    db.customers[idx] = merged;
-    return merged;
+  db.customers[idx] = merged;
+  return merged;
 }
 
-    function createCustomer(obj){
-    db.customers = Array.isArray(db.customers) ? db.customers : [];
-    const c = {
-        id: Date.now(),
-        name: '',
-        nr: '', route: '', category: 'C', status: 'aktiv',
-        address: '', contact: '', phone: '', email: '', products: '',
-        nextAppointment: '',
-        visitInterval: 4,
-        activities: [],
-        reports: [],
-        tasks: [],
-        comms: [],
-        ...(obj||{})
+function createCustomer(obj){
+  db.customers = Array.isArray(db.customers) ? db.customers : [];
+  const c = {
+    id: Date.now(),
+    name: '',
+    nr: '', route: '', category: 'C', status: 'aktiv',
+    address: '', contact: '', phone: '', email: '', products: '',
+    nextAppointment: '',
+    visitInterval: 4,
+    activities: [],
+    reports: [],
+    tasks: [],
+    comms: [],
+    ...(obj || {})
+  };
+  db.customers.push(c);
+  return c;
+}
+
+function saveData(id){
+  try{
+    const n = (document.getElementById('f_name')?.value || '').trim();
+    if(!n) return alert("Name fehlt");
+
+    const patch = {
+      name: n,
+      nr: (document.getElementById('f_nr')?.value || '').trim(),
+      route: (document.getElementById('f_route')?.value || '').trim(),
+      category: (document.getElementById('f_cat')?.value || 'C'),
+      status: (document.getElementById('f_stat')?.value || 'aktiv'),
+      address: (document.getElementById('f_adr')?.value || '').trim(),
+      contact: (document.getElementById('f_con')?.value || '').trim(),
+      phone: (document.getElementById('f_tel')?.value || '').trim(),
+      email: (document.getElementById('f_mail')?.value || '').trim(),
+      products: (document.getElementById('f_prod')?.value || '').trim()
     };
-    db.customers.push(c);
-    return c;
+
+    let c = null;
+
+    if(id){
+      c = updateCustomer(id, patch);
+      // Falls aus irgendeinem Grund nicht gefunden: fallback auf "create"
+      if(!c) c = createCustomer({ id, ...patch });
+    } else {
+      c = createCustomer(patch);
+    }
+
+    save();
+    showDetail(c.id);
+  } catch(e){
+    console.error(e);
+    alert("Speichern-Fehler: " + e.message);
+  }
 }
+
 
         
     }
