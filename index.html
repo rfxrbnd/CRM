@@ -600,6 +600,50 @@
         const txt = document.getElementById('text-logo');
         if(db.logo) { img.src = db.logo; img.style.display = 'inline-block'; txt.style.display = 'none'; } 
         else { img.src = DEFAULT_LOGO; img.style.display = 'inline-block'; txt.style.display = 'none'; }
+
+    function updateCustomer(id, patch){
+    if(!id) throw new Error('updateCustomer: id fehlt');
+    db.customers = Array.isArray(db.customers) ? db.customers : [];
+
+    const idx = db.customers.findIndex(c => c.id === id);
+    if(idx < 0) throw new Error('updateCustomer: Kunde nicht gefunden: ' + id);
+
+    const cur = db.customers[idx] || {};
+
+    const merged = { ...cur, ...(patch || {}) };
+
+    merged.activities = Array.isArray(cur.activities) ? cur.activities : (Array.isArray(merged.activities) ? merged.activities : []);
+    merged.reports     = Array.isArray(cur.reports) ? cur.reports : (Array.isArray(merged.reports) ? merged.reports : []);
+    merged.tasks       = Array.isArray(cur.tasks) ? cur.tasks : (Array.isArray(merged.tasks) ? merged.tasks : []);
+    merged.comms       = Array.isArray(cur.comms) ? cur.comms : (Array.isArray(merged.comms) ? merged.comms : []);
+
+    if(merged.nextAppointment === undefined || merged.nextAppointment === null) merged.nextAppointment = cur.nextAppointment || '';
+    if(!merged.visitInterval) merged.visitInterval = cur.visitInterval || 4;
+
+    db.customers[idx] = merged;
+    return merged;
+}
+
+    function createCustomer(obj){
+    db.customers = Array.isArray(db.customers) ? db.customers : [];
+    const c = {
+        id: Date.now(),
+        name: '',
+        nr: '', route: '', category: 'C', status: 'aktiv',
+        address: '', contact: '', phone: '', email: '', products: '',
+        nextAppointment: '',
+        visitInterval: 4,
+        activities: [],
+        reports: [],
+        tasks: [],
+        comms: [],
+        ...(obj||{})
+    };
+    db.customers.push(c);
+    return c;
+}
+
+        
     }
 
     function nav(page, el) {
@@ -1821,27 +1865,33 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
     }
     
     function saveData(id){
-        const n=document.getElementById('f_name').value;
-        if(!n)return alert("Name fehlt");
-        const d={
-            id:id||Date.now(),name:n,
-            nr:document.getElementById('f_nr').value,
-            route:document.getElementById('f_route').value,
-            category:document.getElementById('f_cat').value,
-            status:document.getElementById('f_stat').value,
-            address:document.getElementById('f_adr').value,
-            contact:document.getElementById('f_con').value,
-            phone:document.getElementById('f_tel').value,
-            email:document.getElementById('f_mail').value,
-            products:document.getElementById('f_prod').value, // Used for Revenue now
-            nextAppointment:id?db.customers.find(x=>x.id===id).nextAppointment:'',
-            reports:id?db.customers.find(x=>x.id===id).reports:[],
-            visitInterval:4, 
-            tasks:id?db.customers.find(x=>x.id===id).tasks:[]
-        };
-        if(id)db.customers[db.customers.findIndex(x=>x.id===id)]=d;else db.customers.push(d);
-        save();showDetail(d.id);
+    const n = (document.getElementById('f_name').value || '').trim();
+    if(!n) return alert("Name fehlt");
+
+    const patch = {
+        name: n,
+        nr: (document.getElementById('f_nr').value || '').trim(),
+        route: (document.getElementById('f_route').value || '').trim(),
+        category: (document.getElementById('f_cat').value || 'C'),
+        status: (document.getElementById('f_stat').value || 'aktiv'),
+        address: (document.getElementById('f_adr').value || '').trim(),
+        contact: (document.getElementById('f_con').value || '').trim(),
+        phone: (document.getElementById('f_tel').value || '').trim(),
+        email: (document.getElementById('f_mail').value || '').trim(),
+        products: (document.getElementById('f_prod').value || '').trim()
+    };
+
+    let c;
+    if(id){
+        c = updateCustomer(id, patch);
+    } else {
+        c = createCustomer(patch);
     }
+
+    save();
+    showDetail(c.id);
+}
+
 
     function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Zuhause</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Sichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
     async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
