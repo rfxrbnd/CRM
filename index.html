@@ -599,6 +599,59 @@
 
     function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
 
+
+// --- AUTO SAVE (debounced) ---
+function debounce(fn, wait){
+    let t = null;
+    return function(...args){
+        clearTimeout(t);
+        t = setTimeout(()=>fn.apply(this, args), wait);
+    };
+}
+const scheduleSave = debounce(()=>{ try { save(); } catch(e){ console.error(e); } }, 300);
+
+// Auto-Save für Bearbeiten-Formular: Änderungen sofort in db schreiben und speichern
+function bindCustomerFormAutoSave(id){
+    if(id===null || id===undefined) return;
+    const cid = id;
+
+    const map = [
+        ['f_name','name','input'],
+        ['f_nr','nr','input'],
+        ['f_route','route','input'],
+        ['f_cat','category','change'],
+        ['f_stat','status','change'],
+        ['f_adr','address','input'],
+        ['f_con','contact','input'],
+        ['f_tel','phone','input'],
+        ['f_mail','email','input'],
+        ['f_prod','products','input']
+    ];
+
+    map.forEach(([elId, key, evt])=>{
+        const el = document.getElementById(elId);
+        if(!el) return;
+        el.addEventListener(evt, ()=>{
+            try{
+                // Minimal-Patch
+                const patch = {};
+                patch[key] = (el.value!==undefined) ? el.value : '';
+                // Name trimmen, damit keine leeren Namen gespeichert werden
+                if(key==='name') patch[key] = (patch[key]||'').trim();
+
+                // Nur speichern, wenn Kunde existiert
+                const c = db.customers.find(x => x.id === cid);
+                if(!c) return;
+
+                updateCustomer(cid, patch);
+                scheduleSave();
+            } catch(e){
+                console.error(e);
+            }
+        });
+    });
+}
+
     function displayCustomerName(c){
         if(c && c.status === 'inaktiv') return '* ' + (c.name || '');
         return (c && c.name) ? c.name : '';
@@ -901,8 +954,8 @@ function saveData(id){
                 <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
                     <div class="exp-amount">${parseFloat(e.amount).toFixed(2)} €</div>
                     <div style="display:flex; gap:5px;">
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">bearbeiten</button>
-                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">löschen</button>
+                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="editExpense(${e.id})">✏️</button>
+                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="delExpense(${e.id})">🗑️</button>
                     </div>
                 </div>
             </div>`).join('');
@@ -1916,6 +1969,7 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
                 <button type="button" class="btn btn-primary btn-full" onclick="saveData(${id})">Sichern</button>${id?`<button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="delData(${id})">Löschen</button>`:''}
             </div>
         </div>`;
+        if(id){ bindCustomerFormAutoSave(id); }
     }
     
     /* saveData: zentral definiert weiter oben (safe merge) */
@@ -2141,7 +2195,7 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
                 <div style="display:flex;gap:10px;" class="no-print">
                     <button class="btn btn-secondary" onclick="pipelineState.tab='lead'; pipelineState.stage=''; renderPipeline()">Lead</button>
                     <button class="btn btn-secondary" onclick="pipelineState.tab='opportunity'; pipelineState.stage=''; renderPipeline()">Deal</button>
-                    <button class="btn btn-secondary" onclick="triggerDealImport()">Import</button>
+                    <button class="btn btn-secondary" onclick="triggerDealImport()">⬆️ Import</button>
                     <button class="btn btn-primary" onclick="openDealForm()">＋ Neu</button>
                     <input type="file" id="dealImportFile" accept=".csv,.txt" style="display:none" onchange="handleDealImportFile(event)">
                 </div>
@@ -2273,8 +2327,8 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
                         </div>
                         <div class="no-print" style="display:flex;gap:6px;flex-shrink:0;">
                             ${type==='lead' ? `<button class="btn btn-secondary" onclick="convertLead(${d.id})">⇢ Deal</button>` : ''}
-                            <button class="btn btn-secondary" onclick="openDealForm(${d.id})">bearbeiten</button>
-                            <button class="btn btn-danger" onclick="deleteDeal(${d.id})">löschen</button>
+                            <button class="btn btn-secondary" onclick="openDealForm(${d.id})">✏️</button>
+                            <button class="btn btn-danger" onclick="deleteDeal(${d.id})">🗑️</button>
                         </div>
                     </div>
                     ${d.notes ? `<div style="margin-top:10px;font-size:13px;color:#374151;white-space:pre-wrap;">${escapeHtml(d.notes)}</div>` : ''}
