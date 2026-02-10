@@ -600,62 +600,64 @@
         const txt = document.getElementById('text-logo');
         if(db.logo) { img.src = db.logo; img.style.display = 'inline-block'; txt.style.display = 'none'; } 
         else { img.src = DEFAULT_LOGO; img.style.display = 'inline-block'; txt.style.display = 'none'; }
+    }
 
-    function updateCustomer(id, patch){
-  db.customers = Array.isArray(db.customers) ? db.customers : [];
-  const idx = db.customers.findIndex(c => c.id === id);
-  if(idx < 0) return null;
+// --- SAFE CUSTOMER UPDATE HELPERS (verhindert Datenverlust von Besuchsberichten/Timeline) ---
+function _normId(x){ return (x===null || x===undefined) ? '' : String(x); }
 
-  const cur = db.customers[idx] || {};
-  const merged = { ...cur, ...(patch || {}) };
+function updateCustomer(id, patch){
+    db.customers = Array.isArray(db.customers) ? db.customers : [];
+    const cid = _normId(id);
+    const idx = db.customers.findIndex(c => _normId(c.id) === cid);
+    if(idx < 0) throw new Error('Kunde nicht gefunden (id=' + cid + ')');
 
-  merged.activities = Array.isArray(cur.activities) ? cur.activities : (Array.isArray(merged.activities) ? merged.activities : []);
-  merged.reports     = Array.isArray(cur.reports) ? cur.reports : (Array.isArray(merged.reports) ? merged.reports : []);
-  merged.tasks       = Array.isArray(cur.tasks) ? cur.tasks : (Array.isArray(merged.tasks) ? merged.tasks : []);
-  merged.comms       = Array.isArray(cur.comms) ? cur.comms : (Array.isArray(merged.comms) ? merged.comms : []);
+    const cur = db.customers[idx] || {};
+    const merged = { ...cur, ...(patch || {}) };
 
-  if(merged.nextAppointment === undefined || merged.nextAppointment === null) merged.nextAppointment = cur.nextAppointment || '';
-  if(!merged.visitInterval) merged.visitInterval = cur.visitInterval || 4;
+    // Container immer behalten
+    merged.activities = Array.isArray(cur.activities) ? cur.activities : (Array.isArray(merged.activities) ? merged.activities : []);
+    merged.reports     = Array.isArray(cur.reports) ? cur.reports : (Array.isArray(merged.reports) ? merged.reports : []);
+    merged.tasks       = Array.isArray(cur.tasks) ? cur.tasks : (Array.isArray(merged.tasks) ? merged.tasks : []);
+    merged.comms       = Array.isArray(cur.comms) ? cur.comms : (Array.isArray(merged.comms) ? merged.comms : []);
 
-  db.customers[idx] = merged;
-  return merged;
+    if(merged.nextAppointment === undefined || merged.nextAppointment === null) merged.nextAppointment = cur.nextAppointment || '';
+    if(!merged.visitInterval) merged.visitInterval = cur.visitInterval || 4;
+
+    db.customers[idx] = merged;
+    return merged;
 }
 
 function createCustomer(obj){
-  db.customers = Array.isArray(db.customers) ? db.customers : [];
-  const c = {
-    id: Date.now(),
-    name: '',
-    nr: '', route: '', category: 'C', status: 'aktiv',
-    address: '', contact: '', phone: '', email: '', products: '',
-    nextAppointment: '',
-    visitInterval: 4,
-    activities: [],
-    reports: [],
-    tasks: [],
-    comms: [],
-    ...(obj || {})
-  };
-  db.customers.push(c);
-  return c;
+    db.customers = Array.isArray(db.customers) ? db.customers : [];
+    const c = {
+        id: Date.now(),
+        name: '',
+        nr: '', route: '', category: 'C', status: 'aktiv',
+        address: '', contact: '', phone: '', email: '', products: '',
+        nextAppointment: '',
+        visitInterval: 4,
+        activities: [],
+        reports: [],
+        tasks: [],
+        comms: [],
+        ...(obj || {})
+    };
+    db.customers.push(c);
+    return c;
 }
 
+// Form-Speichern (Bearbeiten/Neu) – ohne Berichte/Timeline zu löschen
 function saveData(id){
     try{
         const n = (document.getElementById('f_name').value || '').trim();
         if(!n) return alert("Name fehlt");
 
-        // id normalisieren (Bearbeiten: id vorhanden, Neu: id leer/null)
-        const isEdit = !(id === null || id === undefined || String(id).trim() === '');
-        const cid = isEdit ? String(id) : null;
-
-        // Patch aus dem Formular
         const patch = {
             name: n,
             nr: (document.getElementById('f_nr').value || '').trim(),
             route: (document.getElementById('f_route').value || '').trim(),
-            category: document.getElementById('f_cat').value,
-            status: document.getElementById('f_stat').value,
+            category: (document.getElementById('f_cat').value || 'C'),
+            status: (document.getElementById('f_stat').value || 'aktiv'),
             address: (document.getElementById('f_adr').value || '').trim(),
             contact: (document.getElementById('f_con').value || '').trim(),
             phone: (document.getElementById('f_tel').value || '').trim(),
@@ -663,57 +665,20 @@ function saveData(id){
             products: (document.getElementById('f_prod').value || '').trim()
         };
 
-        if(isEdit){
-            const idx = db.customers.findIndex(x => String(x.id) === cid);
-            if(idx < 0) throw new Error("Kunde nicht gefunden (id=" + id + ")");
-
-            // MERGE statt Replace: alles behalten (Besuchsberichte/Timeline/etc.)
-            const cur = db.customers[idx];
-            db.customers[idx] = { ...cur, ...patch };
-
-            // Kritische Arrays absichern (Timeline/Berichte/Aufgaben)
-            if(!Array.isArray(db.customers[idx].activities)) db.customers[idx].activities = Array.isArray(cur.activities) ? cur.activities : [];
-            if(!Array.isArray(db.customers[idx].reports))     db.customers[idx].reports     = Array.isArray(cur.reports) ? cur.reports : [];
-            if(!Array.isArray(db.customers[idx].tasks))       db.customers[idx].tasks       = Array.isArray(cur.tasks) ? cur.tasks : [];
-            if(!Array.isArray(db.customers[idx].comms))       db.customers[idx].comms       = Array.isArray(cur.comms) ? cur.comms : [];
-
-            // Defaults nur wenn fehlen
-            if(db.customers[idx].nextAppointment === undefined || db.customers[idx].nextAppointment === null)
-                db.customers[idx].nextAppointment = cur.nextAppointment || '';
-            if(!db.customers[idx].visitInterval)
-                db.customers[idx].visitInterval = cur.visitInterval || 4;
-
-            save();
-            showDetail(db.customers[idx].id);
-            return;
+        let c;
+        if(id !== null && id !== undefined && String(id).trim() !== ''){
+            c = updateCustomer(id, patch);
+        } else {
+            c = createCustomer(patch);
         }
 
-        // Neu anlegen (inkl. Container-Felder)
-        const newCustomer = {
-            id: Date.now(),
-            category: 'C',
-            status: 'aktiv',
-            nextAppointment: '',
-            visitInterval: 4,
-            tasks: [],
-            reports: [],
-            activities: [],
-            comms: [],
-            ...patch
-        };
-
-        db.customers.push(newCustomer);
         save();
-        showDetail(newCustomer.id);
-
+        showDetail(c.id);
     } catch(e){
         console.error(e);
         alert("Speichern-Fehler: " + e.message);
     }
 }
-
-        
-    
 
     function nav(page, el) {
         document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -1933,33 +1898,8 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
         </div>`;
     }
     
-    function saveData(id){
-    const n = (document.getElementById('f_name').value || '').trim();
-    if(!n) return alert("Name fehlt");
+    /* saveData: zentral definiert weiter oben (safe merge) */
 
-    const patch = {
-        name: n,
-        nr: (document.getElementById('f_nr').value || '').trim(),
-        route: (document.getElementById('f_route').value || '').trim(),
-        category: (document.getElementById('f_cat').value || 'C'),
-        status: (document.getElementById('f_stat').value || 'aktiv'),
-        address: (document.getElementById('f_adr').value || '').trim(),
-        contact: (document.getElementById('f_con').value || '').trim(),
-        phone: (document.getElementById('f_tel').value || '').trim(),
-        email: (document.getElementById('f_mail').value || '').trim(),
-        products: (document.getElementById('f_prod').value || '').trim()
-    };
-
-    let c;
-    if(id){
-        c = updateCustomer(id, patch);
-    } else {
-        c = createCustomer(patch);
-    }
-
-    save();
-    showDetail(c.id);
-}
 
 
     function showTour(){const l=db.tour.map(id=>{const c=db.customers.find(x=>x.id===id);return c?`<div class="card" style="padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><div><b>${c.name}</b><br>${c.address}</div><button class="btn btn-secondary" onclick="togTour(${id});showTour();">Entf</button></div>`:'';}).join('');document.getElementById('content').innerHTML=`<h1>Tour Planer</h1><div class="grid-2"><div><div class="card"><h3>Zuhause</h3><input id="t-start" value="${db.home||''}"><button class="btn btn-primary btn-full" onclick="db.home=document.getElementById('t-start').value;save();alert('Gespeichert')">Sichern</button><hr style="margin:20px 0;border:0;border-top:1px solid #eee;"><button class="btn btn-primary btn-full" onclick="optTour()">Optimieren</button><button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="openMaps()">Maps</button><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Leeren?')){db.tour=[];save();showTour();}">Leeren</button></div></div><div>${l||'Leer'}${db.home?`<div class="card" style="background:#f8fafc; border:1px dashed #ccc; text-align:center; padding:15px; margin-top:10px; font-weight:bold; color:#666;">Rückfahrt (Zuhause)<br>${db.home}</div>`:''}</div></div>`;}
