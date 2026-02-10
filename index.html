@@ -641,71 +641,76 @@ function createCustomer(obj){
 }
 
 function saveData(id){
-  try{
-    const nEl = document.getElementById('f_name');
-    const n = nEl ? nEl.value.trim() : '';
-    if(!n) return alert("Name fehlt");
+    try{
+        const n = (document.getElementById('f_name').value || '').trim();
+        if(!n) return alert("Name fehlt");
 
-    // id kann als Zahl oder String kommen -> normalisieren
-    const isEdit = (id !== null && id !== undefined && String(id).trim() !== '');
-    const cid = isEdit ? Number(id) : null;
+        // id normalisieren (Bearbeiten: id vorhanden, Neu: id leer/null)
+        const isEdit = !(id === null || id === undefined || String(id).trim() === '');
+        const cid = isEdit ? String(id) : null;
 
-    const patch = {
-      id: isEdit ? cid : Date.now(),
-      name: n,
-      nr: (document.getElementById('f_nr')?.value || '').trim(),
-      route: (document.getElementById('f_route')?.value || '').trim(),
-      category: (document.getElementById('f_cat')?.value || 'C'),
-      status: (document.getElementById('f_stat')?.value || 'aktiv'),
-      address: (document.getElementById('f_adr')?.value || '').trim(),
-      contact: (document.getElementById('f_con')?.value || '').trim(),
-      phone: (document.getElementById('f_tel')?.value || '').trim(),
-      email: (document.getElementById('f_mail')?.value || '').trim(),
-      products: (document.getElementById('f_prod')?.value || '').trim()
-    };
+        // Patch aus dem Formular
+        const patch = {
+            name: n,
+            nr: (document.getElementById('f_nr').value || '').trim(),
+            route: (document.getElementById('f_route').value || '').trim(),
+            category: document.getElementById('f_cat').value,
+            status: document.getElementById('f_stat').value,
+            address: (document.getElementById('f_adr').value || '').trim(),
+            contact: (document.getElementById('f_con').value || '').trim(),
+            phone: (document.getElementById('f_tel').value || '').trim(),
+            email: (document.getElementById('f_mail').value || '').trim(),
+            products: (document.getElementById('f_prod').value || '').trim()
+        };
 
-    if(isEdit){
-      const idx = db.customers.findIndex(x => Number(x.id) === cid);
-      if(idx < 0) throw new Error('Kunde zum Bearbeiten nicht gefunden (id=' + id + ')');
+        if(isEdit){
+            const idx = db.customers.findIndex(x => String(x.id) === cid);
+            if(idx < 0) throw new Error("Kunde nicht gefunden (id=" + id + ")");
 
-      // WICHTIG: Merge statt Replace -> Berichte/Timeline bleiben
-      db.customers[idx] = { ...db.customers[idx], ...patch };
+            // MERGE statt Replace: alles behalten (Besuchsberichte/Timeline/etc.)
+            const cur = db.customers[idx];
+            db.customers[idx] = { ...cur, ...patch };
 
-      // Container-Felder absichern (nicht verlieren)
-      const cur = db.customers[idx];
-      if(!Array.isArray(cur.activities)) cur.activities = [];
-      if(!Array.isArray(cur.reports)) cur.reports = [];
-      if(!Array.isArray(cur.tasks)) cur.tasks = [];
-      if(!Array.isArray(cur.comms)) cur.comms = [];
+            // Kritische Arrays absichern (Timeline/Berichte/Aufgaben)
+            if(!Array.isArray(db.customers[idx].activities)) db.customers[idx].activities = Array.isArray(cur.activities) ? cur.activities : [];
+            if(!Array.isArray(db.customers[idx].reports))     db.customers[idx].reports     = Array.isArray(cur.reports) ? cur.reports : [];
+            if(!Array.isArray(db.customers[idx].tasks))       db.customers[idx].tasks       = Array.isArray(cur.tasks) ? cur.tasks : [];
+            if(!Array.isArray(db.customers[idx].comms))       db.customers[idx].comms       = Array.isArray(cur.comms) ? cur.comms : [];
 
-      // Defaults nur wenn fehlen
-      if(cur.nextAppointment === undefined || cur.nextAppointment === null) cur.nextAppointment = '';
-      if(!cur.visitInterval) cur.visitInterval = 4;
+            // Defaults nur wenn fehlen
+            if(db.customers[idx].nextAppointment === undefined || db.customers[idx].nextAppointment === null)
+                db.customers[idx].nextAppointment = cur.nextAppointment || '';
+            if(!db.customers[idx].visitInterval)
+                db.customers[idx].visitInterval = cur.visitInterval || 4;
 
-      save();
-      showDetail(cur.id);
-    } else {
-      // neu
-      const c = {
-        nextAppointment: '',
-        visitInterval: 4,
-        tasks: [],
-        reports: [],
-        activities: [],
-        comms: [],
-        ...patch
-      };
-      db.customers.push(c);
-      save();
-      showDetail(c.id);
+            save();
+            showDetail(db.customers[idx].id);
+            return;
+        }
+
+        // Neu anlegen (inkl. Container-Felder)
+        const newCustomer = {
+            id: Date.now(),
+            category: 'C',
+            status: 'aktiv',
+            nextAppointment: '',
+            visitInterval: 4,
+            tasks: [],
+            reports: [],
+            activities: [],
+            comms: [],
+            ...patch
+        };
+
+        db.customers.push(newCustomer);
+        save();
+        showDetail(newCustomer.id);
+
+    } catch(e){
+        console.error(e);
+        alert("Speichern-Fehler: " + e.message);
     }
-  } catch(e){
-    console.error(e);
-    alert("Speichern-Fehler: " + e.message);
-  }
 }
-
-
 
         
     }
