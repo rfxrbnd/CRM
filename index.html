@@ -385,6 +385,31 @@
   .routes-grid{ grid-template-columns:1fr; }
 }
 
+
+/* --- KALENDER SMART UI --- */
+.cal-layout.focus { grid-template-columns: 1fr !important; }
+.cal-layout.focus .cal-pool { display: none !important; }
+
+.pool-item.due-overdue { border-left: 4px solid #ef4444; }
+.pool-item.due-soon { border-left: 4px solid #f59e0b; }
+.pool-item.due-ok { border-left: 4px solid #10b981; }
+.pool-item.inactive { opacity: .55; filter: grayscale(1); }
+
+.cal-event.due-overdue { outline: 2px solid rgba(239,68,68,.35); }
+.cal-event.due-soon { outline: 2px solid rgba(245,158,11,.35); }
+
+.cal-day .load-badge{
+  align-self:flex-end;
+  font-size:10px;
+  color:#6b7280;
+  padding:2px 6px;
+  border:1px solid #e5e7eb;
+  border-radius:999px;
+  margin-top:auto;
+}
+.cal-day .load-badge.over{ color:#b91c1c; border-color:#fecaca; background:#fff7f7; }
+.cal-day .load-badge.mid{ color:#92400e; border-color:#fde68a; background:#fffbeb; }
+
 </style>
 </head>
 <body>
@@ -457,7 +482,8 @@
     
     let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [], deals: [] };
     let currentCalDate = new Date();
-    let calView = 'month'; 
+    let calView = 'month';
+    let calFocus = false; 
     let dragId = null, dragTargetDate = null;
     let selectMode = false;
     let selectedIds = new Set();
@@ -887,6 +913,143 @@ function saveData(id){
         }
         try { return new Date(reps[0].createdAt); } catch(e){ return null; }
     }
+// --- SMART CALENDAR HELPERS ---
+function _daysBetween(a,b){ return Math.floor((b.getTime()-a.getTime())/86400000); }
+
+// returns {state:'ok'|'soon'|'overdue', dueInDays:number|null}
+function getVisitDueState(c){
+    try{
+        const last = getLatestReportDateObj(c);
+        const intervalWeeks = parseInt(c.visitInterval)||4;
+        if(!last) return { state:'overdue', dueInDays: null }; // noch nie besucht -> behandeln wie überfällig
+        const due = new Date(last.getTime() + intervalWeeks*7*86400000);
+        const today = new Date(); today.setHours(0,0,0,0);
+        const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+        const diff = _daysBetween(today, dueDay);
+        if(diff < 0) return { state:'overdue', dueInDays: diff };
+        if(diff <= 7) return { state:'soon', dueInDays: diff };
+        return { state:'ok', dueInDays: diff };
+    } catch(e){
+        return { state:'overdue', dueInDays: null };
+    }
+}
+
+function getRouteDriveMinutes(route){
+    try{
+        if(!route) return 0;
+        if(typeof ROUTE_DRIVE_TIMES !== 'undefined' && Array.isArray(ROUTE_DRIVE_TIMES)){
+            const r = ROUTE_DRIVE_TIMES.find(x => x && x.route === route);
+            if(r) return Math.round((Number(r.min)+Number(r.max))/2);
+        }
+    }catch(e){}
+    return 0;
+}
+
+function getDayLoadBadgeClass(totalMin){
+    if(totalMin >= 240) return 'over';   // >4h
+    if(totalMin >= 120) return 'mid';    // 2-4h
+    return '';
+}
+
+function getDayTotalDriveMinutes(ds){
+    // Summe der Fahrzeit-Schätzung pro Tag über geplante Kunden
+    try{
+        const list = db.customers.filter(c => c.nextAppointment && String(c.nextAppointment).startsWith(ds));
+        return list.reduce((sum,c)=> sum + getRouteDriveMinutes(c.route), 0);
+    }catch(e){ return 0; }
+}
+
+function dayLabelFromMinutes(min){
+    if(!min) return '';
+    const h = Math.round(min/60);
+    return h>0 ? (h + 'h') : '';
+}
+
+function suggestVisitsForDate(ds){
+    // Vorschlag: überfällige/bald fällige Kunden (aktiv), nach Priorität und Fahrzeit
+    const order = {A:1,B:2,C:3};
+    const candidates = db.customers
+        .filter(c => c && c.status === 'aktiv')
+        .map(c => ({ c, due:getVisitDueState(c) }))
+        .filter(x => x.due.state !== 'ok')
+        .sort((a,b)=>{
+            const s = (a.due.state==='overdue'?0:1) - (b.due.state==='overdue'?0:1);
+            if(s!==0) return s;
+            const oa = order[a.c.category]||9, ob = order[b.c.category]||9;
+            if(oa!==ob) return oa-ob;
+            return getRouteDriveMinutes(b.c.route) - getRouteDriveMinutes(a.c.route);
+        });
+
+    if(!candidates.length){ alert('Keine fälligen Kunden gefunden.'); return; }
+
+    const pick = candidates.slice(0,8).map(x=>x.c);
+    const lines = pick.map((c,i)=> `${i+1}. ${displayCustomerName(c)} (${c.route||'-'})`).join('\n');
+    if(!confirm(`Vorschlag für ${ds}:\n\n${lines}\n\nDiese Kunden automatisch einplanen?`)) return;
+
+    // Zeit-Slots: 09:00, 10:00, ...
+    let hh = 9;
+    pick.forEach((c,idx)=>{
+        const t = String(hh).padStart(2,'0')+':00';
+        c.nextAppointment = ds + 'T' + t;
+        hh = Math.min(18, hh + 1);
+    });
+    save();
+    showCalendar();
+}
+
+function autoPlanNextWeek(){
+    // Plant überfällige/bald fällige Kunden auf nächste Woche Mo–Do nach Fahrzeit (lang -> Mo)
+    const order = {A:1,B:2,C:3};
+    const candidates = db.customers
+        .filter(c => c && c.status === 'aktiv')
+        .map(c => ({ c, due:getVisitDueState(c) }))
+        .filter(x => x.due.state !== 'ok')
+        .sort((a,b)=>{
+            const s = (a.due.state==='overdue'?0:1) - (b.due.state==='overdue'?0:1);
+            if(s!==0) return s;
+            const oa = order[a.c.category]||9, ob = order[b.c.category]||9;
+            if(oa!==ob) return oa-ob;
+            return getRouteDriveMinutes(b.c.route) - getRouteDriveMinutes(a.c.route);
+        })
+        .map(x=>x.c);
+
+    if(!candidates.length){ alert('Keine fälligen Kunden für die Planung gefunden.'); return; }
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const day = today.getDay(); // So=0
+    const daysToNextMon = ((8 - day) % 7) || 7;
+    const nextMon = new Date(today.getTime() + daysToNextMon*86400000);
+
+    const slots = [0,1,2,3].map(i=>{
+        const d = new Date(nextMon.getTime() + i*86400000);
+        return d.toISOString().slice(0,10);
+    });
+
+    let planned = 0;
+    candidates.forEach(c=>{
+        const mins = getRouteDriveMinutes(c.route);
+        let idx = 3; // Do default (kurz)
+        if(mins >= 120) idx = 0;      // Mo
+        else if(mins >= 85) idx = 1;  // Di
+        else if(mins >= 45) idx = 2;  // Mi
+        const ds = slots[idx];
+        // finde nächsten freien Slot (09-18)
+        for(let h=9; h<=18; h++){
+            const t = String(h).padStart(2,'0')+':00';
+            const occupied = db.customers.some(x => x.nextAppointment === (ds+'T'+t));
+            if(!occupied){
+                c.nextAppointment = ds+'T'+t;
+                planned++;
+                break;
+            }
+        }
+    });
+
+    save();
+    alert(planned + ' Kunden für nächste Woche eingeplant.');
+    showCalendar();
+}
+
 // --- DASHBOARD ---
     function showHome(){
         const today=new Date().toLocaleDateString('de-DE');
@@ -2181,17 +2344,38 @@ function filterRoute(r){
     }
 
     // --- CALENDAR LOGIC ---
-    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button type="button" class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div class="pool-head"><label class="pool-head-label">Route</label><select id="poolRoute" onchange="renderPoolList()"><option value="">Route auswählen</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].sort().map(r=>`<option>${r}</option>`).join('')}</select><label class="pool-head-label">Kundenqualifizierung</label><select id="poolCat" onchange="renderPoolList()"><option value="">Alle Kunden</option><option value="A">A-Kunden</option><option value="B">B-Kunden</option><option value="C">C-Kunden</option></select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
+    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;gap:10px;flex-wrap:wrap;">
+<div style="display:flex;align-items:center;gap:10px;">
+  <button class="btn btn-secondary" onclick="changeCal(-1)">◀</button>
+  <span style="font-weight:bold;margin:0 6px;">${h}</span>
+  <button class="btn btn-secondary" onclick="changeCal(1)">▶</button>
+  <button class="btn btn-secondary" onclick="currentCalDate=new Date();showCalendar()">Heute</button>
+</div>
+
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+  <button type="button" class="btn btn-secondary" onclick="calFocus=!calFocus;showCalendar()">${calFocus?'Pool einblenden':'Fokus'}</button>
+  <button type="button" class="btn btn-secondary" onclick="suggestVisitsForDate(new Date().toISOString().slice(0,10))">Vorschlag Heute</button>
+  <button type="button" class="btn btn-secondary" onclick="autoPlanNextWeek()">Nächste Woche planen</button>
+  <button type="button" class="btn btn-success" onclick="openEventModal()">+</button>
+  <div class="view-controls">
+    <button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button>
+    <button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button>
+    <button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button>
+    <button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button>
+  </div>
+</div>
+</div>
+<div class="cal-layout ${calFocus?'focus':''}"><div class="cal-pool"><div class="pool-head"><label class="pool-head-label">Route</label><select id="poolRoute" onchange="renderPoolList()"><option value="">Route auswählen</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].sort().map(r=>`<option>${r}</option>`).join('')}</select><label class="pool-head-label">Kundenqualifizierung</label><select id="poolCat" onchange="renderPoolList()"><option value="">Alle Kunden</option><option value="A">A-Kunden</option><option value="B">B-Kunden</option><option value="C">C-Kunden</option></select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
-    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div class="cal-day empty"></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b class="day-num">${i}</b>${getEvtsMonth(ds,2)}</div>`;}const totalCells=off+d;const rest=(7-(totalCells%7))%7;for(let i=0;i<rest;i++)h+=`<div class="cal-day empty"></div>`;con.innerHTML=h+`</div>`;}
+    function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div class="cal-day empty"></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" onclick="suggestVisitsForDate('${ds}')" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b class="day-num">${i}</b>${getEvtsMonth(ds,2)}${(()=>{const mins=getDayTotalDriveMinutes(ds);const cls=getDayLoadBadgeClass(mins);return mins?`<span class=\"load-badge ${cls}\">${dayLabelFromMinutes(mins)}</span>`:'';})()}</div>`;}const totalCells=off+d;const rest=(7-(totalCells%7))%7;for(let i=0;i<rest;i++)h+=`<div class="cal-day empty"></div>`;con.innerHTML=h+`</div>`;}
     function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
-    function renderPoolList(){const rEl=document.getElementById('poolRoute'),catEl=document.getElementById('poolCat');if(!rEl)return;const r=rEl.value,cat=catEl?catEl.value:'';const box=document.getElementById('poolContainer');if(!r){box.innerHTML='';return;}let list=db.customers.filter(c=>c.status==='aktiv'&&c.route===r);if(cat)list=list.filter(c=>c.category===cat);const order={A:1,B:2,C:3};list.sort((a,b)=>(order[a.category]||9)-(order[b.category]||9)||a.name.localeCompare(b.name));if(!cat){const grp=k=>list.filter(x=>x.category===k);const section=(k,title)=>{const g=grp(k);return g.length?`<div style="padding:8px 10px;color:#6b7280;font-size:11px;font-weight:700;">${title}</div>`+g.map(c=>`<div class="pool-item" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${c.name}</div>`).join(''):'';};box.innerHTML=section('A','A')+section('B','B')+section('C','C')||'<div style="color:#999;padding:10px;">Keine Kunden</div>';return;}box.innerHTML=list.length?list.map(c=>`<div class="pool-item" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${c.name}</div>`).join(''):'<div style="color:#999;padding:10px;">Keine Kunden</div>';}
+    function renderPoolList(){const rEl=document.getElementById('poolRoute'),catEl=document.getElementById('poolCat');if(!rEl)return;const r=rEl.value,cat=catEl?catEl.value:'';const box=document.getElementById('poolContainer');if(!r){box.innerHTML='';return;}let list=db.customers.filter(c=>c.route===r);if(cat)list=list.filter(c=>c.category===cat);const order={A:1,B:2,C:3};list.sort((a,b)=>(order[a.category]||9)-(order[b.category]||9)||a.name.localeCompare(b.name));if(!cat){const grp=k=>list.filter(x=>x.category===k);const section=(k,title)=>{const g=grp(k);return g.length?`<div style="padding:8px 10px;color:#6b7280;font-size:11px;font-weight:700;">${title}</div>`+g.map(c=>`<div class="pool-item${(()=>{const d=getVisitDueState(c).state;const s=(c.status===\'inaktiv\')?\' inactive\':\'\';return s+ (d?(" due-"+d):"");})()}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'';};box.innerHTML=section('A','A')+section('B','B')+section('C','C')||'<div style="color:#999;padding:10px;">Keine Kunden</div>';return;}box.innerHTML=list.length?list.map(c=>`<div class="pool-item${(()=>{const d=getVisitDueState(c).state;const s=(c.status===\'inaktiv\')?\' inactive\':\'\';return s+ (d?(" due-"+d):"");})()}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'<div style="color:#999;padding:10px;">Keine Kunden</div>';}
     function changeCal(d){if(calView==='month')currentCalDate.setMonth(currentCalDate.getMonth()+d);else if(calView==='day')currentCalDate.setDate(currentCalDate.getDate()+d);else if(calView==='week')currentCalDate.setDate(currentCalDate.getDate()+(d*7));else currentCalDate.setFullYear(currentCalDate.getFullYear()+d);showCalendar();}
     function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
-    function dropTime(ev,ds,t){ev.preventDefault();db.customers.find(x=>x.id===dragId).nextAppointment=ds+'T'+t;save();showCalendar();}
-    function confirmDrop(){db.customers.find(x=>x.id===dragId).nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
+    function dropTime(ev,ds,t){ev.preventDefault();const c=db.customers.find(x=>x.id===dragId);if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')) return;}c.nextAppointment=ds+'T'+t;save();showCalendar();}
+    function confirmDrop(){const c=db.customers.find(x=>x.id===dragId);if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')){closeModal();return;}}c.nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
     function openEventModal(){document.getElementById('eventModal').style.display='flex'}
     function closeModal(){document.getElementById('timeModal').style.display='none';}
     function delAppt(id){if(confirm("Termin löschen?")){db.customers.find(x=>x.id===id).nextAppointment="";save();showCalendar();}}
