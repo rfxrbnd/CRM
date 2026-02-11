@@ -1042,7 +1042,7 @@ nextMon.setDate(today.getDate() + daysToNextMon);
 const slots = [0,1,2,3].map(i => {
     const d = new Date(nextMon);
     d.setDate(nextMon.getDate() + i);
-    return (()=>{const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const d=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${d}`;})();
+    return (()=>{const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const dd=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${dd}`;})();
 });
 let planned = 0;
         candidates.forEach(c=>{
