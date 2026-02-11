@@ -413,7 +413,7 @@
 <div id="timeModal" class="modal-overlay">
     <div class="modal-box">
         <h2 style="text-align:center">Zeit wählen</h2>
-        <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
+        <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;" step="1800">
         <div class="grid-2" style="margin-top:20px;">
             <button class="btn btn-primary btn-full" onclick="confirmDrop()">Sichern</button>
             <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
@@ -434,9 +434,9 @@
         </div>
         <div class="grid-2">
             <div><label>Datum</label><input type="date" id="evtDate" style="margin:0;"></div>
-            <div><label>Von</label><input type="time" id="evtStart" value="09:00" style="margin:0;"></div>
+            <div><label>Von</label><input type="time" id="evtStart" value="09:00" style="margin:0;" step="1800"></div>
         </div>
-        <div style="margin-top:10px;"><label>Bis</label><input type="time" id="evtEnd" value="10:00" style="margin:0;"></div>
+        <div style="margin-top:10px;"><label>Bis</label><input type="time" id="evtEnd" value="10:00" style="margin:0;" step="1800"></div>
         <div class="grid-2" style="margin-top:20px;">
             <button class="btn btn-success btn-full" onclick="saveManualEvent()">Sichern</button>
             <button class="btn btn-danger btn-full" onclick="delManualEvent()" id="btnDelEvt" style="display:none;">Löschen</button>
