@@ -454,6 +454,7 @@
   <div class="nav-menu">
     <button class="nav-item active" onclick="nav('home', this)"><span>Dashboard</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('noncustomers', this)"><span>Nicht-Kunden</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('prospects', this)"><span>Interessenten</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('customers', this)"><span>Kunden</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('pipeline', this)"><span>Pipeline</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('expenses', this)"><span>Spesen</span><span class="nav-arrow">›</span></button>
@@ -470,7 +471,7 @@
     const DB_KEY = 'raphael_crm_v122_revenue';
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
     
-    let db = { customers: [], tour: [], home: "", expenses: [], logo: null, events: [], deals: [] };
+    let db = { customers: [], prospects: [], tour: [], home: "", expenses: [], logo: null, events: [], deals: [] };
     let currentCalDate = new Date();
     let calView = 'month';
     let calFocus = false; 
@@ -506,6 +507,8 @@
             // Nicht-Kunden (Kategorie C) dürfen nicht geplant werden: alte Termine entfernen
             db.customers.forEach(c => { if(isNonCustomer(c)) c.nextAppointment = ''; });
             if(!db.deals) db.deals = [];
+            if(!db.prospects) db.prospects = [];
+
             
             if(!db.meta_revenue_migrated) {
                 db.customers.forEach(c => {
@@ -813,6 +816,7 @@ function saveData(id){
         else if(page === 'calendar') showCalendar();
         else if(page === 'customers') { customerListMode = 'customers'; showCustomers(); }
         else if(page === 'noncustomers') { customerListMode = 'noncustomers'; showCustomers(); }
+        else if(page === 'prospects') showProspects();
         else if(page === 'tour') showTour();
         else if(page === 'routes') showRoutes();
         else if(page === 'expenses') showExpenses();
@@ -2495,6 +2499,8 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
 
     function showPipeline(){
         if(!db.deals) db.deals = [];
+            if(!db.prospects) db.prospects = [];
+
         const opps = db.deals.filter(d => d.type === 'opportunity');
         const openOpps = opps.filter(d => !['Won','Lost'].includes(d.stage));
         const pipeValue = openOpps.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
@@ -2850,6 +2856,8 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
 
     function importDealsFromRows(rows){
         if(!db.deals) db.deals = [];
+            if(!db.prospects) db.prospects = [];
+
         const stageMapLead = {
             neu:'Neu', new:'Neu',
             kontaktiert:'Kontaktiert', contacted:'Kontaktiert',
@@ -3105,6 +3113,8 @@ window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub
         };
 
         if(!db.deals) db.deals = [];
+            if(!db.prospects) db.prospects = [];
+
         if(id){
             const idx = db.deals.findIndex(x=>String(x.id)===String(id));
             if(idx>-1) db.deals[idx]=obj;
@@ -3256,6 +3266,315 @@ function autoMigrateRoutesOnce() {
 
 
     
+
+// ===================== INTERESSENTEN (Prospects) =====================
+let prospectViewState = { sort: 'name', search: '' };
+
+function getFilteredProspects(){
+    const s = (prospectViewState.search||'').toLowerCase();
+    let list = Array.isArray(db.prospects) ? db.prospects : [];
+
+    if(s){
+        list = list.filter(p =>
+            (p.name||'').toLowerCase().includes(s) ||
+            (p.company||'').toLowerCase().includes(s) ||
+            (p.source||'').toLowerCase().includes(s) ||
+            (p.address||'').toLowerCase().includes(s) ||
+            (p.phone||'').toLowerCase().includes(s) ||
+            (p.email||'').toLowerCase().includes(s) ||
+            (p.notes||'').toLowerCase().includes(s)
+        );
+    }
+
+    // sort
+    if(prospectViewState.sort === 'company') list.sort((a,b)=>(a.company||'').localeCompare(b.company||''));
+    else list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    return list;
+}
+
+function showProspects(){
+    db.prospects = Array.isArray(db.prospects) ? db.prospects : [];
+
+    const headerHTML = '<h1>Interessenten</h1>';
+
+    document.getElementById('content').innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            ${headerHTML}
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('prosCsvIn').click()">CSV Import</button>
+                <button class="btn btn-primary" onclick="showProspectForm()">+ Neu</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <input id="p_search" placeholder="🔍 Suchen" value="${escapeHtml(prospectViewState.search||'')}"
+                       onkeyup="prospectViewState.search=this.value; renderProspects()" style="margin:0; flex:1;">
+                <select id="p_sort" onchange="prospectViewState.sort=this.value; renderProspects()" style="margin:0; width:140px;">
+                    <option value="name" ${prospectViewState.sort==='name'?'selected':''}>Name</option>
+                    <option value="company" ${prospectViewState.sort==='company'?'selected':''}>Firma</option>
+                </select>
+            </div>
+            <div id="prospectTable"></div>
+        </div>
+
+        <input type="file" id="prosCsvIn" style="display:none" onchange="importProspectsCSV(this)">
+    `;
+
+    renderProspects();
+}
+
+function renderProspects(){
+    const host = document.getElementById('prospectTable');
+    if(!host) return;
+
+    const list = getFilteredProspects();
+    if(!list.length){
+        host.innerHTML = `<div style="padding:18px; text-align:center; color:#9ca3af;">Keine Interessenten</div>`;
+        return;
+    }
+
+    host.innerHTML = list.map(p=>{
+        const line1 = escapeHtml(p.name || p.company || '(Ohne Name)');
+        const line2 = escapeHtml([p.company, p.source].filter(Boolean).join(' · '));
+        return `
+            <div class="cust-row" onclick="showProspectDetail(${p.id})">
+                <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                    <div class="check-circle"></div>
+                    <div style="min-width:0;">
+                        <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${line1}</div>
+                        <div style="font-size:12px; color:var(--text-light); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${line2}</div>
+                    </div>
+                </div>
+                <div style="font-size:12px; color:var(--text-light); white-space:nowrap;">${escapeHtml(p.phone||'')}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function createProspect(obj){
+    db.prospects = Array.isArray(db.prospects) ? db.prospects : [];
+    const p = {
+        id: Date.now(),
+        name: '',
+        company: '',
+        source: '',
+        address: '',
+        phone: '',
+        email: '',
+        notes: ''
+    };
+    Object.assign(p, (obj||{}));
+    db.prospects.push(p);
+    return p;
+}
+
+function updateProspect(id, patch){
+    db.prospects = Array.isArray(db.prospects) ? db.prospects : [];
+    const idx = db.prospects.findIndex(x => String(x.id) === String(id));
+    if(idx < 0) throw new Error('Interessent nicht gefunden (id=' + id + ')');
+    db.prospects[idx] = { ...(db.prospects[idx]||{}), ...(patch||{}) };
+    return db.prospects[idx];
+}
+
+function showProspectForm(id){
+    const p = (id!==null && id!==undefined) ? (db.prospects||[]).find(x=>String(x.id)===String(id)) : null;
+
+    document.getElementById('content').innerHTML = `
+        <div class="no-print" style="margin-bottom:15px;">
+            <button class="btn btn-secondary" onclick="showProspects()">← Zurück</button>
+        </div>
+        <h1>${p ? 'Interessent bearbeiten' : 'Neuer Interessent'}</h1>
+
+        <div class="card">
+            <label>Name</label>
+            <input id="p_name" value="${escapeHtml(p?.name||'')}">
+
+            <label>Firma</label>
+            <input id="p_company" value="${escapeHtml(p?.company||'')}">
+
+            <div class="grid-2">
+                <div>
+                    <label>Telefon</label>
+                    <input id="p_phone" value="${escapeHtml(p?.phone||'')}">
+                </div>
+                <div>
+                    <label>E-Mail</label>
+                    <input id="p_email" value="${escapeHtml(p?.email||'')}">
+                </div>
+            </div>
+
+            <label>Quelle</label>
+            <input id="p_source" value="${escapeHtml(p?.source||'')}" placeholder="z.B. Messe, Empfehlung, Website">
+
+            <label>Adresse</label>
+            <input id="p_address" value="${escapeHtml(p?.address||'')}">
+
+            <label>Notizen</label>
+            <textarea id="p_notes" rows="5">${escapeHtml(p?.notes||'')}</textarea>
+
+            <div style="display:flex; gap:10px;" class="no-print">
+                <button class="btn btn-primary" style="flex:1;" onclick="saveProspect(${p ? p.id : 'null'})">Sichern</button>
+                ${p ? `<button class="btn btn-danger" onclick="deleteProspect(${p.id})">Löschen</button>` : ``}
+            </div>
+        </div>
+    `;
+}
+
+function saveProspect(id){
+    try{
+        const patch = {
+            name: (document.getElementById('p_name')?.value||'').trim(),
+            company: (document.getElementById('p_company')?.value||'').trim(),
+            phone: (document.getElementById('p_phone')?.value||'').trim(),
+            email: (document.getElementById('p_email')?.value||'').trim(),
+            source: (document.getElementById('p_source')?.value||'').trim(),
+            address: (document.getElementById('p_address')?.value||'').trim(),
+            notes: (document.getElementById('p_notes')?.value||'').trim()
+        };
+
+        if(!patch.name && !patch.company) return alert('Bitte mindestens Name oder Firma eingeben.');
+
+        let p;
+        if(id!==null && id!==undefined && String(id).trim()!==''){
+            p = updateProspect(id, patch);
+        }else{
+            p = createProspect(patch);
+        }
+
+        save();
+        showProspectDetail(p.id);
+    }catch(e){
+        console.error(e);
+        alert('Speichern-Fehler: ' + e.message);
+    }
+}
+
+function showProspectDetail(id){
+    const p = (db.prospects||[]).find(x=>String(x.id)===String(id));
+    if(!p) return alert('Interessent nicht gefunden.');
+
+    document.getElementById('content').innerHTML = `
+        <div class="no-print" style="margin-bottom:15px;">
+            <button class="btn btn-secondary" onclick="showProspects()">← Zurück</button>
+        </div>
+
+        <h1>Interessent</h1>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:900; font-size:18px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        ${escapeHtml(p.name || p.company || '(Ohne Name)')}
+                    </div>
+                    <div style="color:var(--text-light); margin-top:4px;">
+                        ${escapeHtml(p.company||'')}
+                    </div>
+                </div>
+                <div class="no-print" style="display:flex; gap:8px;">
+                    <button class="btn btn-secondary" onclick="showProspectForm(${p.id})">Bearbeiten</button>
+                </div>
+            </div>
+
+            <div style="margin-top:15px; display:grid; gap:10px;">
+                ${p.phone ? `<div><b>Telefon:</b> ${escapeHtml(p.phone)}</div>` : ``}
+                ${p.email ? `<div><b>E-Mail:</b> ${escapeHtml(p.email)}</div>` : ``}
+                ${p.source ? `<div><b>Quelle:</b> ${escapeHtml(p.source)}</div>` : ``}
+                ${p.address ? `<div><b>Adresse:</b> ${escapeHtml(p.address)}</div>` : ``}
+                ${p.notes ? `<div style="white-space:pre-wrap;"><b>Notizen:</b><br>${escapeHtml(p.notes)}</div>` : ``}
+            </div>
+        </div>
+
+        <div class="card no-print">
+            <button class="btn btn-danger btn-full" onclick="deleteProspect(${p.id})">Interessent löschen</button>
+        </div>
+    `;
+}
+
+function deleteProspect(id){
+    if(!confirm('Interessent löschen?')) return;
+    db.prospects = (db.prospects||[]).filter(x=>String(x.id)!==String(id));
+    save();
+    showProspects();
+}
+
+// --- CSV IMPORT (Interessenten) ---
+function importProspectsCSV(input){
+    const f = input.files && input.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.readAsText(f, 'UTF-8');
+    r.onload = e => {
+        try{
+            db.prospects = Array.isArray(db.prospects) ? db.prospects : [];
+
+            const text = String(e.target.result||'');
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            if(lines.length < 2) return alert('Datei leer oder ungültig');
+
+            const firstLine = lines[0];
+            const sep = firstLine.includes(';') ? ';' : ',';
+            const headers = firstLine.split(sep).map(h => h.replace(/"/g,'').trim().toLowerCase());
+
+            const idxOf = (...names) => headers.findIndex(h => names.some(n => h === n || h.includes(n)));
+
+            const iName = idxOf('name', 'kontakt', 'ansprechpartner');
+            const iCompany = idxOf('firma', 'company', 'unternehmen');
+            const iStr = idxOf('straße', 'strasse', 'str');
+            const iPlz = idxOf('plz', 'postal');
+            const iOrt = idxOf('ort', 'stadt', 'city');
+            const iTel = idxOf('tel', 'telefon', 'phone', 'mobil');
+            const iMail = idxOf('mail', 'e-mail', 'email');
+            const iSource = idxOf('quelle', 'source', 'kanal', 'channel');
+            const iNotes = idxOf('notiz', 'notes', 'bemerkung', 'comment');
+
+            let added = 0;
+
+            for(let i=1;i<lines.length;i++){
+                const row = lines[i].split(sep).map(s => s.replace(/^"|"$/g,'').trim());
+                if(!row.length) continue;
+
+                const name = (iName>-1 ? row[iName] : '').trim();
+                const company = (iCompany>-1 ? row[iCompany] : '').trim();
+
+                let addressParts = [];
+                if(iStr>-1 && row[iStr]) addressParts.push(row[iStr].trim());
+                if(iPlz>-1 && row[iPlz]) addressParts.push(row[iPlz].trim());
+                if(iOrt>-1 && row[iOrt]) addressParts.push(row[iOrt].trim());
+                const address = addressParts.join(', ');
+
+                const phone = (iTel>-1 ? row[iTel] : '').trim();
+                const email = (iMail>-1 ? row[iMail] : '').trim();
+                const source = (iSource>-1 ? row[iSource] : '').trim();
+                const notes = (iNotes>-1 ? row[iNotes] : '').trim();
+
+                if(!name && !company) continue;
+
+                // simple de-dupe: by email or (name+company)
+                const keyEmail = email.toLowerCase();
+                const exists = db.prospects.some(p =>
+                    (keyEmail && (p.email||'').toLowerCase() === keyEmail) ||
+                    ((p.name||'').trim().toLowerCase() === name.toLowerCase() && (p.company||'').trim().toLowerCase() === company.toLowerCase())
+                );
+                if(exists) continue;
+
+                createProspect({ name, company, address, phone, email, source, notes });
+                added++;
+            }
+
+            save();
+            alert(added + ' Interessenten importiert!');
+            showProspects();
+        }catch(err){
+            console.error(err);
+            alert('Import-Fehler: ' + err.message);
+        }
+    };
+    // reset value so same file can be imported again
+    try{ input.value=''; }catch(e){}
+}
+// =================== ENDE INTERESSENTEN ===================
+
 </script>
 </body>
 </html>
