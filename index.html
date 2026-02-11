@@ -398,17 +398,6 @@
 .cal-event.due-overdue { outline:2px solid rgba(239,68,68,.35); }
 .cal-event.due-soon { outline:2px solid rgba(245,158,11,.35); }
 
-.cal-day .load-badge{
-  display:inline-flex;
-  font-size:10px;
-  color:#6b7280;
-  padding:2px 6px;
-  border:1px solid #e5e7eb;
-  border-radius:999px;
-  margin-top:6px;
-}
-.cal-day .load-badge.over{ color:#b91c1c; border-color:#fecaca; background:#fff7f7; }
-.cal-day .load-badge.mid{ color:#92400e; border-color:#fde68a; background:#fffbeb; }
 
 </style>
 </head>
@@ -1001,8 +990,7 @@ function saveData(id){
         }
 
         const pick = candidates.slice(0,8).map(x=>x.c);
-        const lines = pick.map((c,i)=> (i+1)+'. '+displayCustomerName(c)).join('
-');
+        const lines = pick.map((c,i)=> (i+1)+'. '+displayCustomerName(c)).join('\n');
 
         if(!confirm(`Vorschlag (${selectedRoute}) für ${ds}:
 
@@ -1103,20 +1091,6 @@ Diese Kunden automatisch einplanen?`)) return;
             if(calFocus) layout.classList.add('focus');
             else layout.classList.remove('focus');
         }
-
-        // Load-Badges im Monats-Grid
-        document.querySelectorAll('.cal-day[data-date]').forEach(day=>{
-            const ds = day.getAttribute('data-date');
-            const mins = getDayTotalDriveMinutes(ds);
-            const existing = day.querySelector('.load-badge');
-            if(existing) existing.remove();
-            if(mins){
-                const span = document.createElement('span');
-                span.className = 'load-badge ' + getDayLoadBadgeClass(mins);
-                span.textContent = dayLabelFromMinutes(mins);
-                day.appendChild(span);
-            }
-        });
     }
 
     function showHome(){
