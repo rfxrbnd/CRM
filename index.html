@@ -2386,10 +2386,6 @@ function filterRoute(r){
                     right.insertBefore(planBtn, right.firstChild);
                     right.insertBefore(sugBtn, right.firstChild);
                     right.insertBefore(focusBtn, right.firstChild);
-                    // Heute Button links
-                    const left = header.querySelector('div:first-child');
-                    if(left && !document.getElementById('btnToday')){
-                        const todayBtn = mkBtn('btnToday','Heute', ()=>{currentCalDate=new Date();showCalendar();});
                         left.appendChild(todayBtn);
                     }
                 }
