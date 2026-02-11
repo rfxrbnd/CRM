@@ -453,6 +453,7 @@
 
   <div class="nav-menu">
     <button class="nav-item active" onclick="nav('home', this)"><span>Dashboard</span><span class="nav-arrow">›</span></button>
+    <button class="nav-item" onclick="nav('noncustomers', this)"><span>Nicht-Kunden</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('customers', this)"><span>Kunden</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('pipeline', this)"><span>Pipeline</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('expenses', this)"><span>Spesen</span><span class="nav-arrow">›</span></button>
@@ -477,6 +478,12 @@
     let selectMode = false;
     let selectedIds = new Set();
     let viewState = { sort: 'name', search: '', filterRoute: null, onlyActive: false };
+    let customerListMode = 'customers'; // 'customers' | 'noncustomers'
+
+    function isNonCustomer(c){
+        return (c && (c.category || 'C') === 'C');
+    }
+
     let mapInstance = null; 
     let editingExpenseId = null;
     window.currentOcrImage = null; 
@@ -496,6 +503,8 @@
             if(!db.expenses) db.expenses = [];
             if(!db.events) db.events = [];
             if(!db.customers) db.customers = [];
+            // Nicht-Kunden (Kategorie C) dürfen nicht geplant werden: alte Termine entfernen
+            db.customers.forEach(c => { if(isNonCustomer(c)) c.nextAppointment = ''; });
             if(!db.deals) db.deals = [];
             
             if(!db.meta_revenue_migrated) {
@@ -802,7 +811,8 @@ function saveData(id){
         if(page === 'home') showHome();
         else if(page === 'map') showMap();
         else if(page === 'calendar') showCalendar();
-        else if(page === 'customers') showCustomers();
+        else if(page === 'customers') { customerListMode = 'customers'; showCustomers(); }
+        else if(page === 'noncustomers') { customerListMode = 'noncustomers'; showCustomers(); }
         else if(page === 'tour') showTour();
         else if(page === 'routes') showRoutes();
         else if(page === 'expenses') showExpenses();
@@ -972,6 +982,7 @@ function saveData(id){
 
         const candidates = db.customers
             .filter(c => c && c.status === 'aktiv' && c.route === selectedRoute)
+            .filter(c => !isNonCustomer(c))
             .map(c => ({ c, due: getVisitDueState(c) }))
             .filter(x => x.due.state !== 'ok')
             .filter(x => !(x.c.nextAppointment && String(x.c.nextAppointment).startsWith(ds)))
@@ -1017,6 +1028,7 @@ Diese Kunden automatisch einplanen?`)) return;
         const order = {A:1,B:2,C:3};
         const candidates = db.customers
             .filter(c => c && c.status === 'aktiv')
+            .filter(c => !isNonCustomer(c))
             .map(c => ({ c, due:getVisitDueState(c) }))
             .filter(x => x.due.state !== 'ok')
             .sort((a,b)=>{
@@ -1394,6 +1406,13 @@ let planned = 0;
         const s = (viewState.search||'').toLowerCase();
         let list = db.customers;
 
+        // Modus-Filter: Kunden vs. Nicht-Kunden
+        if (customerListMode === 'noncustomers') {
+            list = list.filter(c => isNonCustomer(c));
+        } else {
+            list = list.filter(c => !isNonCustomer(c));
+        }
+
         if (viewState.filterRoute) {
             list = list.filter(c => c.route === viewState.filterRoute);
         }
@@ -1435,7 +1454,19 @@ let planned = 0;
         showCustomers();
     }
 
-    function addBatchToTour(){if(selectedIds.size===0)return alert("Bitte Kunden auswählen.");selectedIds.forEach(id=>{if(!db.tour.includes(id))db.tour.push(id);});save();selectMode=false;selectedIds.clear();showTour();}
+    function addBatchToTour(){
+        if(selectedIds.size===0) return alert("Bitte Kunden auswählen.");
+        selectedIds.forEach(id=>{
+            const c = db.customers.find(x=>x.id===id);
+            if(!c) return;
+            if(isNonCustomer(c)) return; // Nicht-Kunden nicht zur Tour
+            if(!db.tour.includes(id)) db.tour.push(id);
+        });
+        save();
+        selectMode=false;
+        selectedIds.clear();
+        showTour();
+    }
     function deleteCustomerDirect(e, id) { e.stopPropagation(); if(confirm("Kunden löschen?")) { db.customers = db.customers.filter(x => x.id !== id); db.tour = db.tour.filter(x => x !== id); save(); renderTable(); } }
     function deleteBatch() { if(selectedIds.size === 0) return alert("Keine Kunden ausgewählt."); if(!confirm(`${selectedIds.size} Kunden löschen?`)) return; db.customers = db.customers.filter(c => !selectedIds.has(c.id)); db.tour = db.tour.filter(id => !selectedIds.has(id)); save(); selectMode = false; selectedIds.clear(); showCustomers(); }
     
@@ -1491,14 +1522,14 @@ let planned = 0;
     
     // --- CUSTOMERS & SEARCH ---
     function showCustomers(){
-        let headerHTML = '<h1>Kundenliste</h1>';
+        let headerHTML = (customerListMode === 'noncustomers') ? '<h1>Nicht-Kunden</h1>' : '<h1>Kundenliste</h1>';
         if (viewState.filterRoute) {
             headerHTML = `
                 <div style="background:var(--event-blue); color:var(--event-blue-text); padding:10px; border-radius:var(--radius); margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-weight:bold;">Filter: Route "${viewState.filterRoute}"</div>
                     <button class="btn btn-secondary" style="font-size:11px; padding:4px 8px; height:auto;" onclick="filterRoute(null)">Alle anzeigen</button>
                 </div>
-                <h1>Kunden (Gefiltert)</h1>`;
+                <h1>${customerListMode === 'noncustomers' ? 'Nicht-Kunden' : 'Kunden'} (Gefiltert)</h1>`;
         }
 
         document.getElementById('content').innerHTML = `
@@ -2240,7 +2271,7 @@ const createdAt = dtVal ? (new Date(dtVal)).toISOString() : new Date().toISOStri
             </div>`;
     }
 
-    async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
+    async function optTour(){if(!db.home||db.tour.length<2)return alert("Brauche Start und >2 Kunden");db.tour=(db.tour||[]).filter(id=>{const c=db.customers.find(x=>x.id===id);return c&&!isNonCustomer(c);});document.getElementById('loader').style.display='flex';const getC=async(a)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);const d=await r.json();return d[0]?{lat:d[0].lat,lon:d[0].lon}:null;}catch(e){return null;}};const start=await getC(db.home);if(!start){document.getElementById('loader').style.display='none';return alert("Start nicht gefunden");}let pts=[];for(let id of db.tour){const c=db.customers.find(x=>x.id===id);const co=await getC(c.address);if(co)pts.push({id,co});}let sorted=[],cur=start;while(pts.length){pts.sort((a,b)=>(Math.pow(a.co.lat-cur.lat,2)+Math.pow(a.co.lon-cur.lon,2))-(Math.pow(b.co.lat-cur.lat,2)+Math.pow(b.co.lon-cur.lon,2)));const n=pts.shift();sorted.push(n.id);cur=n.co;}db.tour=sorted;save();document.getElementById('loader').style.display='none';showTour();}
     function openMaps(){const d=db.tour.map(id=>encodeURIComponent(db.customers.find(x=>x.id===id).address)).join('/');window.open(`https://www.google.com/maps/dir/$${encodeURIComponent(db.home)}/${d}/${encodeURIComponent(db.home)}`,'_blank');}
     function delData(id){if(confirm("Löschen?")){db.customers=db.customers.filter(x=>x.id!==id);db.tour=db.tour.filter(x=>x!==id);save();showCustomers();}}
     
@@ -2248,7 +2279,7 @@ function showRoutes(){
     const plan = buildWeekdayRoutePlan();
 
     const mkCard = (r, subtitle) => {
-        const cnt = (db.customers||[]).filter(c => c.route === r).length;
+        const cnt = (db.customers||[]).filter(c => c.route === r && !isNonCustomer(c)).length;
         return `<div class="card route-bubble" onclick="filterRoute('${String(r).replace(/'/g, "\'")}')" style="cursor:pointer;text-align:center;">
                     <h2>${r}</h2>
                     ${subtitle ? `<div class="route-time">${subtitle}</div>` : ``}
@@ -2401,8 +2432,8 @@ function filterRoute(r){
     function renderPoolList(){const rEl=document.getElementById('poolRoute'),catEl=document.getElementById('poolCat');if(!rEl)return;const r=rEl.value,cat=catEl?catEl.value:'';const box=document.getElementById('poolContainer');if(!r){box.innerHTML='';return;}let list=db.customers.filter(c=>c.route===r);if(cat)list=list.filter(c=>c.category===cat);const order={A:1,B:2,C:3};list.sort((a,b)=>(order[a.category]||9)-(order[b.category]||9)||a.name.localeCompare(b.name));if(!cat){const grp=k=>list.filter(x=>x.category===k);const section=(k,title)=>{const g=grp(k);return g.length?`<div style="padding:8px 10px;color:#6b7280;font-size:11px;font-weight:700;">${title}</div>`+g.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'';};box.innerHTML=section('A','A')+section('B','B')+section('C','C')||'<div style="color:#999;padding:10px;">Keine Kunden</div>';return;}box.innerHTML=list.length?list.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'<div style="color:#999;padding:10px;">Keine Kunden</div>';}
     function changeCal(d){if(calView==='month')currentCalDate.setMonth(currentCalDate.getMonth()+d);else if(calView==='day')currentCalDate.setDate(currentCalDate.getDate()+d);else if(calView==='week')currentCalDate.setDate(currentCalDate.getDate()+(d*7));else currentCalDate.setFullYear(currentCalDate.getFullYear()+d);showCalendar();}
     function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
-    function dropTime(ev,ds,t){ev.preventDefault();const c=db.customers.find(x=>x.id===dragId);if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')) return;}c.nextAppointment=ds+'T'+t;save();showCalendar();}
-    function confirmDrop(){const c=db.customers.find(x=>x.id===dragId);if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')){closeModal();return;}}c.nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
+    function dropTime(ev,ds,t){ev.preventDefault();const c=db.customers.find(x=>x.id===dragId);if(c&&isNonCustomer(c)){alert('Nicht-Kunden können nicht eingeplant werden.');return;}if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')) return;}c.nextAppointment=ds+'T'+t;save();showCalendar();}
+    function confirmDrop(){const c=db.customers.find(x=>x.id===dragId);if(c&&isNonCustomer(c)){alert('Nicht-Kunden können nicht eingeplant werden.');closeModal();return;}if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')){closeModal();return;}}c.nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
     function openEventModal(){document.getElementById('eventModal').style.display='flex'}
     function closeModal(){document.getElementById('timeModal').style.display='none';}
     function delAppt(id){if(confirm("Termin löschen?")){db.customers.find(x=>x.id===id).nextAppointment="";save();showCalendar();}}
@@ -2417,7 +2448,7 @@ function saveDetail(id){
         
         save();
     }
-    function getEvts(ds,t){let items=[];db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;if(t&& !c.nextAppointment.includes(t))return;const time=(c.nextAppointment.split('T')[1]||'').slice(0,5);const mins=parseInt(time.split(':')[0]||'0')*60+parseInt(time.split(':')[1]||'0');items.push({mins,html:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});if(db.events){db.events.forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;if(t){const slotHour=parseInt(t.split(':')[0]);const startHour=parseInt(e.start.split('T')[1].split(':')[0]);const startMin=parseInt(e.start.split('T')[1].split(':')[1]);let endHour=startHour+1,endMin=startMin;if(e.end){endHour=parseInt(e.end.split('T')[1].split(':')[0]);endMin=parseInt(e.end.split('T')[1].split(':')[1]);}const evtStartMins=startHour*60+startMin,evtEndMins=endHour*60+endMin,slotStartMins=slotHour*60,slotEndMins=(slotHour+1)*60;if(!(evtStartMins<slotEndMins&&evtEndMins>slotStartMins))return;}const s=(e.start.split('T')[1]||'').slice(0,5);const mins=parseInt(s.split(':')[0]||'0')*60+parseInt(s.split(':')[1]||'0');const end=e.end?(e.end.split('T')[1]||'').slice(0,5):'';items.push({mins,html:`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});}items.sort((a,b)=>a.mins-b.mins);return items.map(x=>x.html).join('');}
+    function getEvts(ds,t){let items=[];db.customers.forEach(c=>{if(isNonCustomer(c))return;if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;if(t&& !c.nextAppointment.includes(t))return;const time=(c.nextAppointment.split('T')[1]||'').slice(0,5);const mins=parseInt(time.split(':')[0]||'0')*60+parseInt(time.split(':')[1]||'0');items.push({mins,html:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});if(db.events){db.events.forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;if(t){const slotHour=parseInt(t.split(':')[0]);const startHour=parseInt(e.start.split('T')[1].split(':')[0]);const startMin=parseInt(e.start.split('T')[1].split(':')[1]);let endHour=startHour+1,endMin=startMin;if(e.end){endHour=parseInt(e.end.split('T')[1].split(':')[0]);endMin=parseInt(e.end.split('T')[1].split(':')[1]);}const evtStartMins=startHour*60+startMin,evtEndMins=endHour*60+endMin,slotStartMins=slotHour*60,slotEndMins=(slotHour+1)*60;if(!(evtStartMins<slotEndMins&&evtEndMins>slotStartMins))return;}const s=(e.start.split('T')[1]||'').slice(0,5);const mins=parseInt(s.split(':')[0]||'0')*60+parseInt(s.split(':')[1]||'0');const end=e.end?(e.end.split('T')[1]||'').slice(0,5):'';items.push({mins,html:`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});}items.sort((a,b)=>a.mins-b.mins);return items.map(x=>x.html).join('');}
     function openDayFromMonth(ds){ currentCalDate = new Date(ds); calView = 'day'; showCalendar(); }
     function getEvtsMonth(ds,limit){let items=[];const toMins=s=>{s=(s||'').split(':');return (parseInt(s[0]||'0')*60)+(parseInt(s[1]||'0'));};db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;const raw=(c.nextAppointment.split('T')[1]||'');const time=raw.slice(0,5);items.push({mins:toMins(time),html:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});(db.events||[]).forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;const raw=(e.start.split('T')[1]||'');const s=raw.slice(0,5);const end=e.end?((e.end.split('T')[1]||'').slice(0,5)):'';items.push({mins:toMins(s),html:`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});items.sort((a,b)=>a.mins-b.mins||a.html.localeCompare(b.html));const shown=items.slice(0,limit);const more=items.length-limit;return shown.map(x=>x.html).join('')+(more>0?`<div class="cal-more" onclick="openDayFromMonth('${ds}')">+${more}</div>`:'');}
 
