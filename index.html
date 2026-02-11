@@ -2372,7 +2372,7 @@ function filterRoute(r){
 
     // --- CALENDAR LOGIC ---
     function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button type="button" class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div class="pool-head"><label class="pool-head-label">Route</label><select id="poolRoute" onchange="renderPoolList()"><option value="">Route auswählen</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].sort().map(r=>`<option>${r}</option>`).join('')}</select><label class="pool-head-label">Kundenqualifizierung</label><select id="poolCat" onchange="renderPoolList()"><option value="">Alle Kunden</option><option value="A">A-Kunden</option><option value="B">B-Kunden</option><option value="C">C-Kunden</option></select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView();
-        // Smart-Buttons in Header einfügen
+        // Smart-Buttons in Header einfügen (ohne "Heute")
         try{
             const header = document.querySelector('#content > div');
             if(header){
@@ -2380,17 +2380,17 @@ function filterRoute(r){
                 if(right && !document.getElementById('btnFocus')){
                     const mkBtn=(id,text,fn)=>{const b=document.createElement('button');b.id=id;b.type='button';b.className='btn btn-secondary';b.textContent=text;b.onclick=fn;return b;};
                     const focusBtn = mkBtn('btnFocus', calFocus?'Pool einblenden':'Fokus', ()=>{calFocus=!calFocus;showCalendar();});
-                    const sugBtn = mkBtn('btnSugToday','Vorschlag Heute', ()=>{suggestVisitsForDate(new Date().toISOString().slice(0,10));});
-                    const planBtn = mkBtn('btnPlanWeek','Nächste Woche planen', ()=>{autoPlanNextWeek();});
+                    const sugBtn   = mkBtn('btnSugToday','Vorschlag Heute', ()=>{suggestVisitsForDate(new Date().toISOString().slice(0,10));});
+                    const planBtn  = mkBtn('btnPlanWeek','Nächste Woche planen', ()=>{autoPlanNextWeek();});
+
                     // vor dem + Button einfügen
                     right.insertBefore(planBtn, right.firstChild);
                     right.insertBefore(sugBtn, right.firstChild);
                     right.insertBefore(focusBtn, right.firstChild);
-                        left.appendChild(todayBtn);
-                    }
                 }
             }
         }catch(e){ console.error(e); }
+
         try{ enhanceCalendarUI(); }catch(e){ console.error(e); }
     }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
