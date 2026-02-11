@@ -973,18 +973,60 @@ function saveData(id){
     }
 
     function suggestVisitsForDate(ds){
+        const rEl = document.getElementById('poolRoute');
+        const selectedRoute = rEl ? (rEl.value || '') : '';
+        if(!selectedRoute){
+            return alert('Bitte zuerst eine Route im Pool auswählen (z. B. Ludwigsburg).');
+        }
+
         const order = {A:1,B:2,C:3};
+
+        // Kandidaten: nur aktive Kunden der ausgewählten Route, die fällig sind
         const candidates = db.customers
-            .filter(c => c && c.status === 'aktiv')
+            .filter(c => c && c.status === 'aktiv' && c.route === selectedRoute)
             .map(c => ({ c, due:getVisitDueState(c) }))
             .filter(x => x.due.state !== 'ok')
+            // bereits für diesen Tag geplant? (dann nicht nochmal vorschlagen)
+            .filter(x => !(x.c.nextAppointment && String(x.c.nextAppointment).startsWith(ds)))
             .sort((a,b)=>{
                 const s = (a.due.state==='overdue'?0:1) - (b.due.state==='overdue'?0:1);
                 if(s!==0) return s;
                 const oa = order[a.c.category]||9, ob = order[b.c.category]||9;
                 if(oa!==ob) return oa-ob;
-                return getRouteDriveMinutes(b.c.route) - getRouteDriveMinutes(a.c.route);
+                return (a.c.name||'').localeCompare(b.c.name||'');
             });
+
+        if(!candidates.length){
+            return alert(`Keine fälligen Kunden für Route "${selectedRoute}" gefunden.`);
+        }
+
+        const pick = candidates.slice(0,8).map(x=>x.c);
+        const lines = pick.map((c,i)=> (i+1)+'. '+displayCustomerName(c)).join('
+');
+
+        if(!confirm(`Vorschlag (${selectedRoute}) für ${ds}:
+
+${lines}
+
+Diese Kunden automatisch einplanen?`)) return;
+
+        // Zeit-Slots: 09:00, 10:00, ...
+        let hh = 9;
+        pick.forEach(c=>{
+            for(let h=hh; h<=18; h++){
+                const t = String(h).padStart(2,'0')+':00';
+                const occupied = db.customers.some(x => x.nextAppointment === (ds+'T'+t));
+                if(!occupied){
+                    c.nextAppointment = ds + 'T' + t;
+                    hh = h + 1;
+                    break;
+                }
+            }
+        });
+
+        save();
+        showCalendar();
+    });
 
         if(!candidates.length){ alert('Keine fälligen Kunden gefunden.'); return; }
 
