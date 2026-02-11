@@ -1031,16 +1031,20 @@ Diese Kunden automatisch einplanen?`)) return;
         if(!candidates.length){ alert('Keine fälligen Kunden für die Planung gefunden.'); return; }
 
         const today = new Date(); today.setHours(0,0,0,0);
-        const day = today.getDay(); // So=0
-        const daysToNextMon = ((8 - day) % 7) || 7;
-        const nextMon = new Date(today.getTime() + daysToNextMon*86400000);
+// Woche = Montag–Donnerstag (immer NÄCHSTE Woche, auch wenn heute Montag ist)
+const dow = today.getDay(); // So=0, Mo=1, ... Sa=6
+let daysToNextMon = (1 - dow + 7) % 7;
+if(daysToNextMon === 0) daysToNextMon = 7; // wenn heute Montag -> nächste Woche
+const nextMon = new Date(today);
+nextMon.setDate(today.getDate() + daysToNextMon);
 
-        const slots = [0,1,2,3].map(i=>{
-            const d = new Date(nextMon.getTime() + i*86400000);
-            return d.toISOString().slice(0,10);
-        });
-
-        let planned = 0;
+// Slots: Mo–Do
+const slots = [0,1,2,3].map(i => {
+    const d = new Date(nextMon);
+    d.setDate(nextMon.getDate() + i);
+    return d.toISOString().slice(0,10);
+});
+let planned = 0;
         candidates.forEach(c=>{
             const mins = getRouteDriveMinutes(c.route);
             let idx = 3;
