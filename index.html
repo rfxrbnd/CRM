@@ -413,7 +413,8 @@
 <div id="timeModal" class="modal-overlay">
     <div class="modal-box">
         <h2 style="text-align:center">Zeit wählen</h2>
-        <input type="time" id="modalTime" value="09:00" style="font-size:24px; text-align:center; padding:10px; width:100%;">
+        <!-- step=1800 => 30-Minuten-Slots im Time-Picker -->
+        <input type="time" id="modalTime" value="09:00" step="1800" style="font-size:24px; text-align:center; padding:10px; width:100%;">
         <div class="grid-2" style="margin-top:20px;">
             <button class="btn btn-primary btn-full" onclick="confirmDrop()">Sichern</button>
             <button class="btn btn-secondary btn-full" onclick="closeModal()">Abbrechen</button>
@@ -996,14 +997,17 @@ ${lines}
 
 Diese Kunden automatisch einplanen?`)) return;
 
-        let hh = 9;
+        // 30-Minuten-Slots (09:00–18:00)
+        let startM = 9*60;
         pick.forEach(c=>{
-            for(let h=hh; h<=18; h++){
-                const t = String(h).padStart(2,'0')+':00';
+            for(let m=startM; m<=18*60; m+=30){
+                const hh = String(Math.floor(m/60)).padStart(2,'0');
+                const mm = String(m%60).padStart(2,'0');
+                const t = `${hh}:${mm}`;
                 const occupied = db.customers.some(x => x.nextAppointment === (ds+'T'+t));
                 if(!occupied){
                     c.nextAppointment = ds + 'T' + t;
-                    hh = h + 1;
+                    startM = m + 30;
                     break;
                 }
             }
@@ -1053,8 +1057,10 @@ let planned = 0;
             else if(mins >= 45) idx = 2;
 
             const ds = slots[idx];
-            for(let h=9; h<=18; h++){
-                const t = String(h).padStart(2,'0')+':00';
+            for(let m=9*60; m<=18*60; m+=30){
+                const hh = String(Math.floor(m/60)).padStart(2,'0');
+                const mm = String(m%60).padStart(2,'0');
+                const t = `${hh}:${mm}`;
                 const occupied = db.customers.some(x => x.nextAppointment === (ds+'T'+t));
                 if(!occupied){
                     c.nextAppointment = ds+'T'+t;
@@ -2395,7 +2401,20 @@ function filterRoute(r){
     }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
     function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div class="cal-day empty"></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" data-date="${ds}" onclick="suggestVisitsForDate('${ds}')" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b class="day-num">${i}</b>${getEvtsMonth(ds,2)}</div>`;}const totalCells=off+d;const rest=(7-(totalCells%7))%7;for(let i=0;i<rest;i++)h+=`<div class="cal-day empty"></div>`;con.innerHTML=h+`</div>`;}
-    function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
+    function renderDay(con){
+        let h=`<div style="overflow-y:auto;height:100%;">`;
+        const ds=currentCalDate.toISOString().slice(0,10);
+
+        // 30-Minuten-Slots (08:00–18:00)
+        for(let m=8*60; m<=18*60; m+=30){
+            const hh = String(Math.floor(m/60)).padStart(2,'0');
+            const mm = String(m%60).padStart(2,'0');
+            const t = `${hh}:${mm}`;
+            h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;
+        }
+
+        con.innerHTML=h+`</div>`;
+    }
     function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
     function renderPoolList(){const rEl=document.getElementById('poolRoute'),catEl=document.getElementById('poolCat');if(!rEl)return;const r=rEl.value,cat=catEl?catEl.value:'';const box=document.getElementById('poolContainer');if(!r){box.innerHTML='';return;}let list=db.customers.filter(c=>c.route===r);if(cat)list=list.filter(c=>c.category===cat);const order={A:1,B:2,C:3};list.sort((a,b)=>(order[a.category]||9)-(order[b.category]||9)||a.name.localeCompare(b.name));if(!cat){const grp=k=>list.filter(x=>x.category===k);const section=(k,title)=>{const g=grp(k);return g.length?`<div style="padding:8px 10px;color:#6b7280;font-size:11px;font-weight:700;">${title}</div>`+g.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'';};box.innerHTML=section('A','A')+section('B','B')+section('C','C')||'<div style="color:#999;padding:10px;">Keine Kunden</div>';return;}box.innerHTML=list.length?list.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'<div style="color:#999;padding:10px;">Keine Kunden</div>';}
