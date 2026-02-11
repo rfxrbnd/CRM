@@ -2395,7 +2395,20 @@ function filterRoute(r){
     }
     function renderCalView(){const c=document.getElementById('calMain');c.innerHTML='';if(calView==='month')renderMonth(c);if(calView==='day')renderDay(c);if(calView==='week')renderWeek(c);if(calView==='year')renderYear(c);}
     function renderMonth(con){const y=currentCalDate.getFullYear(),m=currentCalDate.getMonth();const d=new Date(y,m+1,0).getDate();const off=(new Date(y,m,1).getDay()+6)%7;let h=`<div class="calendar-grid">`;['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(x=>h+=`<div class="cal-head">${x}</div>`);for(let i=0;i<off;i++)h+=`<div class="cal-day empty"></div>`;for(let i=1;i<=d;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;h+=`<div class="cal-day ${new Date().toISOString().slice(0,10)===ds?'today':''}" data-date="${ds}" onclick="suggestVisitsForDate('${ds}')" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b class="day-num">${i}</b>${getEvtsMonth(ds,2)}</div>`;}const totalCells=off+d;const rest=(7-(totalCells%7))%7;for(let i=0;i<rest;i++)h+=`<div class="cal-day empty"></div>`;con.innerHTML=h+`</div>`;}
-    function renderDay(con){let h=`<div style="overflow-y:auto;height:100%;">`;const ds=currentCalDate.toISOString().slice(0,10);for(let i=8;i<=18;i++){const t=String(i).padStart(2,'0')+':00';h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:60px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')"><div style="width:50px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div><div style="flex:1;padding:5px;">${getEvts(ds,t)}</div></div>`;}con.innerHTML=h+`</div>`;}
+    function renderDay(con){
+        let h=`<div style="overflow-y:auto;height:100%;">`;
+        const ds=currentCalDate.toISOString().slice(0,10);
+        for(let hour=8;hour<=18;hour++){
+            for(let mm=0; mm<60; mm+=30){
+                const t = String(hour).padStart(2,'0') + ':' + (mm===0?'00':'30');
+                h+=`<div style="display:flex;border-bottom:1px solid #eee;min-height:50px;" ondragover="event.preventDefault()" ondrop="dropTime(event,'${ds}','${t}')">
+                        <div style="width:55px;padding:10px;font-size:11px;color:#999;border-right:1px solid #eee;">${t}</div>
+                        <div style="flex:1;padding:5px;">${getEvts(ds,t,30)}</div>
+                    </div>`;
+            }
+        }
+        con.innerHTML=h+`</div>`;
+    }
     function renderWeek(con){const d=new Date(currentCalDate);const mon=new Date(d.setDate(d.getDate()-((d.getDay()+6)%7)));let h=`<div style="overflow-y:auto;height:100%;">`;for(let i=0;i<7;i++){const c=new Date(mon);c.setDate(mon.getDate()+i);const ds=c.toISOString().slice(0,10);h+=`<div style="padding:10px;border-bottom:1px solid #eee;min-height:100px;" ondragover="event.preventDefault()" ondrop="drop(event,'${ds}')"><b>${c.toLocaleDateString()}</b><div style="margin-top:5px;">${getEvts(ds)}</div></div>`;}con.innerHTML=h+`</div>`;}
     function renderYear(con){const y=currentCalDate.getFullYear();const m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];let h=`<div class="grid-3" style="padding:20px;">`;m.forEach((x,i)=>{let c=db.customers.filter(k=>k.nextAppointment&&new Date(k.nextAppointment).getMonth()===i&&new Date(k.nextAppointment).getFullYear()===y).length;h+=`<div class="card" style="text-align:center;cursor:pointer;" onclick="currentCalDate.setMonth(${i});calView='month';showCalendar();"><b>${x}</b><br><small>${c} Termine</small></div>`;});con.innerHTML=h+`</div>`;}
     function renderPoolList(){const rEl=document.getElementById('poolRoute'),catEl=document.getElementById('poolCat');if(!rEl)return;const r=rEl.value,cat=catEl?catEl.value:'';const box=document.getElementById('poolContainer');if(!r){box.innerHTML='';return;}let list=db.customers.filter(c=>c.route===r);if(cat)list=list.filter(c=>c.category===cat);const order={A:1,B:2,C:3};list.sort((a,b)=>(order[a.category]||9)-(order[b.category]||9)||a.name.localeCompare(b.name));if(!cat){const grp=k=>list.filter(x=>x.category===k);const section=(k,title)=>{const g=grp(k);return g.length?`<div style="padding:8px 10px;color:#6b7280;font-size:11px;font-weight:700;">${title}</div>`+g.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'';};box.innerHTML=section('A','A')+section('B','B')+section('C','C')||'<div style="color:#999;padding:10px;">Keine Kunden</div>';return;}box.innerHTML=list.length?list.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'<div style="color:#999;padding:10px;">Keine Kunden</div>';}
@@ -2417,7 +2430,48 @@ function saveDetail(id){
         
         save();
     }
-    function getEvts(ds,t){let items=[];db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;if(t&& !c.nextAppointment.includes(t))return;const time=(c.nextAppointment.split('T')[1]||'').slice(0,5);const mins=parseInt(time.split(':')[0]||'0')*60+parseInt(time.split(':')[1]||'0');items.push({mins,html:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});if(db.events){db.events.forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;if(t){const slotHour=parseInt(t.split(':')[0]);const startHour=parseInt(e.start.split('T')[1].split(':')[0]);const startMin=parseInt(e.start.split('T')[1].split(':')[1]);let endHour=startHour+1,endMin=startMin;if(e.end){endHour=parseInt(e.end.split('T')[1].split(':')[0]);endMin=parseInt(e.end.split('T')[1].split(':')[1]);}const evtStartMins=startHour*60+startMin,evtEndMins=endHour*60+endMin,slotStartMins=slotHour*60,slotEndMins=(slotHour+1)*60;if(!(evtStartMins<slotEndMins&&evtEndMins>slotStartMins))return;}const s=(e.start.split('T')[1]||'').slice(0,5);const mins=parseInt(s.split(':')[0]||'0')*60+parseInt(s.split(':')[1]||'0');const end=e.end?(e.end.split('T')[1]||'').slice(0,5):'';items.push({mins,html:`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});}items.sort((a,b)=>a.mins-b.mins);return items.map(x=>x.html).join('');}
+    function getEvts(ds,t,slotMinutes){
+        slotMinutes = slotMinutes || 60;
+
+        const toMins = (hhmm)=>{
+            const p = (hhmm||'').slice(0,5).split(':');
+            return (parseInt(p[0]||'0',10)*60) + (parseInt(p[1]||'0',10));
+        };
+
+        const slotStart = t ? toMins(t) : null;
+        const slotEnd = (slotStart!==null) ? (slotStart + slotMinutes) : null;
+
+        let items = [];
+
+        // Kunden-Termine (nextAppointment)
+        db.customers.forEach(c=>{
+            if(!c.nextAppointment || !c.nextAppointment.startsWith(ds)) return;
+            const time=(c.nextAppointment.split('T')[1]||'').slice(0,5);
+            if(t && time !== t) return; // bei 30-min Slots exakt matchen
+            const mins = toMins(time);
+            items.push({mins, html:`<div class="cal-event" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${displayCustomerName(c)}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});
+        });
+
+        // Manuelle Events (db.events)
+        (db.events||[]).forEach(e=>{
+            if(!e.start || !e.start.startsWith(ds)) return;
+
+            const s=(e.start.split('T')[1]||'').slice(0,5);
+            const e2=e.end ? (e.end.split('T')[1]||'').slice(0,5) : '';
+            const evtStart = toMins(s);
+            const evtEnd = e2 ? toMins(e2) : (evtStart + 60);
+
+            if(t){
+                // Overlap mit 30-min Slot
+                if(!(evtStart < slotEnd && evtEnd > slotStart)) return;
+            }
+
+            items.push({mins:evtStart, html:`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${e2?'-'+e2:''} ${e.title}</span></div>`});
+        });
+
+        items.sort((a,b)=>a.mins-b.mins);
+        return items.map(x=>x.html).join('');
+    }catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});if(db.events){db.events.forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;if(t){const slotHour=parseInt(t.split(':')[0]);const startHour=parseInt(e.start.split('T')[1].split(':')[0]);const startMin=parseInt(e.start.split('T')[1].split(':')[1]);let endHour=startHour+1,endMin=startMin;if(e.end){endHour=parseInt(e.end.split('T')[1].split(':')[0]);endMin=parseInt(e.end.split('T')[1].split(':')[1]);}const evtStartMins=startHour*60+startMin,evtEndMins=endHour*60+endMin,slotStartMins=slotHour*60,slotEndMins=(slotHour+1)*60;if(!(evtStartMins<slotEndMins&&evtEndMins>slotStartMins))return;}const s=(e.start.split('T')[1]||'').slice(0,5);const mins=parseInt(s.split(':')[0]||'0')*60+parseInt(s.split(':')[1]||'0');const end=e.end?(e.end.split('T')[1]||'').slice(0,5):'';items.push({mins,html:`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});}items.sort((a,b)=>a.mins-b.mins);return items.map(x=>x.html).join('');}
     function openDayFromMonth(ds){ currentCalDate = new Date(ds); calView = 'day'; showCalendar(); }
     function getEvtsMonth(ds,limit){let items=[];const toMins=s=>{s=(s||'').split(':');return (parseInt(s[0]||'0')*60)+(parseInt(s[1]||'0'));};db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;const raw=(c.nextAppointment.split('T')[1]||'');const time=raw.slice(0,5);items.push({mins:toMins(time),html:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});(db.events||[]).forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;const raw=(e.start.split('T')[1]||'');const s=raw.slice(0,5);const end=e.end?((e.end.split('T')[1]||'').slice(0,5)):'';items.push({mins:toMins(s),html:`<div class="cal-event manual" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});items.sort((a,b)=>a.mins-b.mins||a.html.localeCompare(b.html));const shown=items.slice(0,limit);const more=items.length-limit;return shown.map(x=>x.html).join('')+(more>0?`<div class="cal-more" onclick="openDayFromMonth('${ds}')">+${more}</div>`:'');}
 
