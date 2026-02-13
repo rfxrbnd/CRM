@@ -3219,7 +3219,7 @@ function buildWeekdayRoutePlan(){
     { day: "Donnerstag", items: [] }
   ];
   // Ziel: 3–4 pro Tag (14–15 Einträge => 4/4/4/3 oder 4/4/3/3)
-  const targets = [4,4,4,3];
+  const targets = [4,3,3,3];
   let bi = 0;
   for(const it of sorted){
     while(bi < buckets.length-1 && buckets[bi].items.length >= targets[bi]) bi++;
