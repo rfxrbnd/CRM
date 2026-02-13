@@ -7,9 +7,36 @@
     <title>SCHOLLBACH - CRM</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+function toggleTourStatus(){
+  const body = document.getElementById('tourStatusBody');
+  const caret = document.getElementById('tourCaret');
+  if(!body) return;
+  body.classList.toggle('open');
+  if(caret) caret.classList.toggle('open');
+}
+
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+function toggleTourStatus(){
+  const body = document.getElementById('tourStatusBody');
+  const caret = document.getElementById('tourCaret');
+  if(!body) return;
+  body.classList.toggle('open');
+  if(caret) caret.classList.toggle('open');
+}
+
+</script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'>
+function toggleTourStatus(){
+  const body = document.getElementById('tourStatusBody');
+  const caret = document.getElementById('tourCaret');
+  if(!body) return;
+  body.classList.toggle('open');
+  if(caret) caret.classList.toggle('open');
+}
+
+</script>
 
     <style>
         /* --- DESIGN CORE --- */
@@ -437,6 +464,29 @@
 .tour-ok{ background:#dcfce7; border-color:#bbf7d0; color:#166534; }
 .tour-soon{ background:#fffbeb; border-color:#fde68a; color:#92400e; }
 .tour-miss{ background:#fee2e2; border-color:#fecaca; color:#991b1b; }
+
+
+.tour-status-collapsible{
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.tour-status-body{
+  display:none;
+  margin-top:8px;
+}
+.tour-status-body.open{
+  display:block;
+}
+.tour-caret{
+  font-size:12px;
+  transition:transform .15s ease;
+}
+.tour-caret.open{
+  transform:rotate(90deg);
+}
 
 </style>
 </head>
@@ -1033,7 +1083,12 @@ function saveData(id){
       const ym = `${currentCalDate.getFullYear()}-${String(currentCalDate.getMonth()+1).padStart(2,'0')}`;
       const all = getAllRoutes();
       if(!all.length){
-        box.innerHTML = `<div class="tour-status-box"><div class="tour-status-title">Tour-Status (${ym})</div><div style="color:#9ca3af;font-size:12px;">Keine Routen vorhanden</div></div>`;
+        box.innerHTML = `<div class="tour-status-box">
+  <div class="tour-status-collapsible" onclick="toggleTourStatus()">
+    <div class="tour-status-title">Tour-Status (${ym}) — ✅ ${done} · ⏳ ${plannedOnly} · ❌ ${missing}</div>
+    <div id="tourCaret" class="tour-caret">▶</div>
+  </div>
+  <div id="tourStatusBody" class="tour-status-body"><div class="tour-status-title">Tour-Status (${ym})</div><div style="color:#9ca3af;font-size:12px;">Keine Routen vorhanden</div></div>`;
         return;
       }
 
@@ -1070,6 +1125,11 @@ function saveData(id){
 
       box.innerHTML = `
         <div class="tour-status-box">
+  <div class="tour-status-collapsible" onclick="toggleTourStatus()">
+    <div class="tour-status-title">Tour-Status (${ym}) — ✅ ${done} · ⏳ ${plannedOnly} · ❌ ${missing}</div>
+    <div id="tourCaret" class="tour-caret">▶</div>
+  </div>
+  <div id="tourStatusBody" class="tour-status-body">
           <div class="tour-status-title">Tour-Status (${ym}) — ✅ ${done} · ⏳ ${plannedOnly} · ❌ ${missing}</div>
           ${rows || emptyHint}
         </div>
@@ -3726,6 +3786,15 @@ function getRouteNumberByName(routeName){
 }
 
     
+
+function toggleTourStatus(){
+  const body = document.getElementById('tourStatusBody');
+  const caret = document.getElementById('tourCaret');
+  if(!body) return;
+  body.classList.toggle('open');
+  if(caret) caret.classList.toggle('open');
+}
+
 </script>
 </body>
 </html>
