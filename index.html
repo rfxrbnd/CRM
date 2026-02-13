@@ -2297,7 +2297,7 @@ function showRoutes(){
         const items = b.items.map(it=>{
             const r = it.route;
             const nr = getRouteNumberByName(r);
-            const sub = nr ? `Nr. ${nr}` : '';
+            const sub = nr ? `${nr}` : '';
             return mkCard(r, sub);
 
         }).join('');
