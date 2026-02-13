@@ -2296,8 +2296,10 @@ function showRoutes(){
     const planHtml = plan.map(b=>{
         const items = b.items.map(it=>{
             const r = it.route;
-            const sub = `${it.min}–${it.max} min`;
+            const nr = getRouteNumberByName(r);
+            const sub = nr ? `Nr. ${nr}` : '';
             return mkCard(r, sub);
+
         }).join('');
         return `
           <div class="card" style="padding:16px;">
@@ -3574,6 +3576,18 @@ function importProspectsCSV(input){
 }
 // =================== ENDE INTERESSENTEN ===================
 
+function getRouteNumberByName(routeName){
+  try{
+    const name = String(routeName || '').trim();
+    // ROUTE_MAP: "21" -> "Aalen"  => wir drehen es um
+    const entry = Object.entries(ROUTE_MAP || {}).find(([nr, nm]) => String(nm).trim() === name);
+    return entry ? entry[0] : '';
+  }catch(e){
+    return '';
+  }
+}
+
+    
 </script>
 </body>
 </html>
