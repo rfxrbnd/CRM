@@ -1096,7 +1096,9 @@ let planned = 0;
 
     function showHome(){
         const today=new Date().toLocaleDateString('de-DE');
-        const count=db.customers.length;
+        const count = db.customers.filter(c =>
+  (c.category === 'A' || c.category === 'B') && c.status !== 'inaktiv'
+).length;
         const visited=db.customers.filter(c=>getCustomerReportActivities(c).some(r=>r.date===today)).length;
         const openTasksCount = db.customers.reduce((sum, c) => sum + (c.tasks ? c.tasks.filter(t => !t.done).length : 0), 0);
 
