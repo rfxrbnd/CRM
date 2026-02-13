@@ -938,6 +938,85 @@ function saveData(id){
         }
     }
 
+
+    // --- TOUR STATUS (Kalender: gefahren / geplant / fehlt pro Monat) ---
+    function _parseDEDateToYMD(dStr){
+        const p = String(dStr||'').split('.');
+        if(p.length!==3) return null;
+        const dd = String(p[0]).padStart(2,'0');
+        const mm = String(p[1]).padStart(2,'0');
+        const yy = String(p[2]).trim();
+        if(!yy || yy.length!==4) return null;
+        return `${yy}-${mm}-${dd}`;
+    }
+    function _ymKeyFromISO(iso){ return String(iso||'').slice(0,7); }
+
+    function getAllRoutes(){
+        return [...new Set((db.customers||[]).map(c=>(c.route||'').trim()).filter(r=>r))].sort((a,b)=>a.localeCompare(b));
+    }
+
+    function getDrivenRoutesForMonth(ym){
+        const driven = new Set();
+        (db.customers||[]).forEach(c=>{
+            const reps = getCustomerReportActivities(c) || [];
+            reps.forEach(r=>{
+                const iso = _parseDEDateToYMD(r.date);
+                if(!iso) return;
+                if(_ymKeyFromISO(iso) === ym){
+                    const rt = (c.route||'').trim();
+                    if(rt) driven.add(rt);
+                }
+            });
+        });
+        return driven;
+    }
+
+    function getScheduledRoutesForMonth(ym){
+        const scheduled = new Set();
+        (db.customers||[]).forEach(c=>{
+            const na = String(c.nextAppointment||'');
+            if(!na) return;
+            const ds = na.slice(0,10); // yyyy-mm-dd
+            if(_ymKeyFromISO(ds) !== ym) return;
+            const rt = (c.route||'').trim();
+            if(rt) scheduled.add(rt);
+        });
+        return scheduled;
+    }
+
+    function renderTourMonthStatus(){
+        const box = document.getElementById('tourMonthStatus');
+        if(!box) return;
+        const ym = `${currentCalDate.getFullYear()}-${String(currentCalDate.getMonth()+1).padStart(2,'0')}`;
+        const all = getAllRoutes();
+        if(!all.length){
+            box.innerHTML = `<div class="tour-status-box"><div class="tour-status-title">Tour-Status (Monat)</div><div style="color:#9ca3af;font-size:12px;">Keine Routen vorhanden</div></div>`;
+            return;
+        }
+        const driven = getDrivenRoutesForMonth(ym);
+        const scheduled = getScheduledRoutesForMonth(ym);
+
+        const rows = all.map(r=>{
+            let cls = 'tour-miss', txt = 'Fehlt';
+            if(driven.has(r)){ cls='tour-ok'; txt='Gefahren'; }
+            else if(scheduled.has(r)){ cls='tour-soon'; txt='Geplant'; }
+
+            return `<div class="tour-status-row" title="${r}">
+                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${escapeHtml(r)}</div>
+                <span class="tour-pill ${cls}">${txt}</span>
+            </div>`;
+        }).join('');
+
+        const done = [...driven].length;
+        const plannedOnly = [...scheduled].filter(x=>!driven.has(x)).length;
+        const missing = all.length - done - plannedOnly;
+
+        box.innerHTML = `<div class="tour-status-box">
+            <div class="tour-status-title">Tour-Status (${ym}) — ✅ ${done} · ⏳ ${plannedOnly} · ❌ ${missing}</div>
+            ${rows}
+        </div>`;
+    }
+
     function poolItemClass(c){
         const d = getVisitDueState(c).state;
         const dueCls = d ? (' due-' + d) : '';
@@ -2410,7 +2489,7 @@ function filterRoute(r){
     }
 
     // --- CALENDAR LOGIC ---
-    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button type="button" class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div class="pool-head"><label class="pool-head-label">Route</label><select id="poolRoute" onchange="renderPoolList()"><option value="">Route auswählen</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].sort().map(r=>`<option>${r}</option>`).join('')}</select><label class="pool-head-label">Kundenqualifizierung</label><select id="poolCat" onchange="renderPoolList()"><option value="">Alle Kunden</option><option value="A">A-Kunden</option><option value="B">B-Kunden</option><option value="C">C-Kunden</option></select></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView();
+    function showCalendar() { const mNames=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; const h=calView==='day'?currentCalDate.toLocaleDateString():(calView==='year'?currentCalDate.getFullYear():`${mNames[currentCalDate.getMonth()]} ${currentCalDate.getFullYear()}`); document.getElementById('content').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><div><button class="btn btn-secondary" onclick="changeCal(-1)">◀</button><span style="font-weight:bold;margin:0 15px;">${h}</span><button class="btn btn-secondary" onclick="changeCal(1)">▶</button></div><div style="display:flex; gap:10px;"><button type="button" class="btn btn-success" onclick="openEventModal()">+</button><div class="view-controls"><button class="view-btn ${calView==='day'?'active':''}" onclick="calView='day';showCalendar()">Tag</button><button class="view-btn ${calView==='week'?'active':''}" onclick="calView='week';showCalendar()">Woche</button><button class="view-btn ${calView==='month'?'active':''}" onclick="calView='month';showCalendar()">Monat</button><button class="view-btn ${calView==='year'?'active':''}" onclick="calView='year';showCalendar()">Jahr</button></div></div></div><div class="cal-layout"><div class="cal-pool"><div class="pool-head"><label class="pool-head-label">Route</label><select id="poolRoute" onchange="renderPoolList()"><option value="">Route auswählen</option>${[...new Set(db.customers.map(c=>c.route).filter(r=>r))].sort().map(r=>`<option>${r}</option>`).join('')}</select><label class="pool-head-label">Kundenqualifizierung</label><select id="poolCat" onchange="renderPoolList()"><option value="">Alle Kunden</option><option value="A">A-Kunden</option><option value="B">B-Kunden</option><option value="C">C-Kunden</option></select><div id="tourMonthStatus"></div></div><div id="poolContainer" class="pool-list"></div></div><div id="calMain" class="cal-main"></div></div>`; renderPoolList(); renderCalView(); renderTourMonthStatus();
         // Smart-Buttons in Header einfügen (ohne "Heute")
         try{
             const header = document.querySelector('#content > div');
