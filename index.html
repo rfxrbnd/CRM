@@ -166,15 +166,34 @@ function toggleTourStatus(){
             .cal-main { height: 500px; }
             .grid-2, .grid-3, .grid-4-custom { grid-template-columns: 1fr; }
         }
-        @media print {
-            #sidebar, #menu-toggle, .no-print, .btn, .nav-menu, .del-x, .float-bar { display: none !important; }
-            #main { padding: 0; margin: 0; width: 100%; height: auto; overflow: visible; }
-            body { background: #fff; height: auto; overflow: visible; font-family: sans-serif; }
-            .card { box-shadow: none; border: none; margin: 0; padding: 0; border-bottom: 1px solid #eee; margin-bottom: 20px; }
-            h1 { font-size: 18pt; border-bottom: 2px solid #000; margin-bottom: 20px; }
-            .report-row { border-bottom: 1px solid #ccc; padding: 10px 0; page-break-inside: avoid; }
-            #rep-input-area, textarea { display: none; }
-        }
+    @media print {
+
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area, #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .receipt-img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+  }
+}
 
     /* Sidebar Navigation – saubere Ausrichtung */
 .nav-item {
@@ -1586,8 +1605,67 @@ let planned = 0;
     }
     
     function delExpense(id){if(confirm("Löschen?")){db.expenses=db.expenses.filter(x=>x.id!==id);save();showExpenses();}}
-    function printExpenses(){let html=`<div class="no-print" style="margin-bottom:20px;"><button class="btn btn-primary" onclick="window.print()">Drucken</button> <button class="btn btn-secondary" onclick="showExpenses()">Zurück</button></div><h1>Spesenabrechnung</h1>`;const total=db.expenses.reduce((sum,e)=>sum+(parseFloat(e.amount)||0),0);html+=`<div style="font-size:18px; font-weight:bold; margin-bottom:20px;">Gesamt: ${total.toFixed(2)} €</div>`;db.expenses.forEach(e=>{html+=`<div style="border-bottom:1px solid #ccc; padding:15px 0; page-break-inside:avoid;"><div style="display:flex; justify-content:space-between;"><strong>${e.date} - ${e.category}</strong><strong>${parseFloat(e.amount).toFixed(2)} €</strong></div><div>${e.note}</div>${e.img?`<img src="${e.img}" style="max-height:200px; max-width:100%; margin-top:10px; border:1px solid #eee;">`:''}</div>`;});document.getElementById('content').innerHTML=html;}
+    function printExpenses() {
+    let html = '<div id="print-area">';
 
+    // ✅ SEITE 1 – NUR SPESENLISTE
+    html += '<h1>Spesenabrechnung</h1>';
+    html += '<table style="width:100%; border-collapse:collapse;">';
+    html += `
+        <tr>
+            <th style="text-align:left; border-bottom:1px solid #000;">Datum</th>
+            <th style="text-align:left; border-bottom:1px solid #000;">Text</th>
+            <th style="text-align:right; border-bottom:1px solid #000;">Betrag</th>
+        </tr>
+    `;
+
+    let receipts = [];
+
+    (db.expenses || []).forEach(e => {
+        html += `
+            <tr>
+                <td>${e.date || ''}</td>
+                <td>${escapeHtml(e.text || '')}</td>
+                <td style="text-align:right;">${(e.amount || 0).toFixed(2)} €</td>
+            </tr>
+        `;
+
+        if (e.photo) {
+            receipts.push({
+                date: e.date,
+                text: e.text,
+                amount: e.amount,
+                photo: e.photo
+            });
+        }
+    });
+
+    html += '</table>';
+
+    // ✅ SEITE 2+ – BELEGE
+    if (receipts.length) {
+        html += '<div class="page-break"></div>';
+        html += '<h1>Belege</h1>';
+
+        receipts.forEach(r => {
+            html += `
+                <div style="margin-bottom:30px;">
+                    <div style="font-weight:bold; margin-bottom:5px;">
+                        ${r.date || ''} – ${escapeHtml(r.text || '')} – ${(r.amount || 0).toFixed(2)} €
+                    </div>
+                    <img src="${r.photo}" class="receipt-img">
+                </div>
+            `;
+        });
+    }
+
+    html += '</div>';
+
+    const win = window.open('', '', 'width=900,height=1200');
+    win.document.write(html);
+    win.document.close();
+    win.print();
+}
     function showMap(){document.getElementById('content').innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h1>Kundenkarte</h1><button class="btn btn-primary" onclick="batchGeocode()">Positionen Laden</button></div><div id="map-container"></div>`;setTimeout(()=>{if(mapInstance){mapInstance.remove();mapInstance=null;}mapInstance=L.map('map-container').setView([51.1657,10.4515],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapInstance);let group=L.featureGroup();let hasMarkers=false;db.customers.forEach(c=>{if(c.lat&&c.lon){const st=getStatus(c);const color=st==='red'?'red':(st==='yellow'?'gold':'green');const marker=L.circleMarker([c.lat,c.lon],{color:color,fillColor:color,fillOpacity:0.8,radius:8}).bindPopup(`<b>${displayCustomerName(c)}</b><br>${c.address}<br><button onclick="showDetail(${c.id})" style="margin-top:5px;">Öffnen</button>`);marker.addTo(group);hasMarkers=true;}});if(hasMarkers){mapInstance.addLayer(group);mapInstance.fitBounds(group.getBounds(),{padding:[50,50]});}},100);}
     async function batchGeocode(){
         const missing=db.customers.filter(c=>!c.lat&&c.address.length>5);
