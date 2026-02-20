@@ -1359,7 +1359,7 @@ let planned = 0;
                 const hasOpen = c.tasks.some(t => t && !t.done);
 
                 if (hasOpen && routeNow !== lastRoute) {
-                    html += `<div style="padding:10px 0 6px; font-size:12px; font-weight:800; color:#6b7280;">Route: ${routeNow}</div>`;
+                    html += `<div style="padding:10px 0 6px; font-size:12px; font-weight:800; color:#6b7280;">Route: ${escapeHtml(routeNow)}${getRouteWeekday(routeNow) ? " (" + escapeHtml(getRouteWeekday(routeNow)) + ")" : ""}</div>`;
                     lastRoute = routeNow;
                 }
 
@@ -3431,6 +3431,21 @@ const ROUTE_DRIVE_TIMES = [
   { route: "Ludwigsburg", label: "Ludwigsburg", min: 35, max: 45 },
   { route: "Pforzheim", label: "Pforzheim", min: 15, max: 20 }
 ];
+
+// ✅ Wochentag pro Route (für Anzeige & Planung)
+// Trage hier deine festen Routentage ein. Beispiel:
+const ROUTE_WEEKDAYS = {
+  "Balingen/Ebingen": "Montag",
+  // "Bodensee": "Dienstag",
+  // "Stuttgart": "Mittwoch",
+};
+
+function getRouteWeekday(route){
+  const r = (route||'').trim();
+  return (ROUTE_WEEKDAYS && ROUTE_WEEKDAYS[r]) ? ROUTE_WEEKDAYS[r] : '';
+}
+
+
 
 function buildWeekdayRoutePlan(){
   // nach max absteigend (Mo am längsten, Do am kürzesten)
