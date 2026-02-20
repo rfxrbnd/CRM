@@ -1341,10 +1341,30 @@ let planned = 0;
         const todayStr = new Date().toISOString().split('T')[0];
         let html = '<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div><h1>Offene Aufgaben</h1><div class="card">';
         let count = 0;
-        db.customers.forEach(c => {
-            if(c.tasks && c.tasks.length > 0) {
+
+        // ✅ Kunden nach Route (und danach Name) sortieren
+        const customersSorted = [...(db.customers || [])].sort((a, b) => {
+            const ra = (a.route || '').trim().toLowerCase();
+            const rb = (b.route || '').trim().toLowerCase();
+            if (ra !== rb) return ra.localeCompare(rb, 'de');
+            return (a.name || '').localeCompare((b.name || ''), 'de');
+        });
+
+        // ✅ optional: Route-Überschriften
+        let lastRoute = null;
+
+        customersSorted.forEach(c => {
+            if (c.tasks && c.tasks.length > 0) {
+                const routeNow = (c.route || 'Ohne Route').trim() || 'Ohne Route';
+                const hasOpen = c.tasks.some(t => t && !t.done);
+
+                if (hasOpen && routeNow !== lastRoute) {
+                    html += `<div style="padding:10px 0 6px; font-size:12px; font-weight:800; color:#6b7280;">Route: ${routeNow}</div>`;
+                    lastRoute = routeNow;
+                }
+
                 c.tasks.forEach((t, index) => {
-                    if(!t.done) {
+                    if (t && !t.done) {
                         const isOverdue = t.dueDate && t.dueDate < todayStr;
                         html += `
                         <div class="global-task-row">
@@ -1361,7 +1381,8 @@ let planned = 0;
                 });
             }
         });
-        if(count === 0) html += '<div style="padding:20px; text-align:center; color:#999;">Alles erledigt! 🎉</div>';
+
+        if (count === 0) html += '<div style="padding:20px; text-align:center; color:#999;">Alles erledigt! 🎉</div>';
         html += '</div>';
         document.getElementById('content').innerHTML = html;
     }
