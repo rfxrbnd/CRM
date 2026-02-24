@@ -962,7 +962,71 @@ function saveData(id){
     }
 
     
-    // --- ACTIVITY HELPERS (Bericht/Kommunikation als "Neue Aktivität") ---
+    
+    // --- CSV EXPORT (Kunden) ---
+    function exportCustomersCSV(){
+        try{
+            const list = Array.isArray(db.customers) ? db.customers : [];
+            if(!list.length){ alert("Keine Kunden vorhanden"); return; }
+
+            const headers = [
+                "Name","Kundennr","Route","Kategorie","Status",
+                "Adresse","Kontakt","Telefon","Email",
+                "Produkte","Besuchsintervall_Wochen","Naechster_Termin",
+                "Letzter_Besuch","Offene_Aufgaben"
+            ];
+
+            const rows = list.map(c=>{
+                const last = getLatestReportDateObj(c);
+                const lastStr = last ? last.toLocaleDateString('de-DE') : "";
+                const openTasks = (c.tasks||[]).filter(t=>!t.done).length;
+
+                const vals = [
+                    c.name||"",
+                    c.nr||"",
+                    c.route||"",
+                    c.category||"",
+                    c.status||"",
+                    c.address||"",
+                    c.contact||"",
+                    c.phone||"",
+                    c.email||"",
+                    (c.products||"").replace(/\r?\n/g," "),
+                    (c.visitInterval||""),
+                    (c.nextAppointment||""),
+                    lastStr,
+                    openTasks
+                ];
+                // CSV mit ; (DE-Excel) und sauberem Quote-Escaping
+                return vals.map(v => `"${String(v).replace(/"/g,'""')}"`).join(";");
+            });
+
+            const csv = headers.join(";") + "\n" + rows.join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+            const now = new Date();
+            const ts = now.getFullYear() + "-" +
+                String(now.getMonth()+1).padStart(2,'0') + "-" +
+                String(now.getDate()).padStart(2,'0') + "_" +
+                String(now.getHours()).padStart(2,'0') + "-" +
+                String(now.getMinutes()).padStart(2,'0');
+            const filename = `kunden_export_${ts}.csv`;
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }catch(e){
+            console.error(e);
+            alert("Export-Fehler: " + e.message);
+        }
+    }
+
+// --- ACTIVITY HELPERS (Bericht/Kommunikation als "Neue Aktivität") ---
     function getCustomerActivities(c){
         const acts = Array.isArray(c.activities) ? c.activities : [];
         // fallback: wenn alte Daten noch nicht migriert sind (sollte aber passiert sein)
@@ -1762,6 +1826,7 @@ let planned = 0;
             ${headerHTML}
             <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
                 <button class="btn btn-secondary" onclick="toggleSelectMode()">${selectMode?'Abbrechen':'Auswahl'}</button>
+                <button class="btn btn-secondary" onclick="exportCustomersCSV()">Export</button>
                 ${(selectMode && viewState.filterRoute)?`<button class="btn btn-secondary" onclick="toggleAllFiltered()">${areAllFilteredSelected()?'Auswahl aufheben':'Alle auswählen'}</button>`:''}
                 ${!selectMode?'<button class="btn btn-primary" onclick="showForm()">+ Neu</button>':''}
             </div>
