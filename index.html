@@ -2726,7 +2726,42 @@ function filterRoute(r){
     function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
     function dropTime(ev,ds,t){ev.preventDefault();const c=db.customers.find(x=>x.id===dragId);if(c&&isNonCustomer(c)){alert('Nicht-Kunden können nicht eingeplant werden.');return;}if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')) return;}c.nextAppointment=ds+'T'+t;save();showCalendar();}
     function confirmDrop(){const c=db.customers.find(x=>x.id===dragId);if(c&&isNonCustomer(c)){alert('Nicht-Kunden können nicht eingeplant werden.');closeModal();return;}if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')){closeModal();return;}}c.nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
-    function openEventModal(){document.getElementById('eventModal').style.display='flex'}
+    function openEventModal(eventId){
+    // eventId optional: wenn vorhanden -> bestehenden Termin bearbeiten
+    document.getElementById('eventModal').style.display='flex';
+    const btnDel = document.getElementById('btnDelEvt');
+    const idEl = document.getElementById('evtId');
+    const titleEl = document.getElementById('evtTitle');
+    const dateEl = document.getElementById('evtDate');
+    const startEl = document.getElementById('evtStart');
+    const endEl = document.getElementById('evtEnd');
+
+    db.events = db.events || [];
+
+    if(eventId !== undefined && eventId !== null && String(eventId).trim() !== ''){
+        const evt = db.events.find(e => String(e.id) === String(eventId));
+        if(evt){
+            idEl.value = evt.id;
+            titleEl.value = evt.title || '';
+            const d = (evt.start || '').split('T')[0] || '';
+            const s = ((evt.start || '').split('T')[1] || '').slice(0,5) || '09:00';
+            const e = evt.end ? (((evt.end || '').split('T')[1] || '').slice(0,5) || '') : '';
+            dateEl.value = d;
+            startEl.value = s;
+            endEl.value = e;
+            if(btnDel) btnDel.style.display = 'block';
+            return;
+        }
+    }
+
+    // Neuer Termin
+    idEl.value = '';
+    titleEl.value = '';
+    try{ dateEl.value = new Date().toISOString().slice(0,10); }catch(e){ dateEl.value = ''; }
+    startEl.value = '09:00';
+    endEl.value = '10:00';
+    if(btnDel) btnDel.style.display = 'none';
+}
     function closeModal(){document.getElementById('timeModal').style.display='none';}
     function delAppt(id){if(confirm("Termin löschen?")){db.customers.find(x=>x.id===id).nextAppointment="";save();showCalendar();}}
 function saveDetail(id){
@@ -2770,7 +2805,19 @@ function getEvtsMonth(ds, limit){
   return shown.join('') + (more > 0 ? `<div class="cal-more" onclick="openDayFromMonth('${ds}')">+${more}</div>` : '');
 }
 
-window.saveManualEvent=window.saveManualEvent||function(){const id=document.getElementById('evtId').value;const title=document.getElementById('evtTitle').value.trim();const date=document.getElementById('evtDate').value;const start=document.getElementById('evtStart').value||'09:00';const end=document.getElementById('evtEnd').value||'';if(!title||!date){alert('Titel und Datum fehlen');return;}db.events=db.events||[];const obj={id:id?parseInt(id):Date.now(),title,start:date+'T'+start,end:end?date+'T'+end:''};if(id){const i=db.events.findIndex(e=>String(e.id)===String(id));if(i>-1)db.events[i]=obj;else db.events.push(obj);}else db.events.push(obj);save();showCalendar();document.getElementById('eventModal').style.display='none';};
+window.saveManualEvent=window.saveManualEvent||function(){const id=document.getElementById('evtId').value;
+window.delManualEvent = window.delManualEvent || function(){
+    const id = document.getElementById('evtId').value;
+    if(!id){ return; }
+    if(!confirm('Termin wirklich löschen?')) return;
+
+    db.events = db.events || [];
+    db.events = db.events.filter(e => String(e.id) !== String(id));
+    save();
+    document.getElementById('eventModal').style.display = 'none';
+    showCalendar();
+};
+const title=document.getElementById('evtTitle').value.trim();const date=document.getElementById('evtDate').value;const start=document.getElementById('evtStart').value||'09:00';const end=document.getElementById('evtEnd').value||'';if(!title||!date){alert('Titel und Datum fehlen');return;}db.events=db.events||[];const obj={id:id?parseInt(id):Date.now(),title,start:date+'T'+start,end:end?date+'T'+end:''};if(id){const i=db.events.findIndex(e=>String(e.id)===String(id));if(i>-1)db.events[i]=obj;else db.events.push(obj);}else db.events.push(obj);save();showCalendar();document.getElementById('eventModal').style.display='none';};
 window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub')?'vacation':t.includes('arzt')?'doctor':t.includes('büro')||t.includes('buero')?'office':''};window.getEvtsMonth=function(ds,limit){let items=[],toMins=s=>{s=(s||'').slice(0,5).split(':');return(+s[0]||0)*60+(+s[1]||0)};db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;const t=(c.nextAppointment.split('T')[1]||'').slice(0,5);items.push({m:toMins(t),h:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${t} ${c.name}</span><span onclick="delAppt(${c.id})">×</span></div>`})});(db.events||[]).forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;const s=(e.start.split('T')[1]||'').slice(0,5),end=e.end?((e.end.split('T')[1]||'').slice(0,5)):'';items.push({m:toMins(s),h:`<div class="cal-event manual ${getEvtClass(e.title)}" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`})});items.sort((a,b)=>a.m-b.m);const sh=items.slice(0,limit),more=items.length-limit;return sh.map(x=>x.h).join('')+(more>0?`<div class="cal-more" onclick="openDayFromMonth('${ds}')">+${more}</div>`:'');};
 window.getEvtClass=function(t){t=(t||'').toLowerCase();return t.includes('urlaub')?'vacation':t.includes('arzt')?'doctor':(t.includes('büro')||t.includes('buero'))?'office':''};window.getEvts=function(ds,t){let items=[],toMins=s=>{s=(s||'').slice(0,5).split(':');return(+s[0]||0)*60+(+s[1]||0)};db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;if(t&&!(c.nextAppointment.split('T')[1]||'').startsWith(t.slice(0,2)))return;const time=(c.nextAppointment.split('T')[1]||'').slice(0,5),mins=toMins(time);items.push({mins,html:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${time} ${c.name}</span><span style="font-weight:bold;cursor:pointer;" onclick="delAppt(${c.id})">×</span></div>`});});(db.events||[]).forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;if(t){const slotHour=parseInt(t.split(':')[0]);const startHour=parseInt((e.start.split('T')[1]||'0:0').split(':')[0]);const startMin=parseInt((e.start.split('T')[1]||'0:0').split(':')[1]);let endHour=startHour+1,endMin=startMin;if(e.end){endHour=parseInt((e.end.split('T')[1]||'0:0').split(':')[0]);endMin=parseInt((e.end.split('T')[1]||'0:0').split(':')[1]);}const evtStartMins=startHour*60+startMin,evtEndMins=endHour*60+endMin,slotStartMins=slotHour*60,slotEndMins=(slotHour+1)*60;if(!(evtStartMins<slotEndMins&&evtEndMins>slotStartMins))return;}const s=(e.start.split('T')[1]||'').slice(0,5),mins=toMins(s),end=e.end?((e.end.split('T')[1]||'').slice(0,5)):'';items.push({mins,html:`<div class="cal-event manual ${getEvtClass(e.title)}" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`});});items.sort((a,b)=>a.mins-b.mins);return items.map(x=>x.html).join('');};window.getEvtsMonth=function(ds,limit){let items=[],toMins=s=>{s=(s||'').slice(0,5).split(':');return(+s[0]||0)*60+(+s[1]||0)};db.customers.forEach(c=>{if(!c.nextAppointment||!c.nextAppointment.startsWith(ds))return;const t=(c.nextAppointment.split('T')[1]||'').slice(0,5);items.push({m:toMins(t),h:`<div class="cal-event ${(()=>{try{const d=getVisitDueState(c).state;return d?("due-"+d):"";}catch(e){return ""}})()}" draggable="true" ondragstart="dragId=${c.id}"><span onclick="showDetail(${c.id})">${t} ${c.name}</span><span onclick="delAppt(${c.id})">×</span></div>`})});(db.events||[]).forEach(e=>{if(!e.start||!e.start.startsWith(ds))return;const s=(e.start.split('T')[1]||'').slice(0,5),end=e.end?((e.end.split('T')[1]||'').slice(0,5)):'';items.push({m:toMins(s),h:`<div class="cal-event manual ${getEvtClass(e.title)}" onclick="openEventModal(${e.id})"><span>${s}${end?'-'+end:''} ${e.title}</span></div>`})});items.sort((a,b)=>a.m-b.m);const shown=items.slice(0,limit),more=items.length-limit;return shown.map(x=>x.h).join('')+(more>0?`<div class="cal-more" onclick="openDayFromMonth('${ds}')">+${more}</div>`:'');};
 
