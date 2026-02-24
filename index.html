@@ -488,6 +488,165 @@ function toggleTourStatus(){
   transform:rotate(90deg);
 }
 
+/* =========================
+   Salesforce-ish (Lightning) Theme Override
+   Paste at END of <style>
+   ========================= */
+:root{
+  /* Lightning-like tokens */
+  --brand: #0176d3;          /* Salesforce Blue */
+  --brand-dark: #014486;
+  --bg-body: #f3f2f2;        /* SLDS app bg */
+  --bg-sidebar: #ffffff;
+  --surface: #ffffff;
+  --text-main: #181818;
+  --text-light: #5c5c5c;
+  --border: #dddbda;         /* SLDS border */
+  --radius: 10px;            /* weniger “pill”, mehr “card” */
+  --shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+
+/* App background + typography */
+body{
+  background: var(--bg-body) !important;
+  color: var(--text-main) !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
+}
+
+/* Sidebar: eher “App Nav” */
+#sidebar{
+  border-right: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+.logo-area{
+  padding: 14px 16px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.nav-menu{ padding: 10px !important; gap: 6px !important; }
+
+/* Nav items: Lightning-typisch: leichtes Hover, klare Active-Indicator */
+.nav-item{
+  border-radius: 8px !important;
+  color: #3e3e3c !important;
+  padding: 10px 12px !important;
+  background: transparent !important;
+}
+.nav-item::after{ display:none !important; } /* entfernt iOS-divider */
+.nav-item:hover{
+  background: #eef4ff !important;
+  color: var(--text-main) !important;
+}
+.nav-item.active{
+  background: #e5f3ff !important;
+  border: 1px solid #cfe9ff !important;
+  font-weight: 700 !important;
+  position: relative;
+}
+.nav-item.active::before{
+  content:"";
+  position:absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--brand);
+}
+.nav-arrow{ color:#706e6b !important; opacity:.75 !important; }
+
+/* Content container: Lightning wirkt “luftiger”, weniger Schatten */
+.content-wrap{
+  max-width: 1160px !important;
+  padding: 20px !important;
+}
+
+/* Cards: SLDS-like card */
+.card{
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow) !important;
+  padding: 16px !important;
+}
+
+/* Headings */
+h1{
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+/* Inputs: kantiger, klare Focus-Ring wie Lightning */
+input, select, textarea{
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  background: #fff !important;
+  color: var(--text-main) !important;
+}
+input:focus, select:focus, textarea:focus{
+  outline: none !important;
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(1,118,211,.20) !important;
+}
+
+/* Buttons: Primary = blau, Secondary = neutral */
+.btn{
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+.btn-primary{
+  background: var(--brand) !important;
+  border-color: var(--brand) !important;
+  color: #fff !important;
+}
+.btn-primary:hover{ filter: brightness(.95); }
+.btn-secondary{
+  background: #fff !important;
+  color: var(--text-main) !important;
+}
+.btn-secondary:hover{ background:#f7f7f7 !important; }
+.btn-danger{
+  background:#fff !important;
+  border-color:#f3b8b8 !important;
+  color:#ba0517 !important; /* Lightning “destructive” red-ish */
+}
+
+/* Floating bar: weniger “pill”, mehr “utility” */
+.float-bar{
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.14) !important;
+}
+
+/* Kalender: Events eher “badge” + brand-blue */
+.cal-event{
+  background: var(--brand) !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+}
+.cal-event.manual{
+  background:#ffffff !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border) !important;
+}
+.cal-head{
+  background:#f3f2f2 !important;
+  border-bottom: 1px solid var(--border) !important;
+  color:#3e3e3c !important;
+}
+.calendar-grid{ background:#fff !important; }
+
+/* Modals: “Lightning modal” feel */
+.modal-overlay{ background: rgba(0,0,0,.40) !important; }
+.modal-box{
+  border-radius: 14px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,.20) !important;
+}
+
+
+        
 </style>
 </head>
 <body>
