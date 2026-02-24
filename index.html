@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SCHOLLBACH - CRM</title>
+    <link rel="stylesheet" href="https://unpkg.com/@salesforce-ux/design-system@2.25.6/assets/styles/salesforce-lightning-design-system.min.css">
+
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
@@ -488,58 +490,175 @@ function toggleTourStatus(){
   transform:rotate(90deg);
 }
 
-/* =========================
-   Salesforce-ish (Lightning) Theme Override
-   Paste at END of <style>
-   ========================= */
+
+/* =========================================================
+   Salesforce Lightning-inspired reskin (no JS changes)
+   ========================================================= */
 :root{
-  /* Lightning-like tokens */
-  --brand: #0176d3;          /* Salesforce Blue */
+  /* Palette aligned to SLDS */
+  --brand: #0176d3;
   --brand-dark: #014486;
-  --bg-body: #f3f2f2;        /* SLDS app bg */
+  --bg-body: #f3f2f2;
   --bg-sidebar: #ffffff;
   --surface: #ffffff;
   --text-main: #181818;
   --text-light: #5c5c5c;
-  --border: #dddbda;         /* SLDS border */
-  --radius: 10px;            /* weniger “pill”, mehr “card” */
-  --shadow: 0 1px 2px rgba(0,0,0,.08);
+  --border: #dddbda;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(0,0,0,.10);
+  --shadow-lg: 0 12px 28px rgba(0,0,0,.16);
+  --focus-ring: 0 0 0 3px rgba(1,118,211,.25);
+  --stat-green: #2e844a;   /* success */
+  --stat-yellow: #dd7a01;  /* warning */
+  --stat-red: #ba0517;     /* error */
+  --event-blue: #0176d3;
+  --event-blue-text: #ffffff;
 }
 
-/* App background + typography */
+/* Base */
+html, body{ height:100%; }
 body{
   background: var(--bg-body) !important;
   color: var(--text-main) !important;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+a{ color: var(--brand); }
+*{ letter-spacing: .01em; }
+
+/* Hide old hamburger; use SFDC header button */
+#menu-toggle{ display:none !important; }
+
+/* Global header */
+#sfdc-global-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 520px) 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #ffffff, #fafaf9);
+  border-bottom: 1px solid var(--border);
+}
+.sfdc-gh-left, .sfdc-gh-center, .sfdc-gh-right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.sfdc-gh-left{ justify-content:flex-start; }
+.sfdc-gh-center{ justify-content:center; }
+.sfdc-gh-right{ justify-content:flex-end; }
+
+.sfdc-icon-btn{
+  height: 36px;
+  width: 36px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  cursor:pointer;
+}
+.sfdc-icon-btn:hover{ background:#f7f7f7; }
+.sfdc-icon-btn:focus{ outline:none; box-shadow: var(--focus-ring); border-color: var(--brand); }
+
+.sfdc-appmark{
+  height: 32px;
+  width: 32px;
+  border-radius: 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: #e5f3ff;
+  color: var(--brand);
+  font-weight: 800;
+}
+.sfdc-appname{
+  font-weight: 700;
+  font-size: 14px;
+  color: #3e3e3c;
+  letter-spacing: .02em;
+  text-transform: none;
 }
 
-/* Sidebar: eher “App Nav” */
+/* Search */
+.sfdc-search{
+  width: 100%;
+  position: relative;
+}
+.sfdc-search-input{
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 14px;
+}
+.sfdc-search-icon{
+  position:absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: .65;
+}
+.sfdc-search-input:focus{
+  outline:none;
+  border-color: var(--brand);
+  box-shadow: var(--focus-ring);
+}
+
+/* Layout: sidebar + main */
 #sidebar{
+  top: 57px !important; /* below header */
+  height: calc(100% - 57px) !important;
+  background: var(--bg-sidebar) !important;
   border-right: 1px solid var(--border) !important;
   box-shadow: none !important;
+  padding-top: 10px !important;
 }
-.logo-area{
-  padding: 14px 16px !important;
-  border-bottom: 1px solid var(--border) !important;
+#main{
+  padding-top: 0 !important;
 }
-.nav-menu{ padding: 10px !important; gap: 6px !important; }
-
-/* Nav items: Lightning-typisch: leichtes Hover, klare Active-Indicator */
-.nav-item{
-  border-radius: 8px !important;
-  color: #3e3e3c !important;
-  padding: 10px 12px !important;
+#main, #content{
   background: transparent !important;
 }
-.nav-item::after{ display:none !important; } /* entfernt iOS-divider */
+
+/* Sidebar branding */
+.logo-area{
+  padding: 12px 14px !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: #fff !important;
+}
+.logo-img{
+  height: 28px !important;
+  width: 28px !important;
+  border-radius: 8px !important;
+}
+#text-logo{ color:#3e3e3c !important; }
+
+/* Nav */
+.nav-menu{ padding: 10px !important; gap: 6px !important; }
+.nav-item{
+  width: 100% !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #3e3e3c !important;
+  font-weight: 600 !important;
+}
 .nav-item:hover{
   background: #eef4ff !important;
-  color: var(--text-main) !important;
+  border-color: #cfe9ff !important;
 }
 .nav-item.active{
   background: #e5f3ff !important;
-  border: 1px solid #cfe9ff !important;
-  font-weight: 700 !important;
+  border-color: #cfe9ff !important;
+  color: #1b1b1b !important;
   position: relative;
 }
 .nav-item.active::before{
@@ -552,46 +671,72 @@ body{
   border-radius: 3px;
   background: var(--brand);
 }
-.nav-arrow{ color:#706e6b !important; opacity:.75 !important; }
+.nav-arrow{ color:#706e6b !important; opacity:.9 !important; }
 
-/* Content container: Lightning wirkt “luftiger”, weniger Schatten */
+/* Content */
 .content-wrap{
-  max-width: 1160px !important;
-  padding: 20px !important;
+  max-width: 1200px !important;
+  padding: 18px 18px 28px !important;
 }
 
-/* Cards: SLDS-like card */
-.card{
+/* Cards */
+.card, .stat-card, .customer-card, .deal-card, .route-card, .expense-card, .note-card{
+  background: var(--surface) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   box-shadow: var(--shadow) !important;
-  padding: 16px !important;
 }
 
-/* Headings */
-h1{
-  font-size: 20px !important;
+/* Section headings */
+h1, h2, h3{
+  color: #1b1b1b !important;
+}
+h1{ font-size: 20px !important; font-weight: 800 !important; }
+h2{ font-size: 16px !important; font-weight: 800 !important; }
+small, .muted, .subtle{ color: #706e6b !important; }
+
+/* Tables */
+table{
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+th{
+  background: #f3f2f2 !important;
+  color: #3e3e3c !important;
   font-weight: 700 !important;
+  border-bottom: 1px solid var(--border) !important;
 }
+td{
+  border-bottom: 1px solid #f0efee !important;
+}
+tr:hover td{ background: #fafaf9 !important; }
 
-/* Inputs: kantiger, klare Focus-Ring wie Lightning */
+/* Forms */
+label{
+  color: #3e3e3c !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
 input, select, textarea{
   border: 1px solid var(--border) !important;
   border-radius: 10px !important;
-  padding: 10px 12px !important;
   background: #fff !important;
   color: var(--text-main) !important;
 }
 input:focus, select:focus, textarea:focus{
   outline: none !important;
   border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px rgba(1,118,211,.20) !important;
+  box-shadow: var(--focus-ring) !important;
 }
+select{ padding-right: 30px !important; }
 
-/* Buttons: Primary = blau, Secondary = neutral */
+/* Buttons */
 .btn{
   border-radius: 10px !important;
   border: 1px solid var(--border) !important;
+  font-weight: 700 !important;
   box-shadow: none !important;
 }
 .btn-primary{
@@ -602,51 +747,109 @@ input:focus, select:focus, textarea:focus{
 .btn-primary:hover{ filter: brightness(.95); }
 .btn-secondary{
   background: #fff !important;
-  color: var(--text-main) !important;
+  color: #3e3e3c !important;
 }
-.btn-secondary:hover{ background:#f7f7f7 !important; }
-.btn-danger{
-  background:#fff !important;
-  border-color:#f3b8b8 !important;
-  color:#ba0517 !important; /* Lightning “destructive” red-ish */
-}
-
-/* Floating bar: weniger “pill”, mehr “utility” */
-.float-bar{
-  border-radius: 12px !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,.14) !important;
-}
-
-/* Kalender: Events eher “badge” + brand-blue */
-.cal-event{
-  background: var(--brand) !important;
+.btn-secondary:hover{ background: #f7f7f7 !important; }
+.btn-success{
+  background: #2e844a !important;
+  border-color: #2e844a !important;
   color: #fff !important;
-  border-radius: 10px !important;
-  font-weight: 600 !important;
 }
-.cal-event.manual{
-  background:#ffffff !important;
-  color: var(--text-main) !important;
-  border: 1px solid var(--border) !important;
+.btn-danger{
+  background: #ba0517 !important;
+  border-color: #ba0517 !important;
+  color: #fff !important;
 }
-.cal-head{
-  background:#f3f2f2 !important;
-  border-bottom: 1px solid var(--border) !important;
-  color:#3e3e3c !important;
-}
-.calendar-grid{ background:#fff !important; }
+.btn:focus{ outline:none !important; box-shadow: var(--focus-ring) !important; }
 
-/* Modals: “Lightning modal” feel */
-.modal-overlay{ background: rgba(0,0,0,.40) !important; }
-.modal-box{
+/* Pills / badges */
+.pill, .tag, .badge{
+  border: 1px solid var(--border) !important;
+  background: #f3f2f2 !important;
+  color: #3e3e3c !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+
+/* Floating bar */
+.float-bar{
   border-radius: 14px !important;
   border: 1px solid var(--border) !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,.20) !important;
+  box-shadow: var(--shadow-lg) !important;
 }
 
+/* Modals: make iOS header look like Lightning */
+.modal-overlay{ background: rgba(0,0,0,.45) !important; }
+.modal-box{
+  border-radius: 16px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+.ios-head{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  padding: 12px 14px !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: #fff !important;
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+}
+.ios-title{
+  font-weight: 800 !important;
+  color: #3e3e3c !important;
+}
+.ios-iconbtn{
+  height: 34px !important;
+  min-width: 34px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  background: #fff !important;
+}
+.ios-iconbtn:hover{ background:#f7f7f7 !important; }
+.ios-done{ color: var(--brand) !important; }
 
-        
+/* Calendar */
+.cal-head{
+  background: #f3f2f2 !important;
+  color: #3e3e3c !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.calendar-grid{
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+}
+.cal-event{
+  background: var(--event-blue) !important;
+  color: var(--event-blue-text) !important;
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+}
+.cal-event.manual{
+  background: #ffffff !important;
+  color: #3e3e3c !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Map container if present */
+#map{ border: 1px solid var(--border) !important; border-radius: 14px !important; }
+
+/* Mobile tweaks */
+@media (max-width: 900px){
+  #sfdc-global-header{
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "left right"
+      "center center";
+  }
+  .sfdc-gh-left{ grid-area:left; }
+  .sfdc-gh-right{ grid-area:right; }
+  .sfdc-gh-center{ grid-area:center; }
+  #sidebar{ top: 105px !important; height: calc(100% - 105px) !important; }
+}
+
 </style>
 </head>
 <body>
@@ -657,6 +860,27 @@ input:focus, select:focus, textarea:focus{
     <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" onclick="stopGeocoding=true">STOPP</button>
 </div>
 <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+<header id="sfdc-global-header" role="banner" aria-label="Global Header">
+  <div class="sfdc-gh-left">
+    <button class="sfdc-icon-btn" id="sfdc-menu-btn" type="button" onclick="toggleSidebar()" aria-label="Navigation öffnen">
+      <span aria-hidden="true">☰</span>
+    </button>
+    <div class="sfdc-appmark" aria-hidden="true">☁</div>
+    <div class="sfdc-appname">SCHOLLBACH CRM</div>
+  </div>
+  <div class="sfdc-gh-center">
+    <div class="sfdc-search" role="search">
+      <span class="sfdc-search-icon" aria-hidden="true">🔎</span>
+      <input class="sfdc-search-input" type="search" placeholder="Suchen…" oninput="/* UI only */">
+    </div>
+  </div>
+  <div class="sfdc-gh-right">
+    <button class="sfdc-icon-btn" type="button" aria-label="Hilfe"><span aria-hidden="true">?</span></button>
+    <button class="sfdc-icon-btn" type="button" aria-label="Einstellungen"><span aria-hidden="true">⚙</span></button>
+  </div>
+</header>
+
 
 <div id="timeModal" class="modal-overlay">
     <div class="modal-box">
