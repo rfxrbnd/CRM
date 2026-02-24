@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SCHOLLBACH - CRM</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 function toggleTourStatus(){
   const body = document.getElementById('tourStatusBody');
@@ -472,7 +473,7 @@ function toggleTourStatus(){
   justify-content:space-between;
   gap:8px;
 }
-.tour-status-.tour-status-body{
+.tour-status-body{
   display:none;
   margin-top:8px;
 }
@@ -488,368 +489,278 @@ function toggleTourStatus(){
 }
 
 
-/* =========================================================
-   Salesforce Lightning-inspired reskin (no JS changes)
-   ========================================================= */
+
+/* =========================
+   DARK SALESFORCE-INSPIRED (as requested)
+   Visual overhaul ONLY — JS/IDs unchanged
+   ========================= */
 :root{
-  /* Palette aligned to SLDS */
-  --brand: #0176d3;
-  --brand-dark: #014486;
-  --bg-body: #f3f2f2;
-  --bg-sidebar: #ffffff;
-  --surface: #ffffff;
-  --text-main: #181818;
-  --text-light: #5c5c5c;
-  --border: #dddbda;
-  --radius: 12px;
-  --shadow: 0 1px 2px rgba(0,0,0,.10);
-  --shadow-lg: 0 12px 28px rgba(0,0,0,.16);
-  --focus-ring: 0 0 0 3px rgba(1,118,211,.25);
-  --stat-green: #2e844a;   /* success */
-  --stat-yellow: #dd7a01;  /* warning */
-  --stat-red: #ba0517;     /* error */
-  --event-blue: #0176d3;
-  --event-blue-text: #ffffff;
+  --bg:#0b1220;
+  --panel:#101a33;
+  --panel2:#0f1730;
+  --card:#111f3e;
+  --muted:#9bb0d1;
+  --text:#e8f0ff;
+  --accent:#4f8cff;
+  --accent2:#22c55e;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+  --border:rgba(255,255,255,0.10);
+  --shadow: 0 12px 30px rgba(0,0,0,.35);
+  --radius:16px;
+  --radius2:20px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
 }
 
-/* Base */
-html, body{ height:100%; }
+/* Layout shell */
+html,body{height:100%}
 body{
-  background: var(--bg-body) !important;
-  color: var(--text-main) !important;
-  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif !important;
-  -webkit-font-smoothing: antialiased;
-}
-a{ color: var(--brand); }
-*{ letter-spacing: .01em; }
-
-/* Hide old hamburger; use SFDC header button */
-#menu-toggle{ display:none !important; }
-
-/* Global header */
-body{ padding-top: 56px; }
-#sfdc-global-header{
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  z-index: 50;
-  display: grid;
-  grid-template-columns: 1fr minmax(260px, 520px) 1fr;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 14px;
-  background: linear-gradient(180deg, #ffffff, #fafaf9);
-  border-bottom: 1px solid var(--border);
-}
-.sfdc-gh-left, .sfdc-gh-center, .sfdc-gh-right{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-.sfdc-gh-left{ justify-content:flex-start; }
-.sfdc-gh-center{ justify-content:center; }
-.sfdc-gh-right{ justify-content:flex-end; }
-
-.sfdc-icon-btn{
-  height: 36px;
-  width: 36px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 8px;
-  cursor:pointer;
-}
-.sfdc-icon-btn:hover{ background:#f7f7f7; }
-.sfdc-icon-btn:focus{ outline:none; box-shadow: var(--focus-ring); border-color: var(--brand); }
-
-.sfdc-appmark{
-  height: 32px;
-  width: 32px;
-  border-radius: 10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: #e5f3ff;
-  color: var(--brand);
-  font-weight: 800;
-}
-.sfdc-appname{
-  font-weight: 700;
-  font-size: 14px;
-  color: #3e3e3c;
-  letter-spacing: .02em;
-  text-transform: none;
+  margin:0;
+  font-family: var(--sans) !important;
+  background: radial-gradient(1200px 800px at 15% 0%, #0d1a3d 0%, var(--bg) 55%, #070c16 100%) !important;
+  color: var(--text) !important;
+  overflow: hidden;
 }
 
-/* Search */
-.sfdc-search{
-  width: 100%;
-  position: relative;
-}
-.sfdc-search-input{
-  width: 100%;
-  height: 36px;
-  padding: 0 12px 0 34px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: #fff;
-  font-size: 14px;
-}
-.sfdc-search-icon{
-  position:absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: .65;
-}
-.sfdc-search-input:focus{
-  outline:none;
-  border-color: var(--brand);
-  box-shadow: var(--focus-ring);
+/* Put app in a 2-col grid like your example */
+.app{
+  display:grid;
+  grid-template-columns: 290px 1fr;
+  height:100vh;
+  gap:14px;
+  padding:14px;
 }
 
-/* Layout: sidebar + main */
+/* Sidebar (keep #sidebar id for functions) */
 #sidebar{
-  top: 57px !important; /* below header */
-  height: calc(100% - 57px) !important;
-  background: var(--bg-sidebar) !important;
-  border-right: 1px solid var(--border) !important;
-  box-shadow: none !important;
-  padding-top: 10px !important;
-}
-#main{
-  padding-top: 0 !important;
-}
-#main, #content{
-  background: transparent !important;
+  position: relative !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  background: linear-gradient(180deg, rgba(79,140,255,.10), rgba(255,255,255,.02)) !important;
+  border:1px solid var(--border) !important;
+  border-radius: var(--radius2) !important;
+  padding:14px !important;
+  box-shadow: var(--shadow) !important;
+  display:flex !important;
+  flex-direction:column !important;
+  min-height:0 !important;
+  transform:none !important;           /* avoids off-canvas shift */
+  transition: none !important;         /* JS toggling still works, but grid is primary */
 }
 
-/* Sidebar branding */
+/* Logo area -> brand row */
 .logo-area{
-  padding: 12px 14px !important;
-  border-bottom: 1px solid var(--border) !important;
-  background: #fff !important;
+  display:flex !important;
+  gap:10px !important;
+  align-items:center !important;
+  padding:10px 10px 16px !important;
+  border-bottom:1px solid var(--border) !important;
+  margin-bottom:12px !important;
 }
 .logo-img{
-  height: 28px !important;
-  width: 28px !important;
-  border-radius: 8px !important;
+  width:38px !important;
+  height:38px !important;
+  border-radius:12px !important;
+  background: radial-gradient(circle at 30% 30%, #7fb0ff, #3b82f6 55%, #1e40af) !important;
+  box-shadow: 0 10px 18px rgba(79,140,255,.25) !important;
+  object-fit: cover !important;
 }
-#text-logo{ color:#3e3e3c !important; }
+#text-logo{
+  display:block !important;
+  font-size:14px !important;
+  margin:0 !important;
+  line-height:1.2 !important;
+  color: var(--text) !important;
+}
+#sidebar-logo{ display:block !important; }
+#sidebar .logo-area::after{
+  content:"Single-File • localStorage";
+  display:block;
+  margin-left:auto;
+  color: var(--muted);
+  font-size:12px;
+  white-space:nowrap;
+}
 
-/* Nav */
-.nav-menu{ padding: 10px !important; gap: 6px !important; }
+/* Nav buttons */
+.nav-menu{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:8px !important;
+  padding:6px 4px !important;
+  overflow:auto !important;
+  min-height:0 !important;
+}
 .nav-item{
-  width: 100% !important;
-  border-radius: 10px !important;
-  padding: 10px 12px !important;
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  color: #3e3e3c !important;
-  font-weight: 600 !important;
-}
-.nav-item:hover{
-  background: #eef4ff !important;
-  border-color: #cfe9ff !important;
-}
-.nav-item.active{
-  background: #e5f3ff !important;
-  border-color: #cfe9ff !important;
-  color: #1b1b1b !important;
-  position: relative;
-}
-.nav-item.active::before{
-  content:"";
-  position:absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--brand);
-}
-.nav-arrow{ color:#706e6b !important; opacity:.9 !important; }
-
-/* Content */
-.content-wrap{
-  max-width: 1200px !important;
-  padding: 18px 18px 28px !important;
-}
-
-/* Cards */
-.card, .stat-card, .customer-card, .deal-card, .route-card, .expense-card, .note-card{
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
+  border:1px solid var(--border) !important;
+  background: rgba(255,255,255,.03) !important;
+  color: var(--text) !important;
+  padding:10px 10px !important;
   border-radius: 14px !important;
-  box-shadow: var(--shadow) !important;
+  cursor:pointer !important;
+  text-align:left !important;
+  display:flex !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  transition: all .15s ease !important;
+  box-shadow:none !important;
+}
+.nav-item:hover{ transform: translateY(-1px); background: rgba(255,255,255,.06) !important; }
+.nav-item.active{
+  background: rgba(79,140,255,.18) !important;
+  border-color: rgba(79,140,255,.35) !important;
+  box-shadow: 0 10px 24px rgba(79,140,255,.10) !important;
+}
+.nav-arrow{ color: var(--muted) !important; opacity:1 !important; }
+
+/* Sidebar bottom utilities (existing .sidebar-footer) */
+.sidebar-footer{
+  margin-top:auto !important;
+  border-top:1px solid var(--border) !important;
+  padding-top:10px !important;
+  display:grid !important;
+  gap:8px !important;
 }
 
-/* Section headings */
-h1, h2, h3{
-  color: #1b1b1b !important;
+/* Main content */
+#main{
+  background: rgba(255,255,255,.02) !important;
+  border:1px solid var(--border) !important;
+  border-radius: var(--radius2) !important;
+  box-shadow: var(--shadow) !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
 }
-h1{ font-size: 20px !important; font-weight: 800 !important; }
-h2{ font-size: 16px !important; font-weight: 800 !important; }
-small, .muted, .subtle{ color: #706e6b !important; }
+
+/* content wrap (where your JS injects pages) */
+.content-wrap{
+  padding:14px !important;
+  overflow:auto !important;
+  min-height:0 !important;
+  max-width: none !important;
+}
+
+/* Make your existing top floating bar look like the example topbar */
+.float-bar{
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  margin: 0 0 14px !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)) !important;
+  box-shadow: none !important;
+}
+.float-inner{
+  padding:12px 14px !important;
+}
+
+/* Cards / panels */
+.card, .panel, .ios-card, .section, .kpi-card{
+  background: rgba(255,255,255,.03) !important;
+  border:1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.20) !important;
+}
+.card h3, .section h3{ color: var(--muted) !important; }
 
 /* Tables */
 table{
-  border-collapse: separate !important;
-  border-spacing: 0 !important;
+  color: var(--text) !important;
 }
-th{
-  background: #f3f2f2 !important;
-  color: #3e3e3c !important;
-  font-weight: 700 !important;
-  border-bottom: 1px solid var(--border) !important;
+.table, .data-table{
+  width:100% !important;
+  border-collapse: collapse !important;
+  overflow:hidden !important;
+  border-radius: 14px !important;
+  border:1px solid var(--border) !important;
+  background: rgba(255,255,255,.02) !important;
 }
-td{
-  border-bottom: 1px solid #f0efee !important;
+.table th, .table td, .data-table th, .data-table td{
+  padding:10px 10px !important;
+  border-bottom:1px solid var(--border) !important;
+  font-size:13px !important;
+  vertical-align: top !important;
 }
-tr:hover td{ background: #fafaf9 !important; }
+.table th, .data-table th{
+  text-align:left !important;
+  color: var(--muted) !important;
+  font-weight:800 !important;
+  font-size:12px !important;
+  background: rgba(255,255,255,.03) !important;
+}
+.table tr:hover td, .data-table tr:hover td{ background: rgba(79,140,255,.06) !important; }
 
-/* Forms */
-label{
-  color: #3e3e3c !important;
-  font-weight: 700 !important;
-  font-size: 12px !important;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
+/* Inputs */
 input, select, textarea{
-  border: 1px solid var(--border) !important;
-  border-radius: 10px !important;
-  background: #fff !important;
-  color: var(--text-main) !important;
+  background: rgba(255,255,255,.04) !important;
+  border:1px solid var(--border) !important;
+  border-radius: 14px !important;
+  padding:9px 10px !important;
+  color: var(--text) !important;
+  outline:none !important;
 }
-input:focus, select:focus, textarea:focus{
-  outline: none !important;
-  border-color: var(--brand) !important;
-  box-shadow: var(--focus-ring) !important;
-}
-select{ padding-right: 30px !important; }
+input::placeholder, textarea::placeholder{ color: rgba(155,176,209,.70) !important; }
 
 /* Buttons */
 .btn{
-  border-radius: 10px !important;
-  border: 1px solid var(--border) !important;
-  font-weight: 700 !important;
-  box-shadow: none !important;
+  border:1px solid var(--border) !important;
+  background: rgba(255,255,255,.04) !important;
+  color: var(--text) !important;
+  border-radius: 14px !important;
+  transition: all .15s ease !important;
+  box-shadow:none !important;
 }
-.btn-primary{
-  background: var(--brand) !important;
-  border-color: var(--brand) !important;
-  color: #fff !important;
+.btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.07) !important; }
+.btn-primary, .primary{
+  background: rgba(79,140,255,.22) !important;
+  border-color: rgba(79,140,255,.45) !important;
+  color: var(--text) !important;
 }
-.btn-primary:hover{ filter: brightness(.95); }
 .btn-secondary{
-  background: #fff !important;
-  color: #3e3e3c !important;
+  background: rgba(255,255,255,.04) !important;
+  border-color: var(--border) !important;
 }
-.btn-secondary:hover{ background: #f7f7f7 !important; }
-.btn-success{
-  background: #2e844a !important;
-  border-color: #2e844a !important;
-  color: #fff !important;
+.btn-danger, .danger{
+  background: rgba(239,68,68,.14) !important;
+  border-color: rgba(239,68,68,.35) !important;
 }
-.btn-danger{
-  background: #ba0517 !important;
-  border-color: #ba0517 !important;
-  color: #fff !important;
+.btn-warn, .warn{
+  background: rgba(245,158,11,.14) !important;
+  border-color: rgba(245,158,11,.35) !important;
 }
-.btn:focus{ outline:none !important; box-shadow: var(--focus-ring) !important; }
-
-/* Pills / badges */
-.pill, .tag, .badge{
-  border: 1px solid var(--border) !important;
-  background: #f3f2f2 !important;
-  color: #3e3e3c !important;
-  border-radius: 999px !important;
-  font-weight: 700 !important;
+.btn-good, .good{
+  background: rgba(34,197,94,.16) !important;
+  border-color: rgba(34,197,94,.35) !important;
 }
 
-/* Floating bar */
-.float-bar{
-  border-radius: 14px !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow-lg) !important;
+/* Modals */
+.modal-overlay{
+  background: rgba(0,0,0,.55) !important;
 }
-
-/* Modals: make iOS header look like Lightning */
-.modal-overlay{ background: rgba(0,0,0,.45) !important; }
 .modal-box{
-  border-radius: 16px !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow-lg) !important;
-}
-.ios-head{
-  display:flex !important;
-  align-items:center !important;
-  justify-content:space-between !important;
-  padding: 12px 14px !important;
-  border-bottom: 1px solid var(--border) !important;
-  background: #fff !important;
-  border-top-left-radius: 16px !important;
-  border-top-right-radius: 16px !important;
-}
-.ios-title{
-  font-weight: 800 !important;
-  color: #3e3e3c !important;
-}
-.ios-iconbtn{
-  height: 34px !important;
-  min-width: 34px !important;
-  border-radius: 8px !important;
-  border: 1px solid var(--border) !important;
-  background: #fff !important;
-}
-.ios-iconbtn:hover{ background:#f7f7f7 !important; }
-.ios-done{ color: var(--brand) !important; }
-
-/* Calendar */
-.cal-head{
-  background: #f3f2f2 !important;
-  color: #3e3e3c !important;
-  border-bottom: 1px solid var(--border) !important;
-}
-.calendar-grid{
-  background: #fff !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 14px !important;
-  overflow: hidden !important;
-}
-.cal-event{
-  background: var(--event-blue) !important;
-  color: var(--event-blue-text) !important;
-  border-radius: 10px !important;
-  font-weight: 800 !important;
-}
-.cal-event.manual{
-  background: #ffffff !important;
-  color: #3e3e3c !important;
-  border: 1px solid var(--border) !important;
+  background: var(--panel) !important;
+  border:1px solid var(--border) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,.35) !important;
+  color: var(--text) !important;
 }
 
-/* Map container if present */
-#map{ border: 1px solid var(--border) !important; border-radius: 14px !important; }
+/* Hide old mobile hamburger; grid layout is primary */
+#menu-toggle{ display:none !important; }
 
-/* Mobile tweaks */
-@media (max-width: 900px){
-  #sfdc-global-header{
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      "left right"
-      "center center";
-  }
-  .sfdc-gh-left{ grid-area:left; }
-  .sfdc-gh-right{ grid-area:right; }
-  .sfdc-gh-center{ grid-area:center; }
-  #sidebar{ top: 105px !important; height: calc(100% - 105px) !important; }
+/* Responsive: stack sidebar above */
+@media (max-width: 1100px){
+  body{ overflow:auto !important; }
+  .app{ grid-template-columns: 1fr; }
+  #sidebar{ position: relative !important; }
+  #main{ height: auto !important; }
 }
-
 </style>
 </head>
 <body>
@@ -860,27 +771,6 @@ select{ padding-right: 30px !important; }
     <button class="btn btn-secondary" id="stopGeoBtn" style="margin-top:20px; display:none;" onclick="stopGeocoding=true">STOPP</button>
 </div>
 <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
-
-<header id="sfdc-global-header" role="banner" aria-label="Global Header">
-  <div class="sfdc-gh-left">
-    <button class="sfdc-icon-btn" id="sfdc-menu-btn" type="button" onclick="toggleSidebar()" aria-label="Navigation öffnen">
-      <span aria-hidden="true">☰</span>
-    </button>
-    <div class="sfdc-appmark" aria-hidden="true">☁</div>
-    <div class="sfdc-appname">SCHOLLBACH CRM</div>
-  </div>
-  <div class="sfdc-gh-center">
-    <div class="sfdc-search" role="search">
-      <span class="sfdc-search-icon" aria-hidden="true">🔎</span>
-      <input class="sfdc-search-input" type="search" placeholder="Suchen…" oninput="/* UI only */">
-    </div>
-  </div>
-  <div class="sfdc-gh-right">
-    <button class="sfdc-icon-btn" type="button" aria-label="Hilfe"><span aria-hidden="true">?</span></button>
-    <button class="sfdc-icon-btn" type="button" aria-label="Einstellungen"><span aria-hidden="true">⚙</span></button>
-  </div>
-</header>
-
 
 <div id="timeModal" class="modal-overlay">
     <div class="modal-box">
@@ -917,6 +807,7 @@ select{ padding-right: 30px !important; }
     </div>
 </div>
 
+<div class="app">
 <div id="sidebar">
   <div class="logo-area">
     <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
@@ -938,6 +829,9 @@ select{ padding-right: 30px !important; }
 </div>
 
 <div id="main"><div id="content" class="content-wrap"></div></div>
+</div>
+
+
 
 <script>
     const DB_KEY = 'raphael_crm_v122_revenue';
