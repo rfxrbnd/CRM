@@ -7,7 +7,8 @@
     <title>SCHOLLBACH - CRM</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
 function toggleTourStatus(){
   const body = document.getElementById('tourStatusBody');
   const caret = document.getElementById('tourCaret');
@@ -489,11 +490,7 @@ function toggleTourStatus(){
 }
 
 
-
-/* =========================
-   DARK SALESFORCE-INSPIRED (as requested)
-   Visual overhaul ONLY — JS/IDs unchanged
-   ========================= */
+/* ===== Reference UI Layout (Dark Glass) ===== */
 :root{
   --bg:#0b1220;
   --panel:#101a33;
@@ -513,17 +510,16 @@ function toggleTourStatus(){
   --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
 }
 
-/* Layout shell */
 html,body{height:100%}
 body{
-  margin:0;
+  margin:0 !important;
   font-family: var(--sans) !important;
   background: radial-gradient(1200px 800px at 15% 0%, #0d1a3d 0%, var(--bg) 55%, #070c16 100%) !important;
-  color: var(--text) !important;
-  overflow: hidden;
+  color:var(--text) !important;
+  overflow:hidden !important;
 }
 
-/* Put app in a 2-col grid like your example */
+/* App grid wrapper */
 .app{
   display:grid;
   grid-template-columns: 290px 1fr;
@@ -532,235 +528,186 @@ body{
   padding:14px;
 }
 
-/* Sidebar (keep #sidebar id for functions) */
-#sidebar{
-  position: relative !important;
-  inset: auto !important;
-  width: auto !important;
-  height: auto !important;
-  background: linear-gradient(180deg, rgba(79,140,255,.10), rgba(255,255,255,.02)) !important;
-  border:1px solid var(--border) !important;
-  border-radius: var(--radius2) !important;
-  padding:14px !important;
-  box-shadow: var(--shadow) !important;
-  display:flex !important;
-  flex-direction:column !important;
-  min-height:0 !important;
-  transform:none !important;           /* avoids off-canvas shift */
-  transition: none !important;         /* JS toggling still works, but grid is primary */
+/* Sidebar */
+#sidebar.sidebar{
+  background: linear-gradient(180deg, rgba(79,140,255,.10), rgba(255,255,255,.02));
+  border:1px solid var(--border);
+  border-radius: var(--radius2);
+  padding:14px;
+  box-shadow: var(--shadow);
+  display:flex;
+  flex-direction:column;
+  min-height:0;
 }
 
-/* Logo area -> brand row */
-.logo-area{
-  display:flex !important;
-  gap:10px !important;
-  align-items:center !important;
-  padding:10px 10px 16px !important;
-  border-bottom:1px solid var(--border) !important;
-  margin-bottom:12px !important;
+/* Re-skin existing logo area */
+#sidebar .logo-area{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:10px 10px 16px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:12px;
 }
-.logo-img{
-  width:38px !important;
-  height:38px !important;
-  border-radius:12px !important;
-  background: radial-gradient(circle at 30% 30%, #7fb0ff, #3b82f6 55%, #1e40af) !important;
-  box-shadow: 0 10px 18px rgba(79,140,255,.25) !important;
-  object-fit: cover !important;
-}
-#text-logo{
-  display:block !important;
-  font-size:14px !important;
-  margin:0 !important;
-  line-height:1.2 !important;
-  color: var(--text) !important;
-}
-#sidebar-logo{ display:block !important; }
-#sidebar .logo-area::after{
-  content:"Single-File • localStorage";
-  display:block;
-  margin-left:auto;
-  color: var(--muted);
-  font-size:12px;
-  white-space:nowrap;
+#sidebar .logo-area img{
+  width:38px; height:38px; border-radius:12px;
+  background: radial-gradient(circle at 30% 30%, #7fb0ff, #3b82f6 55%, #1e40af);
+  box-shadow: 0 10px 18px rgba(79,140,255,.25);
+  object-fit:cover;
 }
 
-/* Nav buttons */
-.nav-menu{
-  display:flex !important;
-  flex-direction:column !important;
-  gap:8px !important;
-  padding:6px 4px !important;
-  overflow:auto !important;
-  min-height:0 !important;
+/* Nav */
+#sidebar .nav-menu{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:6px 4px;
+  overflow:auto;
 }
-.nav-item{
+#sidebar .nav-item{
   border:1px solid var(--border) !important;
   background: rgba(255,255,255,.03) !important;
-  color: var(--text) !important;
+  color:var(--text) !important;
   padding:10px 10px !important;
   border-radius: 14px !important;
-  cursor:pointer !important;
-  text-align:left !important;
-  display:flex !important;
-  justify-content:space-between !important;
-  align-items:center !important;
-  transition: all .15s ease !important;
-  box-shadow:none !important;
+  cursor:pointer;
+  text-align:left;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  transition: all .15s ease;
 }
-.nav-item:hover{ transform: translateY(-1px); background: rgba(255,255,255,.06) !important; }
-.nav-item.active{
+#sidebar .nav-item:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.06) !important;
+}
+#sidebar .nav-item.active{
   background: rgba(79,140,255,.18) !important;
   border-color: rgba(79,140,255,.35) !important;
   box-shadow: 0 10px 24px rgba(79,140,255,.10) !important;
 }
-.nav-arrow{ color: var(--muted) !important; opacity:1 !important; }
+#sidebar .nav-arrow{ color: var(--muted) !important; }
 
-/* Sidebar bottom utilities (existing .sidebar-footer) */
-.sidebar-footer{
-  margin-top:auto !important;
-  border-top:1px solid var(--border) !important;
-  padding-top:10px !important;
-  display:grid !important;
-  gap:8px !important;
+/* Main content shell */
+#main.content{
+  background: rgba(255,255,255,.02);
+  border:1px solid var(--border);
+  border-radius: var(--radius2);
+  box-shadow: var(--shadow);
+  min-height:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
 }
 
-/* Main content */
-#main{
-  background: rgba(255,255,255,.02) !important;
-  border:1px solid var(--border) !important;
-  border-radius: var(--radius2) !important;
-  box-shadow: var(--shadow) !important;
-  min-height:0 !important;
-  overflow:hidden !important;
-  display:flex !important;
-  flex-direction:column !important;
+/* Topbar */
+#main .topbar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+}
+#main .topbar h2{margin:0;font-size:15px}
+#main .topbar .search{
+  display:flex; gap:10px; align-items:center; width:min(700px, 100%);
+  justify-content:flex-end;
 }
 
-/* content wrap (where your JS injects pages) */
-.content-wrap{
+/* Content area */
+#content.content-wrap{
   padding:14px !important;
   overflow:auto !important;
-  min-height:0 !important;
+  min-height:0;
   max-width: none !important;
 }
 
-/* Make your existing top floating bar look like the example topbar */
-.float-bar{
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 10 !important;
-  margin: 0 0 14px !important;
-  border-radius: 0 !important;
-  border: none !important;
-  border-bottom: 1px solid var(--border) !important;
-  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)) !important;
-  box-shadow: none !important;
-}
-.float-inner{
-  padding:12px 14px !important;
-}
-
-/* Cards / panels */
-.card, .panel, .ios-card, .section, .kpi-card{
-  background: rgba(255,255,255,.03) !important;
-  border:1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-  box-shadow: 0 10px 22px rgba(0,0,0,.20) !important;
-}
-.card h3, .section h3{ color: var(--muted) !important; }
-
-/* Tables */
-table{
-  color: var(--text) !important;
-}
-.table, .data-table{
-  width:100% !important;
-  border-collapse: collapse !important;
-  overflow:hidden !important;
-  border-radius: 14px !important;
-  border:1px solid var(--border) !important;
-  background: rgba(255,255,255,.02) !important;
-}
-.table th, .table td, .data-table th, .data-table td{
-  padding:10px 10px !important;
-  border-bottom:1px solid var(--border) !important;
-  font-size:13px !important;
-  vertical-align: top !important;
-}
-.table th, .data-table th{
-  text-align:left !important;
-  color: var(--muted) !important;
-  font-weight:800 !important;
-  font-size:12px !important;
-  background: rgba(255,255,255,.03) !important;
-}
-.table tr:hover td, .data-table tr:hover td{ background: rgba(79,140,255,.06) !important; }
-
-/* Inputs */
+/* Controls */
 input, select, textarea{
   background: rgba(255,255,255,.04) !important;
   border:1px solid var(--border) !important;
   border-radius: 14px !important;
   padding:9px 10px !important;
-  color: var(--text) !important;
+  color:var(--text) !important;
   outline:none !important;
 }
-input::placeholder, textarea::placeholder{ color: rgba(155,176,209,.70) !important; }
+input::placeholder, textarea::placeholder{color: rgba(155,176,209,.70) !important;}
+textarea{resize:vertical}
 
-/* Buttons */
+/* Buttons (map existing .btn variants if present) */
 .btn{
   border:1px solid var(--border) !important;
   background: rgba(255,255,255,.04) !important;
-  color: var(--text) !important;
+  color:var(--text) !important;
+  padding:9px 12px !important;
   border-radius: 14px !important;
-  transition: all .15s ease !important;
-  box-shadow:none !important;
+  cursor:pointer;
+  transition: all .15s ease;
+  font-weight:600;
+  font-size:13px;
 }
-.btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.07) !important; }
-.btn-primary, .primary{
+.btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.07) !important;}
+.btn.primary, .btn-success{
   background: rgba(79,140,255,.22) !important;
   border-color: rgba(79,140,255,.45) !important;
-  color: var(--text) !important;
 }
-.btn-secondary{
-  background: rgba(255,255,255,.04) !important;
-  border-color: var(--border) !important;
-}
-.btn-danger, .danger{
+.btn.good, .btn-success{ }
+.btn-danger{
   background: rgba(239,68,68,.14) !important;
   border-color: rgba(239,68,68,.35) !important;
 }
-.btn-warn, .warn{
+.btn-warning{
   background: rgba(245,158,11,.14) !important;
   border-color: rgba(245,158,11,.35) !important;
 }
-.btn-good, .good{
-  background: rgba(34,197,94,.16) !important;
-  border-color: rgba(34,197,94,.35) !important;
-}
 
-/* Modals */
-.modal-overlay{
-  background: rgba(0,0,0,.55) !important;
-}
-.modal-box{
-  background: var(--panel) !important;
+/* Cards & panels from existing UI */
+.card, .stat-card, .panel, .modal-box{
+  background: rgba(255,255,255,.03) !important;
   border:1px solid var(--border) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,.35) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.20) !important;
   color: var(--text) !important;
 }
 
-/* Hide old mobile hamburger; grid layout is primary */
-#menu-toggle{ display:none !important; }
-
-/* Responsive: stack sidebar above */
-@media (max-width: 1100px){
-  body{ overflow:auto !important; }
-  .app{ grid-template-columns: 1fr; }
-  #sidebar{ position: relative !important; }
-  #main{ height: auto !important; }
+/* Tables */
+table{
+  border-collapse: collapse;
 }
+.table, table.data, table.list, table{
+  width:100%;
+  overflow:hidden;
+  border-radius: 14px;
+  border:1px solid var(--border);
+  background: rgba(255,255,255,.02);
+}
+th, td{
+  padding:10px 10px;
+  border-bottom:1px solid var(--border);
+  font-size:13px;
+  vertical-align: top;
+}
+th{
+  text-align:left;
+  color:var(--muted);
+  font-weight:800;
+  font-size:12px;
+  background: rgba(255,255,255,.03);
+}
+tr:hover td{background: rgba(79,140,255,.06)}
+
+/* Hide old floating bar / hamburger if conflicts, but keep JS working */
+.float-bar{ display:none !important; }
+
+/* Responsive */
+@media (max-width: 1100px){
+  .app{grid-template-columns: 1fr;}
+  body{overflow:auto !important;}
+  #main.content{height: calc(100vh - 28px);}
+}
+
 </style>
 </head>
 <body>
@@ -808,7 +755,9 @@ input::placeholder, textarea::placeholder{ color: rgba(155,176,209,.70) !importa
 </div>
 
 <div class="app">
-<div id="sidebar">
+
+<div class="app">
+<aside id="sidebar" class="sidebar">
   <div class="logo-area">
     <img id="sidebar-logo" src="" class="logo-img" alt="Logo">
     <div id="text-logo" style="display:none; font-weight:800;">Raphaels CRM</div>
@@ -826,13 +775,23 @@ input::placeholder, textarea::placeholder{ color: rgba(155,176,209,.70) !importa
     <button class="nav-item" onclick="nav('tour', this)"><span>Tour</span><span class="nav-arrow">›</span></button>
     <button class="nav-item" onclick="nav('routes', this)"><span>Routen</span><span class="nav-arrow">›</span></button>
   </div>
+</aside>
+
+<div id="main" class="content">
+  <div class="topbar">
+    <h2 id="viewTitle">Dashboard</h2>
+    <div class="search">
+      <input id="globalSearch" placeholder="Suche (Name, Firma, E-Mail, Deal …)" />
+      <button class="btn primary" id="btnQuickAdd" type="button">+ Schnell hinzufügen</button>
+    </div>
+  </div>
+  <div id="content" class="content-wrap"></div>
+</div>
 </div>
 
-<div id="main"><div id="content" class="content-wrap"></div></div>
+
+
 </div>
-
-
-
 <script>
     const DB_KEY = 'raphael_crm_v122_revenue';
     const DEFAULT_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='14' rx='2' ry='2'/%3E%3Cpath d='M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'/%3E%3C/svg%3E";
@@ -1171,6 +1130,12 @@ function saveData(id){
 }
 
     function nav(page, el) {
+  const vt=document.getElementById('viewTitle');
+  if(vt){
+    const label = el ? (el.innerText||el.textContent||'').replace('›','').trim() : '';
+    vt.textContent = label || (page==='home'?'Dashboard':page);
+  }
+
         document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
         if(el) el.classList.add('active');
         if(window.innerWidth <= 768) toggleSidebar();
@@ -4230,6 +4195,33 @@ function toggleTourStatus(){
   body.classList.toggle('open');
   if(caret) caret.classList.toggle('open');
 }
+
+
+// --- Global search bridge (visual topbar) ---
+(function(){
+  const gs = document.getElementById('globalSearch');
+  if(!gs) return;
+  gs.addEventListener('input', ()=>{
+    // try to forward to any active page search input if present
+    const targets = ['searchCustomers','searchProspects','searchNonCustomers','searchDeals','searchExpenses'];
+    for(const id of targets){
+      const el = document.getElementById(id);
+      if(el){
+        el.value = gs.value;
+        el.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+    }
+  });
+  const qa = document.getElementById('btnQuickAdd');
+  if(qa){
+    qa.addEventListener('click', ()=>{
+      // fall back: open add customer modal if available
+      const btn = document.getElementById('btnAddCustomer') || document.getElementById('addCustomerBtn');
+      if(btn) btn.click();
+      else nav('customers', document.querySelector('#sidebar .nav-item[onclick*="customers"]') || null);
+    });
+  }
+})();
 
 </script>
 </body>
