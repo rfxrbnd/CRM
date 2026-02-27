@@ -593,8 +593,7 @@ function toggleTourStatus(){
             if(!db.expenses) db.expenses = [];
             if(!db.events) db.events = [];
             if(!db.customers) db.customers = [];
-            // Nicht-Kunden (Kategorie C) dürfen nicht geplant werden: alte Termine entfernen
-            db.customers.forEach(c => { if(isNonCustomer(c)) c.nextAppointment = ''; });
+            // Nicht-Kunden (Kategorie C) dürfen geplant werden: keine automatische Termin-Löschung
             if(!db.deals) db.deals = [];
             if(!db.prospects) db.prospects = [];
 
@@ -1248,7 +1247,7 @@ function saveData(id){
 
         const candidates = db.customers
             .filter(c => c && c.status === 'aktiv' && c.route === selectedRoute)
-            .filter(c => !isNonCustomer(c))
+            
             .map(c => ({ c, due: getVisitDueState(c) }))
             .filter(x => x.due.state !== 'ok')
             .filter(x => !(x.c.nextAppointment && String(x.c.nextAppointment).startsWith(ds)))
@@ -1294,7 +1293,7 @@ Diese Kunden automatisch einplanen?`)) return;
         const order = {A:1,B:2,C:3};
         const candidates = db.customers
             .filter(c => c && c.status === 'aktiv')
-            .filter(c => !isNonCustomer(c))
+            
             .map(c => ({ c, due:getVisitDueState(c) }))
             .filter(x => x.due.state !== 'ok')
             .sort((a,b)=>{
@@ -1699,7 +1698,7 @@ let planned = 0;
         if (customerListMode === 'noncustomers') {
             list = list.filter(c => isNonCustomer(c));
         } else {
-            list = list.filter(c => !isNonCustomer(c));
+            list = list;
         }
 
         if (viewState.filterRoute) {
@@ -2724,8 +2723,8 @@ function filterRoute(r){
     function renderPoolList(){const rEl=document.getElementById('poolRoute'),catEl=document.getElementById('poolCat');if(!rEl)return;const r=rEl.value,cat=catEl?catEl.value:'';const box=document.getElementById('poolContainer');if(!r){box.innerHTML='';return;}let list=db.customers.filter(c=>c.route===r);if(cat)list=list.filter(c=>c.category===cat);const order={A:1,B:2,C:3};list.sort((a,b)=>(order[a.category]||9)-(order[b.category]||9)||a.name.localeCompare(b.name));if(!cat){const grp=k=>list.filter(x=>x.category===k);const section=(k,title)=>{const g=grp(k);return g.length?`<div style="padding:8px 10px;color:#6b7280;font-size:11px;font-weight:700;">${title}</div>`+g.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'';};box.innerHTML=section('A','A')+section('B','B')+section('C','C')||'<div style="color:#999;padding:10px;">Keine Kunden</div>';return;}box.innerHTML=list.length?list.map(c=>`<div class="pool-item${poolItemClass(c)}" draggable="true" ondragstart="dragId=${c.id}"><div class="cat-badge cat-${c.category}"></div>${displayCustomerName(c)}</div>`).join(''):'<div style="color:#999;padding:10px;">Keine Kunden</div>';}
     function changeCal(d){if(calView==='month')currentCalDate.setMonth(currentCalDate.getMonth()+d);else if(calView==='day')currentCalDate.setDate(currentCalDate.getDate()+d);else if(calView==='week')currentCalDate.setDate(currentCalDate.getDate()+(d*7));else currentCalDate.setFullYear(currentCalDate.getFullYear()+d);showCalendar();}
     function drop(ev,ds){ev.preventDefault();dragTargetDate=ds;document.getElementById('timeModal').style.display='flex';}
-    function dropTime(ev,ds,t){ev.preventDefault();const c=db.customers.find(x=>x.id===dragId);if(c&&isNonCustomer(c)){alert('Nicht-Kunden können nicht eingeplant werden.');return;}if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')) return;}c.nextAppointment=ds+'T'+t;save();showCalendar();}
-    function confirmDrop(){const c=db.customers.find(x=>x.id===dragId);if(c&&isNonCustomer(c)){alert('Nicht-Kunden können nicht eingeplant werden.');closeModal();return;}if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')){closeModal();return;}}c.nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
+    function dropTime(ev,ds,t){ev.preventDefault();const c=db.customers.find(x=>x.id===dragId);if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')) return;}c.nextAppointment=ds+'T'+t;save();showCalendar();}
+    function confirmDrop(){const c=db.customers.find(x=>x.id===dragId);if(c&&c.status==='inaktiv'){if(!confirm('Kunde ist inaktiv – Besuch wirklich planen?')){closeModal();return;}}c.nextAppointment=dragTargetDate+'T'+document.getElementById('modalTime').value;save();closeModal();showCalendar();}
     function openEventModal(eventId){
     // eventId optional: wenn vorhanden -> bestehenden Termin bearbeiten
     document.getElementById('eventModal').style.display='flex';
