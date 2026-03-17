@@ -1742,6 +1742,29 @@ let planned = 0;
         showCustomers();
     }
 
+    function emailAllCustomers(){
+        const rawEmails = (db.customers || [])
+            .filter(c => !isNonCustomer(c))
+            .map(c => (c.email || '').trim())
+            .filter(Boolean)
+            .filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+        const emails = [...new Set(rawEmails.map(e => e.toLowerCase()))];
+        if(!emails.length) return alert('Keine gültigen E-Mail-Adressen bei Kunden gefunden.');
+
+        const bcc = encodeURIComponent(emails.join(','));
+        const mailtoUrl = `mailto:?bcc=${bcc}`;
+
+        if(mailtoUrl.length > 1800){
+            alert(`Es wurden ${emails.length} E-Mails gefunden. Die Liste ist zu lang für einen direkten Mailto-Link und wurde in die Zwischenablage kopiert.`);
+            if(navigator.clipboard && navigator.clipboard.writeText){
+                navigator.clipboard.writeText(emails.join(', ')).catch(()=>{});
+            }
+            return;
+        }
+
+        window.location.href = mailtoUrl;
+    }
     function addBatchToTour(){
         if(selectedIds.size===0) return alert("Bitte Kunden auswählen.");
         selectedIds.forEach(id=>{
