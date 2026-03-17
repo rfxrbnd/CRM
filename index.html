@@ -1742,14 +1742,18 @@ let planned = 0;
         showCustomers();
     }
 
-    function emailAllCustomers(){
+        function getMailableCustomerEmails(){
         const rawEmails = (db.customers || [])
             .filter(c => !isNonCustomer(c))
             .map(c => (c.email || '').trim())
             .filter(Boolean)
             .filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 
-        const emails = [...new Set(rawEmails.map(e => e.toLowerCase()))];
+        return [...new Set(rawEmails.map(e => e.toLowerCase()))];
+    }
+
+    function emailAllCustomers(){
+        const emails = getMailableCustomerEmails();
         if(!emails.length) return alert('Keine gültigen E-Mail-Adressen bei Kunden gefunden.');
 
         const bcc = encodeURIComponent(emails.join(','));
@@ -1765,6 +1769,7 @@ let planned = 0;
 
         window.location.href = mailtoUrl;
     }
+
     function addBatchToTour(){
         if(selectedIds.size===0) return alert("Bitte Kunden auswählen.");
         selectedIds.forEach(id=>{
