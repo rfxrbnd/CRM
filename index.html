@@ -1396,6 +1396,7 @@ let planned = 0;
         <div class="card"><h2>Sonstiges</h2>
             <button class="btn btn-secondary btn-full" onclick="showDuplicates()">Duplikate finden</button>
             <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
+            <button class="btn btn-primary" onclick="window.location.href='mailto:?bcc='+db.customers.map(c=>c.email).filter(e=>e).join(',')">📧 Rundmail an Kunden</button>
         </div>`;
     }
 
@@ -3953,6 +3954,25 @@ function toggleTourStatus(){
   if(caret) caret.classList.toggle('open');
 }
 
+function mailAllCustomers(){
+    const emails = db.customers
+        .map(c => (c.email || '').trim())
+        .filter(e => e !== '');
+
+    if(!emails.length){
+        alert("Keine Kunden mit hinterlegter E-Mail gefunden.");
+        return;
+    }
+
+    const bcc = emails.join(',');
+    const subject = encodeURIComponent("Information");
+    const body = encodeURIComponent("Hallo,\n\n");
+
+    const mailto = `mailto:?bcc=${bcc}&subject=${subject}&body=${body}`;
+
+    window.location.href = mailto;
+}
+    
 </script>
 </body>
 </html>
