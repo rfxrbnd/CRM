@@ -1396,7 +1396,8 @@ let planned = 0;
         <div class="card"><h2>Sonstiges</h2>
             <button class="btn btn-secondary btn-full" onclick="showDuplicates()">Duplikate finden</button>
             <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="document.getElementById('logoIn').click()">Logo ändern</button><input type="file" id="logoIn" style="display:none" accept="image/*" onchange="uploadLogo(this)"><button class="btn btn-danger btn-full" style="margin-top:10px;" onclick="if(confirm('Logo löschen?')){db.logo=null;save();updateLogoUI();}">Logo entfernen</button>
-            <button class="btn btn-primary" onclick="window.location.href='mailto:?bcc='+db.customers.map(c=>c.email).filter(e=>e).join(',')">📧 Rundmail an Kunden</button>
+            <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="window.location.href='mailto:?bcc='+db.customers.map(c=>c.email).filter(e=>e).join(',')">📧 Rundmail an Kunden</button>        
+            
         </div>`;
     }
 
