@@ -2654,35 +2654,43 @@ function filterRoute(r){
 
     // --- DUPLIKATE ---
     function showDuplicates(){
-    const list = (db.customers || []).filter(c => ['A','B'].includes((c.category || '').trim()));
-            const key = (c.address || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!key) return; 
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(c);
-        });
+    const list = (db.customers || []).filter(c => ['A','B'].includes((c.category || '')));
+    const groups = {};
 
-        const duplicates = Object.values(groups).filter(g => g.length > 1);
+    list.forEach(c => {
+        const key = (c.address || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!key) return;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(c);
+    });
 
-        if (duplicates.length === 0) return alert("Keine doppelten Adressen gefunden.");
+    const duplicates = Object.values(groups).filter(g => g.length > 1);
 
-        let html = `<h1>Doppelte Einträge (${duplicates.length} Gruppen)</h1>`;
-        duplicates.forEach(group => {
-            html += `<div class="card" style="border-left:4px solid #ef4444;">
-                <h3>📍 ${group[0].address}</h3>
-                ${group.map(c => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding:10px 0;">
-                        <div>
-                            <b>${displayCustomerName(c)}</b> <span style="font-size:10px; color:#666;">(ID: ${c.id})</span><br>
-                            Tour: ${c.route || '-'} | Status: ${c.status}
-                        </div>
-                        <button class="btn btn-danger" style="font-size:12px;" onclick="deleteDuplicate(${c.id})">Löschen</button>
+    if (duplicates.length === 0) return alert("Keine doppelten Adressen gefunden.");
+
+    let html = `<h1>Doppelte Einträge (${duplicates.length} Gruppen)</h1>`;
+    duplicates.forEach(group => {
+        html += `<div class="card" style="border-left:4px solid #ef4444;">
+            <h3>📍 ${group[0].address}</h3>
+            ${group.map(c => `
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding:10px 0;">
+                    <div>
+                        <b>${displayCustomerName(c)}</b>
+                        <span style="font-size:10px; color:#666;">(ID: ${c.id})</span><br>
+                        Tour: ${c.route || '-'} | Status: ${c.status}
                     </div>
-                `).join('')}
-            </div>`;
-        });
-        html = `<div class="no-print" style="margin-bottom:15px;"><button class="btn btn-secondary" onclick="showHome()">← Zurück</button></div>` + html;
-        document.getElementById('content').innerHTML = html;
-    }
+                    <button class="btn btn-danger" style="font-size:12px;" onclick="deleteDuplicate(${c.id})">Löschen</button>
+                </div>
+            `).join('')}
+        </div>`;
+    });
+
+    html = `<div class="no-print" style="margin-bottom:15px;">
+                <button class="btn btn-secondary" onclick="showHome()">← Zurück</button>
+            </div>` + html;
+
+    document.getElementById('content').innerHTML = html;
+}
 
     function deleteDuplicate(id) {
         if(confirm("Diesen Eintrag wirklich löschen?")) {
