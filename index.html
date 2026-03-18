@@ -2654,8 +2654,7 @@ function filterRoute(r){
 
     // --- DUPLIKATE ---
     function showDuplicates() {
-        const groups = {};
-        db.customers.forEach(c => {
+        const customers = db.customers.filter(c => ['A','B'].includes((c.category || '').trim()));
             const key = (c.address || '').toLowerCase().replace(/[^a-z0-9]/g, '');
             if (!key) return; 
             if (!groups[key]) groups[key] = [];
